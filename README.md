@@ -4,7 +4,7 @@
 
 First, run `./data/local-setup.sh`, then `kubectl apply -k ./k8s/local`
 
-Nifi UI should be available at: `http://localhost:8081/nifi/`
+Nifi UI should be available at: `http://localhost:8080/nifi/`
 
 ### Cloud ###
 
