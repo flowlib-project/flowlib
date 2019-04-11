@@ -18,7 +18,7 @@ spec:
         image: dbkegley/nifi:1.8.0
         imagePullPolicy: Always
         ports:
-        - containerPort: 8081
+        - containerPort: 8080
         - containerPort: 6342
         - containerPort: 10000
         - containerPort: 10443
@@ -28,12 +28,12 @@ spec:
             command:
             - bash
             - "-c"
-            - "curl http://127.0.0.1:8081/nifi"
+            - "curl http://127.0.0.1:8080/nifi"
           initialDelaySeconds: 300
           periodSeconds: 15
         livenessProbe:
           tcpSocket:
-            port: 8081
+            port: 8080
           initialDelaySeconds: 300
           periodSeconds: 15
         volumeMounts: # https://groups.google.com/forum/#!topic/openshift/klwlwl2m-uE
@@ -54,8 +54,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        - name: NIFI_WEB_HTTP_PORT
-          value: "8081"
         - name: NIFI_CLUSTER_ADDRESS
           valueFrom:
             fieldRef:
