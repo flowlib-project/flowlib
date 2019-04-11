@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: b23-data-platform
+
+commonLabels:
+  environment: local
+  owner: b23-data-platform
+
+resources:
+- ../ns.yaml
+
+bases:
+- ../app/common
+- ../app/nifi
+- ../app/zookeeper
+
+# https://kubernetes.io/blog/2018/04/13/local-persistent-volumes-beta/
+resources:
+- ./nifi-storage-class.yaml
+- ./zookeeper-storage-class.yaml
+- ./nifi-pv.yaml
+- ./zookeeper-pv.yaml

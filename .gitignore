@@ -1,0 +1,10 @@
+# python
+env/
+*.pyc
+
+# vscode
+.vscode
+
+# persistent volumes
+data/nifi
+data/zookeeper
