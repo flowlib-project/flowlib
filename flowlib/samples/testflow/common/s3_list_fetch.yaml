@@ -1,0 +1,42 @@
+component_name: S3 List Fetch
+
+defaults: # map(str, str)
+  s3_min_object_age: 5m
+  s3_key: "/"
+
+required_vars: # list(str)
+- s3_bucket
+- s3_region
+
+accepts_inputs: False # bool
+accepts_outputs: True # bool
+
+process_group: # list(FlowLibProcessor)
+- name: list-s3
+  element_type: Processor
+  processor_def:
+    package_id: org.apache.nifi.processors.aws.s3.ListS3
+    properties:
+    # aws_credentials_provider_service:
+      bucket: $(s3_bucket)
+      region: $(s3_region)
+      minimum_object_age: $(s3_min_object_age)
+      prefix: $(s3_key)
+  downstream:
+  - name: fetch-s3
+    relationships: ['success']
+
+- name: fetch-s3
+  element_type: Processor
+  processor_def:
+    package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
+    properties:
+    # aws_credentials_provider_service:
+      bucket: $(s3_bucket)
+      region: $(s3_region)
+  downstream:
+  - name: output
+    relationships: ['success']
+
+- name: output
+  element_type: OutputPort

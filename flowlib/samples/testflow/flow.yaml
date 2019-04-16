@@ -1,0 +1,49 @@
+flow_name: Demo Flow
+
+controllers:
+- name: 'AWS Credential Controller - EAST'
+  package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
+  properties: {}
+- name: 'AWS Credential Controller - WEST'
+  package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
+  properties: {}
+
+canvas:
+- name: listfetch-east
+  element_type: ProcessGroup
+  element_ref: ./common/s3_list_fetch.yaml
+  # controller_refs:
+  # - 'AWS Credential Controller - EAST'
+  vars:
+    s3_bucket: stackspace-us-east-1
+    s3_region: us-east-1
+  downstream:
+  - name: debug
+    relationships: ['success']
+
+- name: listfetch-west
+  element_type: ProcessGroup
+  element_ref: ./common/s3_list_fetch.yaml
+  # controller_refs:
+  # - 'AWS Credential Controller - WEST'
+  vars:
+    s3_bucket: stackspace-us-west-1
+    s3_region: us-west-1
+  downstream:
+  - name: debug
+    relationships: ['success']
+
+- name: debug
+  element_type: ProcessGroup
+  element_ref: ./common/debug.yaml
+  downstream:
+  - name: log-attribute
+    relationships: ['success']
+
+- name: log-attribute
+  element_type: Processor
+  processor_def:
+    package_id: org.apache.nifi.processors.standard.LogAttribute
+    properties:
+      log_level: info
+      log_payload: False

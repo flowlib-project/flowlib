@@ -1,0 +1,23 @@
+component_name: Debug
+
+accepts_inputs: True
+accepts_outputs: True
+
+process_group:
+- name: input
+  element_type: InputPort
+  downstream:
+  - name: debug
+    relationships: ['success']
+
+- name: debug
+  element_type: Processor
+  processor_def:
+    package_id: org.apache.nifi.processors.aws.s3.ListS3
+    properties: {}
+  downstream:
+  - name: output
+    relationships: ['success']
+
+- name: output
+  element_type: OutputPort
