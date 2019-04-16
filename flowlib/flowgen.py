@@ -1,66 +1,77 @@
+import yaml
+import logging
+
 import nipyapi
 from nipyapi import canvas
 from nipyapi.nifi import models
 from nipyapi.nifi import apis
 
-import yaml
-import logging
+from model import Flow, FlowLibException
 
 # Some constants for canvas dimensions
 TOP_LEVEL_PG_LOCATION = (300, 100)
 
 
-def deploy_from_yaml(config):
+# TODO: Validate downstream connections, but this will have to happen after the flow is fully initialized
+def validate_flow_yaml(config):
+    pass
+
+
+def deploy_flow_yaml(config):
+    """
+    :param config: A FlowLibConfig
+    :type config: FlowGenConfig
+    """
     logging.info("Deploying NiFi flow from YAML with config:")
     logging.info(config)
 
     nifi_url = 'http://{}:{}/nifi-api'.format(config.nifi_address, config.nifi_port)
     nipyapi.config.nifi_config.host = nifi_url
     root_id = nipyapi.canvas.get_root_pg_id()
-    root_pge = models.process_group_entity.ProcessGroupEntity(id=root_id)
-    logging.info("Deploying flow to NiFi root canvas ID: {}".format(root_id))
 
-    # TODO: parse this to a real graph data structure
-    # we need to be able to go from yaml -> nifi as well as nifi -> yaml, should be 1:1
-    # Additionally, it should be composeable so that we can re-use process groups via references
-    # and input/output ports
-    flow = yaml.safe_load(config.flow_yaml)
+    try:
+        flow = Flow.load_from_file(config.flow_yaml).init()
+        logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.flow_name, root_id))
 
-    pge_name = flow['processor_group_name']
-    logging.info("Found top level process group: {}".format(pge_name))
+        # TODO: Check deployed flow to see if a flow already exists or --force, if not
+        # Check if root process group is the same as the one being deployed, should we set the version in the pg name?
+        root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
+        root.component.name = '{}/root'.format(flow.flow_name)
 
-    # Create flow-specific processor group (under root processor group entity)
-    pge = check_or_create_pg(root_pge, pge_name, get_canvas_location(0))
+        # Set root pg name
+        nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
-    # Create or Update Controllers
-    # total_controllers = len(flow['controllers'])
-    # logging.info('Found {} total controllers'.format(total_controllers))
-    # TODO: create controllers from yaml
-    # for index, controller in enumerate(flow['controllers']):
-    #     controller = b23.check_or_create_controllers(pge,
-    #                                                  controller['type'],
-    #                                                  controller['name'],
-    #                                                  controller['properties']
-    #                                                  )
-    #     logging.info('created controller {}'.format(controller))
-
-    total_processors = len(flow['processors'])
-    logging.info("Found {} total processors".format(total_processors))
-
-    pce_list = list()
-    for index, processor in enumerate(flow['processors']):
-        # get the processor entity object if new or exists, then add to list
-        processor_entity = check_or_create_proc(pge, processor, index, total_processors)
-        pce_list.append(processor_entity)
-        logging.info('Added processor to canvas: {}'.format(processor_entity.component.name))
-
-    connection_list = list()
-    for index, processor in enumerate(flow['processors']):
-        connection = check_or_create_connection(pce_list[index], processor)
-        connection_list.append(connection)
+        # create_or_update_controllers(flow)
+        create_or_update_processors(flow.elements, root)
+        # create_or_update_connections(flow)
+    except FlowLibException as e:
+        logging.error(e)
 
 
-## TODO: Use create_or_update pattern instead of check or create ##
+def create_or_update_processors(elements, pg):
+    """
+    :param flow: A Flow to deploy
+    :type flow: Flow
+    :param pg: The process group in which to create the processors
+    :type pg: models.process_group_entity.ProcessGroupEntity
+    """
+    for el in elements.values():
+        if el.element_type == 'ProcessGroup':
+            pg = create_or_update_process_group(name, parent_pg)
+            create_or_update_processors(el.elements, pg) # recursively create process_groups
+        elif el.element_type == 'Processor':
+            create_or_update_processor(el, pg)
+        elif el.element_type == 'InputPort':
+            create_or_update_input_port(el, pg)
+        elif el.element_type == 'OutputPort':
+            create_or_update_output_port(el, pg)
+        else:
+            raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
+
+
+def create_or_update_process_group(name):
+    pass
+
 
 def check_or_create_pg(top_pge, name, location):
     """
