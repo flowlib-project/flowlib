@@ -1,6 +1,8 @@
 # python
 env/
+devenv/
 *.pyc
+__pycache__/
 
 # vscode
 .vscode
