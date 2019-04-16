@@ -23,6 +23,13 @@ process_group: # list(FlowLibProcessor)
       minimum_object_age: $(s3_min_object_age)
       prefix: $(s3_key)
   downstream:
+  - name: debug
+    relationships: ['success']
+
+- name: debug
+  element_type: ProcessGroup
+  element_ref: ./common/debug.yaml
+  downstream:
   - name: fetch-s3
     relationships: ['success']
 

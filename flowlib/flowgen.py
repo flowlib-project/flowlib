@@ -36,58 +36,82 @@ def deploy_flow_yaml(config):
         # TODO: Check deployed flow to see if a flow already exists or --force, if not
         # Check if root process group is the same as the one being deployed, should we set the version in the pg name?
         root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
-        root.component.name = '{}/root'.format(flow.flow_name)
+        root.component.name = flow.flow_name
 
         # Set root pg name
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
         # create_or_update_controllers(flow)
-        create_or_update_processors(flow.elements, root)
+        create_or_update_processors(flow.elements, root_id)
         # create_or_update_connections(flow)
     except FlowLibException as e:
         logging.error(e)
 
 
-def create_or_update_processors(elements, pg):
+def create_or_update_processors(elements, parent_pg_id):
     """
     :param flow: A Flow to deploy
     :type flow: Flow
-    :param pg: The process group in which to create the processors
-    :type pg: models.process_group_entity.ProcessGroupEntity
+    :param parent_pg_id: The process group in which to create the processors
+    :type parent_pg_id: str
     """
     for el in elements.values():
-        if el.element_type == 'ProcessGroup':
-            pg = create_or_update_process_group(name, parent_pg)
-            create_or_update_processors(el.elements, pg) # recursively create process_groups
+        if el.element_type == 'ProcessGroup': # recursively create process_groups
+            pg_id = create_or_update_process_group(el, parent_pg_id)
+            create_or_update_processors(el.elements, pg_id)
         elif el.element_type == 'Processor':
-            create_or_update_processor(el, pg)
+            create_or_update_processor(el, parent_pg_id)
         elif el.element_type == 'InputPort':
-            create_or_update_input_port(el, pg)
+            create_or_update_input_port(el, parent_pg_id)
         elif el.element_type == 'OutputPort':
-            create_or_update_output_port(el, pg)
+            create_or_update_output_port(el, parent_pg_id)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
 
 
-def create_or_update_process_group(name):
+def create_or_update_process_group(element, parent_pg_id):
+    # TODO: Figure out this naming convention for easier lookups
+    # consider calling nipyapi.utils.filter_obj() directly?
+    name = "{}/{}".format(element.name, parent_pg_id)
+    logging.info('Create or update ProcessGroup: {}'.format(name))
+    parent_pg = nipyapi.canvas.get_process_group(parent_pg_id, identifier_type='id')
+    pg = nipyapi.canvas.get_process_group(name)
+    if pg:
+        logging.debug('Found PG: {}'.format(name))
+        # TODO: Update the pg
+        pass
+    else:
+        logging.debug('Creating PG: {} with parent: {}'.format(name, parent_pg.id))
+        pg = nipyapi.canvas.create_process_group(parent_pg, name, TOP_LEVEL_PG_LOCATION)
+
+    return pg.id
+
+
+def create_or_update_processor(element, pg_id):
+    pass
+
+def create_or_update_input_port(element, pg_id):
+    pass
+
+def create_or_update_output_port(element, pg_id):
     pass
 
 
-def check_or_create_pg(top_pge, name, location):
-    """
-    Checks to see if process group exists. If not, create one.
-    :param top_pge:
-    :param name:
-    :param location:
-    :return:
-    """
-    pge = canvas.get_process_group(name, identifier_type='name')
-    if pge:
-        logging.info("process group {} with id {} already exists.  Ignoring create request".format(name, pge.id))
-    else:
-        pge = canvas.create_process_group(top_pge, name, TOP_LEVEL_PG_LOCATION)  # unable to configure PG
-        logging.info("new process group {} created".format(pge.component.name))
-    return pge
+# def check_or_create_pg(top_pge, name, location):
+#     """
+#     Checks to see if process group exists. If not, create one.
+#     :param top_pge:
+#     :param name:
+#     :param location:
+#     :return:
+#     """
+#     pge = canvas.get_process_group(name, identifier_type='name')
+#     if pge:
+#         logging.info("process group {} with id {} already exists.  Ignoring create request".format(name, pge.id))
+#     else:
+#         pge = canvas.create_process_group(top_pge, name, TOP_LEVEL_PG_LOCATION)  # unable to configure PG
+#         logging.info("new process group {} created".format(pge.component.name))
+#     return pge
 
 
 def check_or_create_proc(top_pge, processor, index, total):

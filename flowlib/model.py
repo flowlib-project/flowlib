@@ -56,7 +56,7 @@ class Flow:
         """
         logging.info("Initializing root Flow: {}".format(self.flow_name))
         for elem_dict in self.canvas:
-            elem_dict['parent_path'] = '{}/root'.format(self.flow_name)
+            elem_dict['parent_path'] = self.flow_name
             el = FlowElement.load(elem_dict, self)
             if self.elements.get(el.name):
                 raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
@@ -144,6 +144,7 @@ class ProcessGroup(FlowElement):
         except KeyError as e:
             raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_ref))
 
+        # TODO: Check that a component does not reference itself recursively
         raw['source_ref'] = ref
         loaded_component = FlowComponent(**raw)
         if not loaded_component.source_ref in flow.loaded_components:
