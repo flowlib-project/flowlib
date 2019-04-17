@@ -1,5 +1,6 @@
 import yaml
 import logging
+import sys
 
 import nipyapi
 from nipyapi import canvas
@@ -14,7 +15,13 @@ TOP_LEVEL_PG_LOCATION = (300, 100)
 
 # TODO: Validate downstream connections, but this will have to happen after the flow is fully initialized
 def validate_flow_yaml(config):
-    pass
+    try:
+        flow = Flow.load_from_file(config.flow_yaml).init()
+        # apply_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        # validate_flow_connections(flow)
+    except FlowLibException as e:
+        logging.error(e)
+        sys.exit(1)
 
 
 def deploy_flow_yaml(config):
@@ -33,39 +40,63 @@ def deploy_flow_yaml(config):
         flow = Flow.load_from_file(config.flow_yaml).init()
         logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.flow_name, root_id))
 
-
         # TODO: Check deployed flow to see if a flow already exists or require --force, if not
-        # Check if root process group is the same as the one being deployed, should we set the version in the pg name?
+        # then check if root process group is the same as the one being deployed,
+        # should we set the version in the pg name or comments?
         root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
         root.component.name = flow.flow_name
 
         # TODO: Stop all source processors and wait for queues to drain completely.
         # Then stop all remaining processors and remove all connections
+
         # TODO: It is probably more reliable to delete all processors and connections and re-deploy
         # to a blank canvas. This will involve reading the state and setting the state directly in zookeeper
-        # for the new processors
+        # for the newly deployed processors
 
         # Set root pg name
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
-        # create_or_update_controllers(flow)
-        create_process_groups_recursive(flow.elements, root)
-        # create_or_update_connections(flow)
+        # TODO: create_or_update_controllers(flow)
+        apply_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        # create_canvas_elements_recursive(flow.elements, root)
+        # TODO: create_or_update_connections(flow)
     except FlowLibException as e:
         logging.error(e)
 
 
-def create_process_groups_recursive(elements, parent_pg):
+def _apply_vars(processor, component):
+    logging.info("Applying vars for processor: {}".format(processor.name))
+    pass
+
+def apply_flow_element_vars_recursive(elements, loaded_components, component_name=None):
     """
-    :param flow: A Flow to deploy
-    :type flow: flowlib.model.Flow
+    Recusively apply the variable templating to each element in the flow
+    :param elements: The elements to deploy
+    :type elements: list(model.FlowElement)
+    :param loaded_components: The components that were imported during flow.init()
+    :type loaded_components: map(str:model.FlowComponent)
+    """
+    for el in elements.values():
+        if el.element_type == 'ProcessGroup':
+            apply_flow_element_vars_recursive(el.elements, loaded_components, component_name=el.component_ref)
+        elif el.element_type == 'Processor':
+            if component_name:
+                component = loaded_components.get(component_name)
+                _apply_vars(el, component)
+
+
+def create_canvas_elements_recursive(elements, parent_pg):
+    """
+    Recursively creates the actual NiFi elements (groups, processors, inputs, outputs) on the canvas
+    :param elements: The elements to deploy
+    :type elements: list(model.FlowElement)
     :param parent_pg: The process group in which to create the processors
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
     for el in elements.values():
         if el.element_type == 'ProcessGroup':
             pg = create_or_update_process_group(el, parent_pg)
-            create_process_groups_recursive(el.elements, pg)
+            create_canvas_elements_recursive(el.elements, pg)
         elif el.element_type == 'Processor':
             create_or_update_processor(el, parent_pg)
         elif el.element_type == 'InputPort':
@@ -79,14 +110,12 @@ def create_process_groups_recursive(elements, parent_pg):
 def create_or_update_process_group(element, parent_pg):
     """
     :param element: The process group to deploy
-    :type element: flowlib.model.ProcessGroup
+    :type element: model.ProcessGroup
     :param parent_pg: The process group in which to create the new process group
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
-    # TODO: Figure out this naming convention for faster lookups
-    # consider calling nipyapi.utils.filter_obj() directly? or perhaps filter by a different
-    # attribute so that the name does not contain a messy looking uuid.
-    # Applies to processgroups, processors, inputs, and outputs
+    # TODO: If we assert that the canvas is clean then we do not need to check if the
+    # canvas elements already exist when creating processors, pgs, input/output ports
     name = "{}/{}".format(element.name, parent_pg.id)
     logging.info("Create or update ProcessGroup: {}".format(name))
     pg = nipyapi.canvas.get_process_group(name)
@@ -103,7 +132,7 @@ def create_or_update_process_group(element, parent_pg):
 def create_or_update_processor(element, parent_pg):
     """
     :param element: The processor to deploy
-    :type element: flowlib.model.Processor
+    :type element: model.Processor
     :param parent_pg: The process group in which to create the new processor
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
@@ -114,6 +143,7 @@ def create_or_update_processor(element, parent_pg):
         logging.error("Found existing Processor: {}".format(name))
         raise FlowLibException("Re-deploying a flow is not yet supported")
     else:
+
         logging.debug("Creating Processor: {} with parent: {}".format(name, element.parent_path))
         tpe = models.DocumentedTypeDTO(type=element.config.package_id)
         p = canvas.create_processor(parent_pg, tpe, TOP_LEVEL_PG_LOCATION, name, element.config)

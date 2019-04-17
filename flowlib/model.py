@@ -24,7 +24,7 @@ class Flow:
         :type canvas: list(FlowElement)
         :param flow_root_dir: The path to the directory containing flow.yaml
         :type flow_root_dir: str
-        :param loaded_components: A map of components (element_refs) loaded while initializing the flow, these are re-useable components
+        :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
         :type loaded_components: dict(str:FlowComponent)
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling flow.init()
@@ -121,7 +121,7 @@ class FlowElement:
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, element_type, element_ref, vars=None, downstream=None):
+    def __init__(self, name, parent_path, element_type, component_ref, vars=None, downstream=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -130,14 +130,14 @@ class ProcessGroup(FlowElement):
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
-        self.element_ref = element_ref.lstrip('./')
+        self.component_ref = component_ref
         self.vars = vars
         self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
         self.elements = dict()
 
     def load(self, flow):
         logging.info("Loading ProcessGroup: {}".format(self.name))
-        ref = os.path.join(flow.flow_root_dir, self.element_ref)
+        ref = os.path.join(flow.flow_root_dir, self.component_ref)
         with open(ref) as f:
             raw = yaml.safe_load(f)
 

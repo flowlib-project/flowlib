@@ -1,6 +1,6 @@
 component_name: S3 List Fetch
 
-defaults: # map(str, str)
+defaults:
   s3_min_object_age: 5m
   s3_key: "/"
 
@@ -8,10 +8,10 @@ required_vars: # list(str)
 - s3_bucket
 - s3_region
 
-accepts_inputs: False # bool
-accepts_outputs: True # bool
+accepts_inputs: False
+accepts_outputs: True
 
-process_group: # list(FlowLibProcessor)
+process_group:
 - name: list-s3
   element_type: Processor
   config:
@@ -28,7 +28,7 @@ process_group: # list(FlowLibProcessor)
 
 - name: debug
   element_type: ProcessGroup
-  element_ref: ./common/debug.yaml
+  component_ref: common/debug.yaml
   downstream:
   - name: fetch-s3
     relationships: ['success']
