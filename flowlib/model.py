@@ -3,6 +3,8 @@ import yaml
 import logging
 import pprint
 
+from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
+
 class FlowLibException(Exception):
     pass
 
@@ -169,18 +171,18 @@ class ProcessGroup(FlowElement):
 
 
 class Processor(FlowElement):
-    def __init__(self, name, parent_path, element_type, processor_def, downstream=None):
+    def __init__(self, name, parent_path, element_type, config, downstream=None):
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
-        self.processor_def = ProcessorDef(**processor_def)
+        self.config = ProcessorConfig(config.pop('package_id'), **config)
         self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
 
 
-class ProcessorDef:
-    def __init__(self, package_id, properties):
+class ProcessorConfig(ProcessorConfigDTO):
+    def __init__(self, package_id, **kwargs):
+        super().__init__(**kwargs)
         self.package_id = package_id
-        self.properties = properties
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)

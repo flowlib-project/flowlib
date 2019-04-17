@@ -12,8 +12,8 @@ process_group:
 
 - name: debug
   element_type: Processor
-  processor_def:
-    package_id: org.apache.nifi.processors.aws.s3.ListS3
+  config:
+    package_id: org.apache.nifi.processors.standard.DebugFlow
     properties: {}
   downstream:
   - name: output

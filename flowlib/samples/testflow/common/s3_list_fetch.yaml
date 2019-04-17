@@ -14,14 +14,14 @@ accepts_outputs: True # bool
 process_group: # list(FlowLibProcessor)
 - name: list-s3
   element_type: Processor
-  processor_def:
+  config:
     package_id: org.apache.nifi.processors.aws.s3.ListS3
     properties:
     # aws_credentials_provider_service:
-      bucket: $(s3_bucket)
-      region: $(s3_region)
-      minimum_object_age: $(s3_min_object_age)
-      prefix: $(s3_key)
+      Bucket: $(s3_bucket)
+      Region: $(s3_region)
+      Minimum Object Age: $(s3_min_object_age)
+      Prefix: $(s3_key)
   downstream:
   - name: debug
     relationships: ['success']
@@ -35,12 +35,12 @@ process_group: # list(FlowLibProcessor)
 
 - name: fetch-s3
   element_type: Processor
-  processor_def:
+  config:
     package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
     properties:
     # aws_credentials_provider_service:
-      bucket: $(s3_bucket)
-      region: $(s3_region)
+      Bucket: $(s3_bucket)
+      Region: $(s3_region)
   downstream:
   - name: output
     relationships: ['success']

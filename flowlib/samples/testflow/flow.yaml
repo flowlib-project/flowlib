@@ -1,5 +1,15 @@
 flow_name: Demo Flow
 
+# TODO: Allow Common Defaults for processors?
+#   How would these be passed down and merged with child components?
+# processor_defaults:
+#   **nipyapi.nifi.models.processor_config_dto.ProcessorConfigDTO
+
+# TODO: Allow Common Defaults for connections?
+#   How would these be passed down and merged with child components?
+# connection_defaults:
+#   **nipyapi.nifi.models.connection_dto.ConnectionDTO
+
 controllers:
 - name: 'AWS Credential Controller - EAST'
   package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
@@ -42,8 +52,8 @@ canvas:
 
 - name: log-attribute
   element_type: Processor
-  processor_def:
+  config:
     package_id: org.apache.nifi.processors.standard.LogAttribute
     properties:
-      log_level: info
-      log_payload: False
+      Log Level: info
+      Log Payload: False
