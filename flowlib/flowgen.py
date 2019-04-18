@@ -1,6 +1,9 @@
-import yaml
+import copy
 import logging
+import re
 import sys
+import yaml
+
 
 import nipyapi
 from nipyapi import canvas
@@ -11,13 +14,13 @@ from model import Flow, FlowLibException
 
 # Some constants for canvas dimensions
 TOP_LEVEL_PG_LOCATION = (300, 100)
+VAR_WRAPPER = "$({})"
 
-
-# TODO: Validate downstream connections, but this will have to happen after the flow is fully initialized
 def validate_flow_yaml(config):
     try:
         flow = Flow.load_from_file(config.flow_yaml).init()
-        # apply_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        # TODO: Validate downstream connections
         # validate_flow_connections(flow)
     except FlowLibException as e:
         logging.error(e)
@@ -57,18 +60,47 @@ def deploy_flow_yaml(config):
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
         # TODO: create_or_update_controllers(flow)
-        apply_flow_element_vars_recursive(flow.elements, flow.loaded_components)
-        # create_canvas_elements_recursive(flow.elements, root)
+        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        create_canvas_elements_recursive(flow.elements, root)
         # TODO: create_or_update_connections(flow)
     except FlowLibException as e:
         logging.error(e)
 
 
-def _apply_vars(processor, component):
-    logging.info("Applying vars for processor: {}".format(processor.name))
-    pass
+def _replace_vars(process_group, source_component):
+    """
+    :param process_group: The processorGroup processors that need vars evaluated
+    :type process_group: model.ProcessGroup
+    :param component: The source component that the processGroup was created from
+    :type component: model.FlowComponent
+    """
+    # We already valdated that required vars were present during flow.init()
+    # so don't worry about it here
 
-def apply_flow_element_vars_recursive(elements, loaded_components, component_name=None):
+    # Create a dict of vars to replace
+    replacements = copy.deepcopy(source_component.defaults) or dict()
+    if process_group.vars:
+        for key,val in process_group.vars.items():
+            replacements[key] = val
+
+
+    # format each var name with the expected VAR_WRAPPER
+    # so that we can do a lookup when we find a pattern match
+    wrapped_vars = dict()
+    for k,v in replacements.items():
+        wrapped_vars[VAR_WRAPPER.format(k)] = v
+
+    esc_keys = [re.escape(key) for key in wrapped_vars.keys()]
+    pattern = re.compile(r'(' + '|'.join(esc_keys) + r')')
+
+    # apply var replacements for each value of processor.config.properties
+    for el in process_group.elements.values():
+        if el.element_type == 'Processor':
+            for k,v in el.config.properties.items():
+                el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
+
+
+def replace_flow_element_vars_recursive(elements, loaded_components):
     """
     Recusively apply the variable templating to each element in the flow
     :param elements: The elements to deploy
@@ -78,11 +110,9 @@ def apply_flow_element_vars_recursive(elements, loaded_components, component_nam
     """
     for el in elements.values():
         if el.element_type == 'ProcessGroup':
-            apply_flow_element_vars_recursive(el.elements, loaded_components, component_name=el.component_ref)
-        elif el.element_type == 'Processor':
-            if component_name:
-                component = loaded_components.get(component_name)
-                _apply_vars(el, component)
+            source_component = loaded_components[el.component_ref]
+            _replace_vars(el, source_component)
+            replace_flow_element_vars_recursive(el.elements, loaded_components)
 
 
 def create_canvas_elements_recursive(elements, parent_pg):
@@ -185,104 +215,104 @@ def create_or_update_output_port(element, parent_pg):
     return op
 
 
-def get_connection_info(connection):
-    """
-    :param connection:
-    :return:
-    """
-    ap = apis.connections_api.ConnectionsApi()
-    connection = ap.get_connection(connection.id)
-    return connection
+# def get_connection_info(connection):
+#     """
+#     :param connection:
+#     :return:
+#     """
+#     ap = apis.connections_api.ConnectionsApi()
+#     connection = ap.get_connection(connection.id)
+#     return connection
 
 
-def update_connection(source_pe, downstream_pe, connection, connection_params):
-    """
-    :param connection_params:
-    :param source_pe:
-    :param downstream_pe:
-    :param connection:
-    :return:
-    """
+# def update_connection(source_pe, downstream_pe, connection, connection_params):
+#     """
+#     :param connection_params:
+#     :param source_pe:
+#     :param downstream_pe:
+#     :param connection:
+#     :return:
+#     """
 
-    destination_component = models.connectable_dto.ConnectableDTO(
-        type='PROCESSOR',
-        group_id=downstream_pe.component.parent_group_id,
-        id=downstream_pe.id
-    )
-    source_component = models.connectable_dto.ConnectableDTO(
-        type='PROCESSOR',
-        group_id=source_pe.component.parent_group_id,
-        id=source_pe.id
-    )
-    component_connection = models.connection_dto.ConnectionDTO(
-        **connection_params,
-        id=connection.id,
-        source=source_component,
-        destination=destination_component
-    )
+#     destination_component = models.connectable_dto.ConnectableDTO(
+#         type='PROCESSOR',
+#         group_id=downstream_pe.component.parent_group_id,
+#         id=downstream_pe.id
+#     )
+#     source_component = models.connectable_dto.ConnectableDTO(
+#         type='PROCESSOR',
+#         group_id=source_pe.component.parent_group_id,
+#         id=source_pe.id
+#     )
+#     component_connection = models.connection_dto.ConnectionDTO(
+#         **connection_params,
+#         id=connection.id,
+#         source=source_component,
+#         destination=destination_component
+#     )
 
-    existing_revision = get_connection_info(connection).revision.version
-    logging.info("existing revision is {}".format(existing_revision))
+#     existing_revision = get_connection_info(connection).revision.version
+#     logging.info("existing revision is {}".format(existing_revision))
 
-    revision = models.revision_dto.RevisionDTO(
-        version=existing_revision
-    )
-    connection_body_config = models.connection_entity.ConnectionEntity(
-        id=connection.id,
-        source_type='PROCESSOR',
-        destination_type='PROCESSOR',
-        component=component_connection,
-        revision=revision
-    )
-    ap = apis.connections_api.ConnectionsApi()
-    update = ap.update_connection(connection.id, connection_body_config)
+#     revision = models.revision_dto.RevisionDTO(
+#         version=existing_revision
+#     )
+#     connection_body_config = models.connection_entity.ConnectionEntity(
+#         id=connection.id,
+#         source_type='PROCESSOR',
+#         destination_type='PROCESSOR',
+#         component=component_connection,
+#         revision=revision
+#     )
+#     ap = apis.connections_api.ConnectionsApi()
+#     update = ap.update_connection(connection.id, connection_body_config)
 
-    return update
+#     return update
 
 
-def check_or_create_connection(source_pe, processor):
-    # inefficeint way to check, but this is only known approach now
-    all_connections = canvas.list_all_connections('root', True)
-    logging.info("identified {} existing connections".format(len(all_connections)))
-    logging.info("source processor entity id is {}".format(source_pe.id))
+# def check_or_create_connection(source_pe, processor):
+#     # inefficeint way to check, but this is only known approach now
+#     all_connections = canvas.list_all_connections('root', True)
+#     logging.info("identified {} existing connections".format(len(all_connections)))
+#     logging.info("source processor entity id is {}".format(source_pe.id))
 
-    # start iterating through the proposed new connections
-    for connection in processor['connections']:
-        logging.info("connection is {}".format(connection))
-        downstream_pe = canvas.get_processor(connection['downstream_name'], identifier_type='name')
-        logging.info("downstream processor id is {}".format(downstream_pe.id))
-        logging.info("relationship is {}".format(connection['relationship']))
+#     # start iterating through the proposed new connections
+#     for connection in processor['connections']:
+#         logging.info("connection is {}".format(connection))
+#         downstream_pe = canvas.get_processor(connection['downstream_name'], identifier_type='name')
+#         logging.info("downstream processor id is {}".format(downstream_pe.id))
+#         logging.info("relationship is {}".format(connection['relationship']))
 
-        # if there at least one connection on the canvas, otherwise just create it
-        if all_connections:
+#         # if there at least one connection on the canvas, otherwise just create it
+#         if all_connections:
 
-            # initialize that we are going to look and see if connection exists already
-            found_connection = False
+#             # initialize that we are going to look and see if connection exists already
+#             found_connection = False
 
-            for existing_connection in all_connections:
-                # Check for a match between proposed and existing - idempotency
-                if (source_pe.id == existing_connection.source_id) and (downstream_pe.id == existing_connection.destination_id):
-                    found_connection = True
-                    logging.info("connection between {} and {} already exists. Ignoring".format(source_pe.id, downstream_pe.id))
-                    update = update_connection(source_pe, downstream_pe, existing_connection, connection['config'])
-                    break
+#             for existing_connection in all_connections:
+#                 # Check for a match between proposed and existing - idempotency
+#                 if (source_pe.id == existing_connection.source_id) and (downstream_pe.id == existing_connection.destination_id):
+#                     found_connection = True
+#                     logging.info("connection between {} and {} already exists. Ignoring".format(source_pe.id, downstream_pe.id))
+#                     update = update_connection(source_pe, downstream_pe, existing_connection, connection['config'])
+#                     break
 
-                else:
-                    logging.info("Connection did not exist between {} and {}".format(source_pe.id, downstream_pe.id))
+#                 else:
+#                     logging.info("Connection did not exist between {} and {}".format(source_pe.id, downstream_pe.id))
 
-            # if all existing connections were checked and still did not find a match, then create one
-            if not found_connection:
-                logging.info("creating connection between {} and {}".format(source_pe.id, downstream_pe.id))
-                connection = canvas.create_connection(source_pe, downstream_pe,
-                                                          relationships=connection['relationship'])
+#             # if all existing connections were checked and still did not find a match, then create one
+#             if not found_connection:
+#                 logging.info("creating connection between {} and {}".format(source_pe.id, downstream_pe.id))
+#                 connection = canvas.create_connection(source_pe, downstream_pe,
+#                                                           relationships=connection['relationship'])
 
-        # No connections existed originally, so just start creating them
-        else:
+#         # No connections existed originally, so just start creating them
+#         else:
 
-            new_connection = canvas.create_connection(source_pe, downstream_pe, relationships=connection['relationship'])
-            logging.info("connection {} created".format(new_connection.id))
-            update = update_connection(source_pe, downstream_pe, new_connection, connection['config'])
-    return connection
+#             new_connection = canvas.create_connection(source_pe, downstream_pe, relationships=connection['relationship'])
+#             logging.info("connection {} created".format(new_connection.id))
+#             update = update_connection(source_pe, downstream_pe, new_connection, connection['config'])
+#     return connection
 
 
 # def check_or_create_controllers(parent_pg, controller, name, properties):

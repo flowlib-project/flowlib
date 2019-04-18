@@ -149,8 +149,8 @@ class ProcessGroup(FlowElement):
         # TODO: Check that a component does not reference itself recursively
         raw['source_ref'] = ref
         loaded_component = FlowComponent(**raw)
-        if not loaded_component.source_ref in flow.loaded_components:
-            flow.loaded_components[loaded_component.source_ref] = loaded_component
+        if not self.component_ref in flow.loaded_components:
+            flow.loaded_components[self.component_ref] = loaded_component
 
         # Validate required variables are present
         if loaded_component.required_vars:
