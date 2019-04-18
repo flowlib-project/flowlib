@@ -12,6 +12,8 @@ flow_name: Demo Flow
 
 # TODO: How are required_vars and defaults passed down and merged with child components?
 
+# TODO: Add top-level vars that can be used globally?
+
 controllers:
 - name: 'AWS Credential Controller - EAST'
   package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
@@ -29,6 +31,7 @@ canvas:
   vars:
     s3_bucket: stackspace-us-east-1
     s3_region: us-east-1
+    s3_prefix: /abc/def
   downstream:
   - name: debug
     relationships: ['success']

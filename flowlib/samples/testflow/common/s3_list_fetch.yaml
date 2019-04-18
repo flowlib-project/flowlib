@@ -2,9 +2,9 @@ component_name: S3 List Fetch
 
 defaults:
   s3_min_object_age: 5m
-  s3_key: "/"
+  s3_prefix: /
 
-required_vars: # list(str)
+required_vars:
 - s3_bucket
 - s3_region
 
@@ -20,8 +20,8 @@ process_group:
     # aws_credentials_provider_service:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
-      Minimum Object Age: $(s3_min_object_age)
-      Prefix: $(s3_key)
+      prefix: $(s3_prefix)
+      min-age: $(s3_min_object_age)
   downstream:
   - name: debug
     relationships: ['success']
