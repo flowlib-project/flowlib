@@ -90,12 +90,34 @@ class FlowElement:
     Do not call __init__ directly, use FlowElement.load()
     """
     def __init__(self, name, parent_path, element_type):
+        self._id = None
+        self._parent_id = None
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        if self._id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._id = _id
+
+    @property
+    def parent_id(self):
+        return self._parent_id
+
+    @parent_id.setter
+    def parent_id(self, _id):
+        if self._parent_id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._parent_id = _id
 
     @staticmethod
     def load(elem_dict, flow):
@@ -127,6 +149,8 @@ class ProcessGroup(FlowElement):
           Initialized by calling FlowElement.load()
         :type elements: dict(str:FlowElement)
         """
+        self._id = None
+        self._parent_id = None
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
@@ -172,6 +196,8 @@ class ProcessGroup(FlowElement):
 
 class Processor(FlowElement):
     def __init__(self, name, parent_path, element_type, config, downstream=None):
+        self._id = None
+        self._parent_id = None
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
@@ -190,6 +216,8 @@ class ProcessorConfig(ProcessorConfigDTO):
 
 class InputPort(FlowElement):
     def __init__(self, name, parent_path, element_type, downstream=None):
+        self._id = None
+        self._parent_id = None
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type

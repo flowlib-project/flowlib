@@ -4,7 +4,6 @@ import re
 import sys
 import yaml
 
-
 import nipyapi
 from nipyapi import canvas
 from nipyapi.nifi import models
@@ -16,12 +15,12 @@ from model import Flow, FlowLibException
 TOP_LEVEL_PG_LOCATION = (300, 100)
 VAR_WRAPPER = "$({})"
 
-def validate_flow_yaml(config):
+
+def validate_flow(config):
     try:
         flow = Flow.load_from_file(config.flow_yaml).init()
         replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
-        # TODO: Validate downstream connections
-        # validate_flow_connections(flow)
+        # validate_connections_recursive(flow.elements, flow.loaded_components)
     except FlowLibException as e:
         logging.error(e)
         sys.exit(1)
@@ -40,7 +39,7 @@ def deploy_flow_yaml(config):
     root_id = nipyapi.canvas.get_root_pg_id()
 
     try:
-        flow = Flow.load_from_file(config.flow_yaml).init()
+        flow = validate_flow(config)
         logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.flow_name, root_id))
 
         # TODO: Check deployed flow to see if a flow already exists or require --force, if not
@@ -59,16 +58,18 @@ def deploy_flow_yaml(config):
         # Set root pg name
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
-        # TODO: create_or_update_controllers(flow)
+        # TODO: create_controllers(flow)
         replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
         create_canvas_elements_recursive(flow.elements, root)
-        # TODO: create_or_update_connections(flow)
+        create_connections_recursive(flow.elements, root)
+
     except FlowLibException as e:
         logging.error(e)
 
 
 def _replace_vars(process_group, source_component):
     """
+    Replace vars for all Processor elements inside a given ProcessGroup
     :param process_group: The processorGroup processors that need vars evaluated
     :type process_group: model.ProcessGroup
     :param component: The source component that the processGroup was created from
@@ -83,8 +84,7 @@ def _replace_vars(process_group, source_component):
         for key,val in process_group.vars.items():
             replacements[key] = val
 
-
-    # format each var name with the expected VAR_WRAPPER
+    # Format each var name with the expected VAR_WRAPPER
     # so that we can do a lookup when we find a pattern match
     wrapped_vars = dict()
     for k,v in replacements.items():
@@ -93,7 +93,7 @@ def _replace_vars(process_group, source_component):
     esc_keys = [re.escape(key) for key in wrapped_vars.keys()]
     pattern = re.compile(r'(' + '|'.join(esc_keys) + r')')
 
-    # apply var replacements for each value of processor.config.properties
+    # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
         if el.element_type == 'Processor':
             for k,v in el.config.properties.items():
@@ -102,7 +102,7 @@ def _replace_vars(process_group, source_component):
 
 def replace_flow_element_vars_recursive(elements, loaded_components):
     """
-    Recusively apply the variable templating to each element in the flow
+    Recusively apply the variable evaluation to each element in the flow
     :param elements: The elements to deploy
     :type elements: list(model.FlowElement)
     :param loaded_components: The components that were imported during flow.init()
@@ -117,7 +117,7 @@ def replace_flow_element_vars_recursive(elements, loaded_components):
 
 def create_canvas_elements_recursive(elements, parent_pg):
     """
-    Recursively creates the actual NiFi elements (groups, processors, inputs, outputs) on the canvas
+    Recursively creates the actual NiFi elements (process_groups, processors, inputs, outputs) on the canvas
     :param elements: The elements to deploy
     :type elements: list(model.FlowElement)
     :param parent_pg: The process group in which to create the processors
@@ -125,21 +125,37 @@ def create_canvas_elements_recursive(elements, parent_pg):
     """
     for el in elements.values():
         if el.element_type == 'ProcessGroup':
-            pg = create_or_update_process_group(el, parent_pg)
+            pg = create_process_group(el, parent_pg)
             create_canvas_elements_recursive(el.elements, pg)
         elif el.element_type == 'Processor':
-            create_or_update_processor(el, parent_pg)
+            create_processor(el, parent_pg)
         elif el.element_type == 'InputPort':
-            create_or_update_input_port(el, parent_pg)
+            create_input_port(el, parent_pg)
         elif el.element_type == 'OutputPort':
-            create_or_update_output_port(el, parent_pg)
+            create_output_port(el, parent_pg)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
 
 
-def create_or_update_process_group(element, parent_pg):
+def create_connections_recursive(elements, loaded_components, parent_element=None):
     """
-    :param element: The process group to deploy
+    """
+    for el in elements.values():
+        if el.element_type == 'ProcessGroup':
+            create_connections_recursive(el.elements, loaded_components, parent_element=el)
+        elif el.element_type in ['Processor', 'InputPort']:
+            source_component = loaded_components[el.component_ref]
+            create_downstream_connections(el, source_component)
+        elif el.element_type = 'OutputPort':
+            create_downstream_connections(el, source_component, parent_element)
+        else:
+            raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
+
+
+def create_process_group(element, parent_pg):
+    """
+    Create a Process Group on the NiFi canvas
+    :param element: The Process Group to deploy
     :type element: model.ProcessGroup
     :param parent_pg: The process group in which to create the new process group
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
@@ -156,12 +172,15 @@ def create_or_update_process_group(element, parent_pg):
         logging.debug("Creating ProcessGroup: {} with parent: {}".format(name, element.parent_path))
         pg = nipyapi.canvas.create_process_group(parent_pg, name, TOP_LEVEL_PG_LOCATION)
 
+    element.id = pg.id
+    element.parent_id = parent_pg.id
     return pg
 
 
-def create_or_update_processor(element, parent_pg):
+def create_processor(element, parent_pg):
     """
-    :param element: The processor to deploy
+    Create a Processor on the NiFi canvas
+    :param element: The Processor to deploy
     :type element: model.Processor
     :param parent_pg: The process group in which to create the new processor
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
@@ -173,15 +192,23 @@ def create_or_update_processor(element, parent_pg):
         logging.error("Found existing Processor: {}".format(name))
         raise FlowLibException("Re-deploying a flow is not yet supported")
     else:
-
         logging.debug("Creating Processor: {} with parent: {}".format(name, element.parent_path))
         tpe = models.DocumentedTypeDTO(type=element.config.package_id)
         p = canvas.create_processor(parent_pg, tpe, TOP_LEVEL_PG_LOCATION, name, element.config)
 
+    element.id = p.id
+    element.parent_id = parent_pg.id
     return p
 
 
-def create_or_update_input_port(element, parent_pg):
+def create_input_port(element, parent_pg):
+    """
+    Create an Input Port on the NiFi canvas
+    :param element: The InputPort to deploy
+    :type element: model.InputPort
+    :param parent_pg: The process group in which to create the new processor
+    :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    """
     name = "{}/{}".format(element.name, parent_pg.id)
     logging.info("Create or update InputPort: {}".format(name))
     filtered_ips = [ip for ip in nipyapi.canvas.list_all_input_ports() if name in ip.component.name]
@@ -195,10 +222,19 @@ def create_or_update_input_port(element, parent_pg):
         logging.debug("Creating InputPort: {} with parent: {}".format(name, element.parent_path))
         ip = canvas.create_port(parent_pg.id, 'INPUT_PORT', name, 'STOPPED')
 
+    element.id = ip.id
+    element.parent_id = parent_pg.id
     return ip
 
 
-def create_or_update_output_port(element, parent_pg):
+def create_output_port(element, parent_pg):
+    """
+    Create an Output Port on the NiFi canvas
+    :param element: The Output Port to deploy
+    :type element: model.OutputPort
+    :param parent_pg: The process group in which to create the new processor
+    :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    """
     name = "{}/{}".format(element.name, parent_pg.id)
     logging.info("Create or update OutputPort: {}".format(name))
     filtered_ops = [op for op in nipyapi.canvas.list_all_output_ports() if name in op.component.name]
@@ -212,7 +248,15 @@ def create_or_update_output_port(element, parent_pg):
         logging.debug("Creating OutputPort: {} with parent: {}".format(name, element.parent_path))
         op = canvas.create_port(parent_pg.id, 'OUTPUT_PORT', name, 'STOPPED')
 
+    element.id = op.id
+    element.parent_id = parent_pg.id
     return op
+
+
+def create_downstream_connections(element, source_component, parent=None):
+    if element.element_type == 'OutputPort' and not parent:
+        raise FlowLibException("The parent element is required in order to create an OutputPort")
+    return
 
 
 # def get_connection_info(connection):

@@ -1,6 +1,6 @@
 flow_name: Demo Flow
 
-# TODO: Allow Common Defaults for processors?
+# TODO: Allow Common Default properties for processors?
 #   How would these be passed down and merged with child components?
 # processor_defaults:
 #   **nipyapi.nifi.models.processor_config_dto.ProcessorConfigDTO
@@ -10,9 +10,10 @@ flow_name: Demo Flow
 # connection_defaults:
 #   **nipyapi.nifi.models.connection_dto.ConnectionDTO
 
-# TODO: How are required_vars and defaults passed down and merged with child components?
-
 # TODO: Add top-level vars that can be used globally?
+
+# TODO: Should controllers be global or at the component level?
+# similar to required_vars, we could have required_controllers
 
 controllers:
 - name: 'AWS Credential Controller - EAST'
@@ -31,7 +32,7 @@ canvas:
   vars:
     s3_bucket: stackspace-us-east-1
     s3_region: us-east-1
-    s3_prefix: /abc/def
+    s3_prefix: /abc/def/
   downstream:
   - name: debug
     relationships: ['success']
