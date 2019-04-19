@@ -67,14 +67,27 @@ class Flow:
 
         return self
 
+    def get_parent_element(self, element):
+        """
+        A helper method for looking up parent elements from a breadcrumb path
+        :param element: The element to retrieve the parent of
+        :type element: FlowElement
+        """
+        target = self
+        names = element.parent_path.split(Flow.PG_DELIMETER)
+        for n in names[1:]:
+            elements = target.elements
+            target = elements.get(n)
+        return target
+
 
 class FlowComponent:
-    def __init__(self, component_name, source_ref, accepts_inputs=True, accepts_outputs=True, defaults=None, required_vars=None):
+    def __init__(self, component_name, source_file, accepts_inputs=True, accepts_outputs=True, defaults=None, required_vars=None):
         """
         A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
         """
         self.component_name = component_name
-        self.source_ref = source_ref
+        self.source_file = source_file
         self.accepts_inputs = accepts_inputs
         self.accepts_outputs = accepts_outputs
         self.defaults = defaults
@@ -89,12 +102,13 @@ class FlowElement:
     This is either a ProcessGroup, Processor, InputPort, or OutputPort
     Do not call __init__ directly, use FlowElement.load()
     """
-    def __init__(self, name, parent_path, element_type):
+    def __init__(self, name, parent_path, element_type, downstream):
         self._id = None
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
         self.element_type = element_type
+        self.downstream
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
@@ -161,17 +175,17 @@ class ProcessGroup(FlowElement):
 
     def load(self, flow):
         logging.info("Loading ProcessGroup: {}".format(self.name))
-        ref = os.path.join(flow.flow_root_dir, self.component_ref)
-        with open(ref) as f:
+        file_ref = os.path.join(flow.flow_root_dir, self.component_ref)
+        with open(file_ref) as f:
             raw = yaml.safe_load(f)
 
         try:
             process_group = raw.pop('process_group')
         except KeyError as e:
-            raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_ref))
+            raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_file))
 
         # TODO: Check that a component does not reference itself recursively
-        raw['source_ref'] = ref
+        raw['source_file'] = file_ref
         loaded_component = FlowComponent(**raw)
         if not self.component_ref in flow.loaded_components:
             flow.loaded_components[self.component_ref] = loaded_component
@@ -180,16 +194,42 @@ class ProcessGroup(FlowElement):
         if loaded_component.required_vars:
             for v in loaded_component.required_vars:
                 if not v in self.vars:
-                    raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, loaded_component.source_ref))
+                    raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, loaded_component.file_ref))
 
+        found_input = False
+        found_output = False
+        # Call FlowElement.load() on each element in the process_group
         for elem_dict in process_group:
             elem_dict['parent_path'] = "{}/{}".format(self.parent_path, self.name)
             el = FlowElement.load(elem_dict, flow)
+
+            # Validate that only 1 input/output port is contained in a PG
+            # TODO: Would there ever be a scenario where we wanted multiple inputs or outputs?
+            if isinstance(el, InputPort):
+                if found_input == True:
+                    raise FlowLibException("Only a single input port is allowed per ProcessGroup, found multiple in {}".format(loaded_component.file_ref))
+                found_input = True
+            elif isinstance(el, OutputPort):
+                if found_output == True:
+                    raise FlowLibException("Only a single output port is allowed per ProcessGroup, found multiple in {}".format(loaded_component.file_ref))
+                found_output = True
 
             if self.elements.get(el.name):
                 raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, ref))
             else:
                 self.elements[el.name] = el
+
+        # Validate that the component accepts an input/output if one was found
+        if found_input and not loaded_component.accepts_inputs:
+            raise FlowLibException("{} does not accept an input port".format(loaded_component.file_ref))
+        elif found_output and not loaded_component.accepts_outputs:
+            raise FlowLibException("{} does not accept an output port".format(loaded_component.file_ref))
+
+        # Validate that the component specifies an input/output if it accepts them
+        if not found_input and loaded_component.accepts_inputs:
+            raise FlowLibException("{} accepts an input but there are no InputPorts defined".format(loaded_component.file_ref))
+        elif not found_output and loaded_component.accepts_outputs:
+            raise FlowLibException("{} accepts an output but there are no OutputPorts defined".format(loaded_component.file_ref))
 
         return self
 
@@ -225,7 +265,13 @@ class InputPort(FlowElement):
 
 
 class OutputPort(FlowElement):
-    pass
+    def __init__(self, name, parent_path, element_type, downstream=None):
+        self._id = None
+        self._parent_id = None
+        self.name = name
+        self.parent_path = parent_path
+        self.element_type = element_type
+        self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
 
 
 class DownstreamConnection:

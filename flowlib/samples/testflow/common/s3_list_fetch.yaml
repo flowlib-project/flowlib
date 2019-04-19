@@ -24,19 +24,20 @@ process_group:
       min-age: $(s3_min_object_age)
   downstream:
   - name: debug
-    relationships: ['success']
+    relationships: []
 
 - name: debug
   element_type: ProcessGroup
   component_ref: common/debug.yaml
   downstream:
   - name: fetch-s3
-    relationships: ['success']
+    relationships: []
 
 - name: fetch-s3
   element_type: Processor
   config:
     package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
+    auto_terminated_relationships: ['failure']
     properties:
     # aws_credentials_provider_service:
       Bucket: $(s3_bucket)

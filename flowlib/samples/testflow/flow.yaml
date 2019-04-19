@@ -15,6 +15,8 @@ flow_name: Demo Flow
 # TODO: Should controllers be global or at the component level?
 # similar to required_vars, we could have required_controllers
 
+# TODO: Remove relationships attr from ProcessGroup model
+
 controllers:
 - name: 'AWS Credential Controller - EAST'
   package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
@@ -35,7 +37,7 @@ canvas:
     s3_prefix: /abc/def/
   downstream:
   - name: debug
-    relationships: ['success']
+    relationships: [] # Downstream connections TO ProcessGroups do not require relationships
 
 - name: listfetch-west
   element_type: ProcessGroup
@@ -47,19 +49,20 @@ canvas:
     s3_region: us-west-1
   downstream:
   - name: debug
-    relationships: ['success']
+    relationships: []
 
 - name: debug
   element_type: ProcessGroup
   component_ref: common/debug.yaml
   downstream:
   - name: log-attribute
-    relationships: ['success']
+    relationships: [] # Downstream connections FROM ProcessGroups do not require relationships
 
 - name: log-attribute
   element_type: Processor
   config:
     package_id: org.apache.nifi.processors.standard.LogAttribute
+    auto_terminated_relationships: ['success', 'failure']
     properties:
       Log Level: info
       Log Payload: False

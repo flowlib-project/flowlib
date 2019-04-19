@@ -9,12 +9,15 @@ from nipyapi import canvas
 from nipyapi.nifi import models
 from nipyapi.nifi import apis
 
-from model import Flow, FlowLibException
+from model import (FlowLibException, Flow, FlowComponent, FlowElement,
+    ProcessGroup, Processor, InputPort, OutputPort)
 
 # Some constants for canvas dimensions
 TOP_LEVEL_PG_LOCATION = (300, 100)
 VAR_WRAPPER = "$({})"
 
+# TODO: Add a --dry-run command flag so that we can validate flows completely before
+#   attempting to deploy to a running NiFi instance
 
 def validate_flow(config):
     try:
@@ -39,7 +42,7 @@ def deploy_flow_yaml(config):
     root_id = nipyapi.canvas.get_root_pg_id()
 
     try:
-        flow = validate_flow(config)
+        flow = Flow.load_from_file(config.flow_yaml).init()
         logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.flow_name, root_id))
 
         # TODO: Check deployed flow to see if a flow already exists or require --force, if not
@@ -58,26 +61,28 @@ def deploy_flow_yaml(config):
         # Set root pg name
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
-        # TODO: create_controllers(flow)
+        # create_controllers(flow)
         replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
         create_canvas_elements_recursive(flow.elements, root)
-        create_connections_recursive(flow.elements, root)
+        create_connections_recursive(flow, flow.elements, flow.loaded_components)
 
     except FlowLibException as e:
         logging.error(e)
+        sys.exit(1)
 
 
 def _replace_vars(process_group, source_component):
     """
     Replace vars for all Processor elements inside a given ProcessGroup
+
+    Note: We already valdated that required vars were present during flow.init()
+      so don't worry about it here
+
     :param process_group: The processorGroup processors that need vars evaluated
     :type process_group: model.ProcessGroup
     :param component: The source component that the processGroup was created from
     :type component: model.FlowComponent
     """
-    # We already valdated that required vars were present during flow.init()
-    # so don't worry about it here
-
     # Create a dict of vars to replace
     replacements = copy.deepcopy(source_component.defaults) or dict()
     if process_group.vars:
@@ -95,7 +100,7 @@ def _replace_vars(process_group, source_component):
 
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
-        if el.element_type == 'Processor':
+        if isinstance(el, Processor):
             for k,v in el.config.properties.items():
                 el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
 
@@ -109,7 +114,7 @@ def replace_flow_element_vars_recursive(elements, loaded_components):
     :type loaded_components: map(str:model.FlowComponent)
     """
     for el in elements.values():
-        if el.element_type == 'ProcessGroup':
+        if isinstance(el, ProcessGroup):
             source_component = loaded_components[el.component_ref]
             _replace_vars(el, source_component)
             replace_flow_element_vars_recursive(el.elements, loaded_components)
@@ -124,30 +129,35 @@ def create_canvas_elements_recursive(elements, parent_pg):
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
     for el in elements.values():
-        if el.element_type == 'ProcessGroup':
+        if isinstance(el, ProcessGroup):
             pg = create_process_group(el, parent_pg)
             create_canvas_elements_recursive(el.elements, pg)
-        elif el.element_type == 'Processor':
+        elif isinstance(el, Processor):
             create_processor(el, parent_pg)
-        elif el.element_type == 'InputPort':
+        elif isinstance(el, InputPort):
             create_input_port(el, parent_pg)
-        elif el.element_type == 'OutputPort':
+        elif isinstance(el, OutputPort):
             create_output_port(el, parent_pg)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
 
 
-def create_connections_recursive(elements, loaded_components, parent_element=None):
+def create_connections_recursive(flow, elements, loaded_components, source_component=None, parent_element=None):
     """
+    Recursively creates the connections between elements defined in the Flow
+    :param elements: a list of FlowElements to connect together
+    :type elements: list(FlowElement)
+    :param loaded_components: The components that were imported during flow.init()
+    :type loaded_components: map(str:model.FlowComponent)
+    :param parent_element: The parent elements of the current ProcessGroup or None if this is the root flow
+    :type parent_element: model.ProcessGroup or None
     """
     for el in elements.values():
-        if el.element_type == 'ProcessGroup':
-            create_connections_recursive(el.elements, loaded_components, parent_element=el)
-        elif el.element_type in ['Processor', 'InputPort']:
+        if isinstance(el, ProcessGroup):
             source_component = loaded_components[el.component_ref]
-            create_downstream_connections(el, source_component)
-        elif el.element_type = 'OutputPort':
-            create_downstream_connections(el, source_component, parent_element)
+            create_connections_recursive(flow, el.elements, loaded_components, source_component, el)
+        elif el.element_type in ['Processor', 'InputPort', 'OutputPort']:
+            create_downstream_connections(flow, el, elements, source_component, parent_element)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
 
@@ -253,110 +263,84 @@ def create_output_port(element, parent_pg):
     return op
 
 
-def create_downstream_connections(element, source_component, parent=None):
-    if element.element_type == 'OutputPort' and not parent:
+def create_downstream_connections(flow, element, all_elements, source_component, parent=None):
+    """
+    Create the downstream connections for the element on the NiFi canvas
+    :param element: The source FlowElement to connect to its downstreams
+    :type element: FlowElement
+    :param source_component: The source component of the current element
+    :type source_component: FlowComponent
+    :param parent: The parent element if it exists
+    :type parent: FlowElement
+    """
+    logging.info('Creating downstream connections for element: {}/{}'.format(element.parent_path, element.name))
+    # Validate no inputs or outputs on the root canvas
+    if not source_component and (isinstance(element, InputPort) or isinstance(element, OutputPort)):
+        raise FlowLibException("Input and Output ports may only be contained inside a component (ProcessGroup)")
+    # Validate that a parent element was provided if connecting an outputPort to a downstream InputPort of another PG
+    if isinstance(element, OutputPort) and not parent:
         raise FlowLibException("The parent element is required in order to create an OutputPort")
-    return
+
+    # Get the source element NiFi entity by id
+    #   - For ProcessGroups, we need to get the id of the OutputPort element id for the source ProcessGroup.
+    #   - For OutputPorts, the downstream relationships are defined in the parent ProcessGroup and
+    #     all_elements is the dict of elements contained in the parent
+    downstream = element.downstream
+    if isinstance(element, ProcessGroup):
+        # we already validated output ports during init, so just grab the first one
+        source_op = [e for e in element.elements.values() if isinstance(e, OutputPort)][0]
+        source = get_nifi_entity_by_id('output_port', source_op.id)
+    elif isinstance(element, InputPort):
+        source = get_nifi_entity_by_id('input_port', element.id)
+    elif isinstance(element, Processor):
+        source = get_nifi_entity_by_id('processor', element.id)
+    elif isinstance(element, OutputPort):
+        downstream = parent.downstream
+        pg_parent = flow.get_parent_element(parent) # we need to go one more level up in depth on the canvas to get the target elements
+        all_elements = pg_parent.elements
+        source = get_nifi_entity_by_id('output_port', element.id)
+
+    if downstream:
+        for d in downstream:
+            dest_element = all_elements.get(d.name)
+            if not dest_element:
+                raise FlowLibException("The downstream connection element for {} is not defined in {}".format(element.name, source_component.source_file))
+
+            # Get the destincation element NiFi entity by id
+            # for ProcessGroups, we need to get the id of the InputPort element id for the
+            # destincation ProcessGroup
+            if isinstance(dest_element, ProcessGroup):
+                # we already validated input ports during init, so just grab the first one
+                dest_element = [e for e in dest_element.elements.values() if isinstance(e, InputPort)][0]
+                dest = get_nifi_entity_by_id('input_port', dest_element.id)
+            elif isinstance(dest_element, OutputPort):
+                dest = get_nifi_entity_by_id('output_port', dest_element.id)
+            elif isinstance(dest_element, Processor):
+                dest = get_nifi_entity_by_id('processor', dest_element.id)
+            elif isinstance(dest_element, InputPort):
+                raise FlowLibException("The downstream connection element for {} cannot be an InputPort: {}".format(element.name, source_component.source_file))
+
+            logging.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, d.relationships))
+            canvas.create_connection(source, dest, d.relationships)
 
 
-# def get_connection_info(connection):
-#     """
-#     :param connection:
-#     :return:
-#     """
-#     ap = apis.connections_api.ConnectionsApi()
-#     connection = ap.get_connection(connection.id)
-#     return connection
-
-
-# def update_connection(source_pe, downstream_pe, connection, connection_params):
-#     """
-#     :param connection_params:
-#     :param source_pe:
-#     :param downstream_pe:
-#     :param connection:
-#     :return:
-#     """
-
-#     destination_component = models.connectable_dto.ConnectableDTO(
-#         type='PROCESSOR',
-#         group_id=downstream_pe.component.parent_group_id,
-#         id=downstream_pe.id
-#     )
-#     source_component = models.connectable_dto.ConnectableDTO(
-#         type='PROCESSOR',
-#         group_id=source_pe.component.parent_group_id,
-#         id=source_pe.id
-#     )
-#     component_connection = models.connection_dto.ConnectionDTO(
-#         **connection_params,
-#         id=connection.id,
-#         source=source_component,
-#         destination=destination_component
-#     )
-
-#     existing_revision = get_connection_info(connection).revision.version
-#     logging.info("existing revision is {}".format(existing_revision))
-
-#     revision = models.revision_dto.RevisionDTO(
-#         version=existing_revision
-#     )
-#     connection_body_config = models.connection_entity.ConnectionEntity(
-#         id=connection.id,
-#         source_type='PROCESSOR',
-#         destination_type='PROCESSOR',
-#         component=component_connection,
-#         revision=revision
-#     )
-#     ap = apis.connections_api.ConnectionsApi()
-#     update = ap.update_connection(connection.id, connection_body_config)
-
-#     return update
-
-
-# def check_or_create_connection(source_pe, processor):
-#     # inefficeint way to check, but this is only known approach now
-#     all_connections = canvas.list_all_connections('root', True)
-#     logging.info("identified {} existing connections".format(len(all_connections)))
-#     logging.info("source processor entity id is {}".format(source_pe.id))
-
-#     # start iterating through the proposed new connections
-#     for connection in processor['connections']:
-#         logging.info("connection is {}".format(connection))
-#         downstream_pe = canvas.get_processor(connection['downstream_name'], identifier_type='name')
-#         logging.info("downstream processor id is {}".format(downstream_pe.id))
-#         logging.info("relationship is {}".format(connection['relationship']))
-
-#         # if there at least one connection on the canvas, otherwise just create it
-#         if all_connections:
-
-#             # initialize that we are going to look and see if connection exists already
-#             found_connection = False
-
-#             for existing_connection in all_connections:
-#                 # Check for a match between proposed and existing - idempotency
-#                 if (source_pe.id == existing_connection.source_id) and (downstream_pe.id == existing_connection.destination_id):
-#                     found_connection = True
-#                     logging.info("connection between {} and {} already exists. Ignoring".format(source_pe.id, downstream_pe.id))
-#                     update = update_connection(source_pe, downstream_pe, existing_connection, connection['config'])
-#                     break
-
-#                 else:
-#                     logging.info("Connection did not exist between {} and {}".format(source_pe.id, downstream_pe.id))
-
-#             # if all existing connections were checked and still did not find a match, then create one
-#             if not found_connection:
-#                 logging.info("creating connection between {} and {}".format(source_pe.id, downstream_pe.id))
-#                 connection = canvas.create_connection(source_pe, downstream_pe,
-#                                                           relationships=connection['relationship'])
-
-#         # No connections existed originally, so just start creating them
-#         else:
-
-#             new_connection = canvas.create_connection(source_pe, downstream_pe, relationships=connection['relationship'])
-#             logging.info("connection {} created".format(new_connection.id))
-#             update = update_connection(source_pe, downstream_pe, new_connection, connection['config'])
-#     return connection
+def get_nifi_entity_by_id(kind, identifier):
+    """
+    :param kind: One of input_port, output_port, processor, process_group
+    :param identifier: The NiFi API identifier uuid of the entity
+    """
+    logging.debug('Getting Nifi {} Entity with id: {}'.format(kind, identifier))
+    if kind == 'input_port':
+        e = nipyapi.nifi.InputPortsApi().get_input_port(identifier)
+    elif kind == 'output_port':
+        e = nipyapi.nifi.OutputPortsApi().get_output_port(identifier)
+    elif kind == 'processor':
+        e = nipyapi.nifi.ProcessorsApi().get_processor(identifier)
+    elif kind == 'process_group':
+        e = nipyapi.nifi.ProcessGroupsApi().get_process_group(identifier)
+    else:
+        raise FlowLibException("{} is not a valid NiFi api type")
+    return e
 
 
 # def check_or_create_controllers(parent_pg, controller, name, properties):

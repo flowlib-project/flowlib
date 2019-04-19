@@ -8,12 +8,13 @@ process_group:
   element_type: InputPort
   downstream:
   - name: debug
-    relationships: ['success']
+    relationships: []
 
 - name: debug
   element_type: Processor
   config:
     package_id: org.apache.nifi.processors.standard.DebugFlow
+    auto_terminated_relationships: ['failure']
     properties: {}
   downstream:
   - name: output
