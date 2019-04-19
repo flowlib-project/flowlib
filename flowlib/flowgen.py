@@ -287,7 +287,7 @@ def create_downstream_connections(flow, element, all_elements, source_component,
     #     all_elements is the dict of elements contained in the parent
     downstream = element.downstream
     if isinstance(element, ProcessGroup):
-        # we already validated output ports during init, so just grab the first one
+        # We already validated output ports during init, so just grab the first one
         source_op = [e for e in element.elements.values() if isinstance(e, OutputPort)][0]
         source = get_nifi_entity_by_id('output_port', source_op.id)
     elif isinstance(element, InputPort):
@@ -296,8 +296,8 @@ def create_downstream_connections(flow, element, all_elements, source_component,
         source = get_nifi_entity_by_id('processor', element.id)
     elif isinstance(element, OutputPort):
         downstream = parent.downstream
-        pg_parent = flow.get_parent_element(parent) # we need to go one more level up in depth on the canvas to get the target elements
-        all_elements = pg_parent.elements
+        # We need to go one more level up in depth on the canvas to get the target elements
+        all_elements = flow.get_parent_element(parent).elements
         source = get_nifi_entity_by_id('output_port', element.id)
 
     if downstream:
@@ -310,7 +310,7 @@ def create_downstream_connections(flow, element, all_elements, source_component,
             # for ProcessGroups, we need to get the id of the InputPort element id for the
             # destincation ProcessGroup
             if isinstance(dest_element, ProcessGroup):
-                # we already validated input ports during init, so just grab the first one
+                # We already validated input ports during init, so just grab the first one
                 dest_element = [e for e in dest_element.elements.values() if isinstance(e, InputPort)][0]
                 dest = get_nifi_entity_by_id('input_port', dest_element.id)
             elif isinstance(dest_element, OutputPort):
