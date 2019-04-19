@@ -1,18 +1,9 @@
-# nifi yaml #
+# B23 FlowLib #
 
-### Local ###
+### Resources ###
 
-First, run `./data/local-setup.sh`, then `kubectl apply -k ./k8s/local`
+[flowlib/](./flowlib/README.md) - A python module and cli tool for deploying NiFi flows from YAML
 
-Nifi UI should be available at: `http://localhost:8080/nifi/`
+[lib/](./lib/README.md) - A library of commonly used FlowLib components
 
-### Cloud ###
-
-Run either `kubectl apply -k ./k8s/cloud/aws` or `kubectl apply -k ./k8s/cloud/gcp`
-
-
-## Todo ##
-
-- Fix cloud storage classes
-- [Fix cloud node affinity patching](https://github.com/kubernetes-sigs/kustomize/issues/937)
-- Fix liveness/readiness probes
+[k8s/](./k8s/README.md) - kustomize resource definitions for creating NiFi deployments in different environments

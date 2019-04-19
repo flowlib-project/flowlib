@@ -1,6 +1,6 @@
 # FlowLib #
 
-A python module and cli tool for deploying NiFi flows from a yaml definition
+A python module and cli tool for deploying NiFi flows from YAML
 
 
 #### Concepts ####
