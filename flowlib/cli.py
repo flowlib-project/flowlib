@@ -15,6 +15,7 @@ class FlowLibCLI:
     def __init__(self):
         self.parser = argparse.ArgumentParser(description="Deploy a NiFi flow from YAML")
         # TODO: Add --validate arg to check that the given flow can be loaded successfully
+        # TODO: Add --version arg
         self.parser.add_argument('--flow-yaml',
             nargs='?',
             type=argparse.FileType('r'),

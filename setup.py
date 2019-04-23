@@ -19,5 +19,10 @@ setup(
     url="https://b23.io",
     project_urls={
         "Source Code": "https://github.com/B23admin/b23-flowlib"
+    },
+    entry_points={
+        'console_scripts': [
+            'flowlib=flowlib.main:main',
+        ],
     }
 )

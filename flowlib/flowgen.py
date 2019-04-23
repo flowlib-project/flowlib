@@ -10,9 +10,11 @@ from nipyapi import canvas
 from nipyapi.nifi import models
 from nipyapi.nifi import apis
 
-import version
-from model import (FlowLibException, Flow, FlowComponent, FlowElement,
+import flowlib
+from flowlib.model import (FlowLibException, Flow, FlowComponent, FlowElement,
     ProcessGroup, Processor, InputPort, OutputPort)
+
+# TODO: Rename this module to something else ??
 
 # Some constants for canvas dimensions
 TOP_LEVEL_PG_LOCATION = (300, 100)
@@ -62,7 +64,7 @@ def deploy_flow_yaml(config):
 
         # Update root process group metadata with new flow version info
         root.component.name = flow.name
-        root.component.comments = DEPLOYMENT_VERSION_INFO.format(version.version, version.git_revision,  flow.version)
+        root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_revision__,  flow.version)
 
         # TODO: Stop all source processors and wait for queues to drain completely.
         # Then stop all remaining processors and remove all connections ?

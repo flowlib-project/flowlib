@@ -8,6 +8,23 @@ source env/bin/activate
 pip install -e ./
 ```
 
+```bash
+$ flowlib --help
+usage: flowlib [-h] [--flow-yaml [FLOW_YAML]] [--nifi-address NIFI_ADDRESS]
+               [--nifi-port NIFI_PORT]
+
+Deploy a NiFi flow from YAML
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --flow-yaml [FLOW_YAML]
+                        YAML file defining a NiFi flow
+  --nifi-address NIFI_ADDRESS
+                        Address of the NiFi API
+  --nifi-port NIFI_PORT
+                        HTTP port for the NiFi API
+```
+
 ### Resources ###
 
 [flowlib/](./flowlib/README.md) - A python module and cli tool for deploying NiFi flows from YAML
