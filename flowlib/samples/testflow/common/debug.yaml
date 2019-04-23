@@ -1,24 +1,19 @@
 component_name: Debug
 
-accepts_inputs: True
-accepts_outputs: True
-
 process_group:
 - name: input
-  element_type: InputPort
-  downstream:
+  type: input_port
+  connections:
   - name: debug
-    relationships: []
 
 - name: debug
-  element_type: Processor
+  type: processor
   config:
     package_id: org.apache.nifi.processors.standard.DebugFlow
-    auto_terminated_relationships: ['failure']
     properties: {}
-  downstream:
+  connections:
   - name: output
-    relationships: ['success']
+    relationships: ['success', 'failure']
 
 - name: output
-  element_type: OutputPort
+  type: output_port

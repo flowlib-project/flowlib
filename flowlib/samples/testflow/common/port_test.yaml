@@ -1,0 +1,29 @@
+component_name: Port Tester
+
+process_group:
+- name: success-input
+  type: input_port
+  connections:
+  - name: debug
+
+- name: failure-input
+  type: input_port
+  connections:
+  - name: debug
+
+- name: debug
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.DebugFlow
+    properties: {}
+  connections:
+  - name: success-output
+    relationships: ['success']
+  - name: failure-output
+    relationships: ['failure']
+
+- name: success-output
+  type: output_port
+
+- name: failure-output
+  type: output_port

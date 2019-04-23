@@ -1,4 +1,4 @@
-component_name: S3 List Fetch
+component_name: S3 List Fetch With Retry
 
 defaults:
   s3_min_object_age: 5m
@@ -8,43 +8,32 @@ required_vars:
 - s3_bucket
 - s3_region
 
-accepts_inputs: False
-accepts_outputs: True
-
 process_group:
 - name: list-s3
-  element_type: Processor
+  type: processor
   config:
     package_id: org.apache.nifi.processors.aws.s3.ListS3
     properties:
-    # aws_credentials_provider_service:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
       prefix: $(s3_prefix)
       min-age: $(s3_min_object_age)
-  downstream:
-  - name: debug
-    relationships: []
-
-- name: debug
-  element_type: ProcessGroup
-  component_ref: common/debug.yaml
-  downstream:
+  connections:
   - name: fetch-s3
-    relationships: []
+    relationships: ['success']
 
 - name: fetch-s3
-  element_type: Processor
+  type: processor
   config:
     package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
-    auto_terminated_relationships: ['failure']
     properties:
-    # aws_credentials_provider_service:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
-  downstream:
+  connections:
+  - name: fetch-s3
+    relationships: ['failure']
   - name: output
     relationships: ['success']
 
 - name: output
-  element_type: OutputPort
+  type: output_port

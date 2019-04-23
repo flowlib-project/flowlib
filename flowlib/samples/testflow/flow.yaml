@@ -3,7 +3,7 @@ flow_name: Demo Flow
 # TODO: Allow Common Default properties for processors?
 #   How would these be passed down and merged with child components?
 # processor_defaults:
-#   **nipyapi.nifi.models.processor_config_dto.ProcessorConfigDTO
+#   **nipyapi.nifi.models.processor_config_dto.processorConfigDTO
 
 # TODO: Allow Common Defaults for connections?
 #   How would these be passed down and merged with child components?
@@ -15,54 +15,73 @@ flow_name: Demo Flow
 # TODO: Should controllers be global or at the component level?
 # similar to required_vars, we could have required_controllers
 
-# TODO: Remove relationships attr from ProcessGroup model
+# TODO: Add support for Remoteprocess_group Elements
 
-controllers:
-- name: 'AWS Credential Controller - EAST'
-  package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
-  properties: {}
-- name: 'AWS Credential Controller - WEST'
-  package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
-  properties: {}
+# TODO: Add config for terminating unspecified relationships automatically?
+#   How should we handle overriding which relationships to auto-terminate inside a component with multiple processors?
+# default_auto_terminate_relationships: False
+
+# TODO: Config for removing OutputPorts which have no downstream connections?
+# e.g. some components will define output ports which might be unused
+
+controllers: []
 
 canvas:
+# TODO: Test a downstream connection to a component with no inputs
+# TODO: Test input/output port on root canvas (currently raises exception)
+
 - name: listfetch-east
-  element_type: ProcessGroup
-  component_ref: common/s3_list_fetch.yaml
-  # controller_refs:
-  # - 'AWS Credential Controller - EAST'
+  type: process_group
+  component_ref: common/s3_list_fetch_with_retry.yaml
   vars:
     s3_bucket: stackspace-us-east-1
     s3_region: us-east-1
     s3_prefix: /abc/def/
-  downstream:
+  connections:
   - name: debug
-    relationships: [] # Downstream connections TO ProcessGroups do not require relationships
+    from_port: output
+    to_port: input
 
 - name: listfetch-west
-  element_type: ProcessGroup
-  component_ref: common/s3_list_fetch.yaml
-  # controller_refs:
-  # - 'AWS Credential Controller - WEST'
+  type: process_group
+  component_ref: common/s3_list_fetch_with_retry.yaml
   vars:
     s3_bucket: stackspace-us-west-1
     s3_region: us-west-1
-  downstream:
+  connections:
   - name: debug
-    relationships: []
+    from_port: output
+    to_port: input
 
 - name: debug
-  element_type: ProcessGroup
+  type: process_group
   component_ref: common/debug.yaml
-  downstream:
+  connections:
+  - name: port-tester
+    from_port: output
+    to_port: success-input
+
+- name: port-tester
+  type: process_group
+  component_ref: common/port_test.yaml
+  connections:
   - name: log-attribute
-    relationships: [] # Downstream connections FROM ProcessGroups do not require relationships
+    from_port: success-output
+  - name: log-attribute
+    from_port: failure-output
 
 - name: log-attribute
-  element_type: Processor
+  type: processor
   config:
     package_id: org.apache.nifi.processors.standard.LogAttribute
-    auto_terminated_relationships: ['success', 'failure']
     properties:
       Log Level: info
       Log Payload: False
+  connections:
+  - name: port-tester-two
+    relationships: ['success']
+    to_port: success-input
+
+- name: port-tester-two
+  type: process_group
+  component_ref: common/port_test.yaml
