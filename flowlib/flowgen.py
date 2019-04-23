@@ -15,6 +15,7 @@ from flowlib.model import (FlowLibException, Flow, FlowComponent, FlowElement,
     ProcessGroup, Processor, InputPort, OutputPort)
 
 # TODO: Rename this module to something else ??
+# TODO: Separate this module from the actual NiFi API interaction
 
 # Some constants for canvas dimensions
 TOP_LEVEL_PG_LOCATION = (300, 100)
@@ -330,49 +331,6 @@ def create_connections(flow, source_element):
         logging.debug("Terminal node, no downstream connections found for element {}".format(source_element.name))
 
 
-    # # Get the source element NiFi entity by id
-    # #   - For ProcessGroups, we need to get the id of the OutputPort element for the source ProcessGroup.
-    # #   - For OutputPorts, the downstream relationships are defined in the parent ProcessGroup and
-    # #     all_elements is the dict of elements contained in the parent
-    # connections = element.connections
-    # if isinstance(element, ProcessGroup):
-    #     # We already validated output ports during init, so just grab the first one
-    #     source_op = [e for e in element.elements.values() if isinstance(e, OutputPort)][0]
-    #     source = get_nifi_entity_by_id('output_port', source_op.id)
-    # elif isinstance(element, InputPort):
-    #     source = get_nifi_entity_by_id('input_port', element.id)
-    # elif isinstance(element, Processor):
-    #     source = get_nifi_entity_by_id('processor', element.id)
-    # elif isinstance(element, OutputPort):
-    #     connections = parent.connections
-    #     # We need to go one more level up in depth on the canvas to get the target elements
-    #     all_elements = flow.get_parent_element(parent).elements
-    #     source = get_nifi_entity_by_id('output_port', element.id)
-
-    # if connections:
-    #     for c in connections:
-    #         dest_element = all_elements.get(c.name)
-    #         if not dest_element:
-    #             raise FlowLibException("The DownstreamConnection element for {} is not defined in {}".format(element.name, source_component.source_file))
-
-    #         # Get the destincation element NiFi entity by id
-    #         # for ProcessGroups, we need to get the id of the InputPort element id for the
-    #         # destincation ProcessGroup
-    #         if isinstance(dest_element, ProcessGroup):
-    #             # We already validated input ports during init, so just grab the first one
-    #             dest_element = [e for e in dest_element.elements.values() if isinstance(e, InputPort)][0]
-    #             dest = get_nifi_entity_by_id('input_port', dest_element.id)
-    #         elif isinstance(dest_element, OutputPort):
-    #             dest = get_nifi_entity_by_id('output_port', dest_element.id)
-    #         elif isinstance(dest_element, Processor):
-    #             dest = get_nifi_entity_by_id('processor', dest_element.id)
-    #         elif isinstance(dest_element, InputPort):
-    #             raise FlowLibException("The downstream connection element for {} cannot be an InputPort: {}".format(element.name, source_component.source_file))
-
-    #         logging.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
-    #         canvas.create_connection(source, dest, .relationships)
-
-
 def get_nifi_entity_by_id(kind, identifier):
     """
     :param kind: One of input_port, output_port, processor, process_group
@@ -390,31 +348,3 @@ def get_nifi_entity_by_id(kind, identifier):
     else:
         raise FlowLibException("{} is not a valid NiFi api type")
     return e
-
-
-# def check_or_create_controllers(parent_pg, controller, name, properties):
-#     """
-#     :param parent_pg:
-#     :param controller:
-#     :param name:
-#     :return:
-#     """
-#     controller_type = models.documented_type_dto.DocumentedTypeDTO(type=controller)
-#     controller = canvas.create_controller(parent_pg, controller_type, name)
-#     update = models.controller_service_dto.ControllerServiceDTO(properties=properties)
-#     canvas.update_controller(controller, update)
-#     return controller
-
-
-# def get_canvas_reverse_location(index, total):
-#     x_location = 300
-#     # for y, assume each processor is 200
-#     y_offset = total - index
-#     y_location = 200 * y_offset
-#     return (x_location, y_location)
-
-
-# def get_canvas_location(sequence_number):
-#     x_location = 300
-#     y_location = 50 + (200 * sequence_number)
-#     return (x_location, y_location)
