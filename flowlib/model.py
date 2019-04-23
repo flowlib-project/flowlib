@@ -52,6 +52,11 @@ class Flow:
         canvas = raw.get('canvas')
         return cls(name, controllers, canvas, os.path.dirname(f.name))
 
+    # # TODO:
+    # @staticmethod
+    # def load_from_nifi(url):
+    #     nipyapi.config.nifi_config.host = nifi_url
+
     def init(self):
         """
         :raises: FlowLibException
@@ -82,14 +87,12 @@ class Flow:
 
 
 class FlowComponent:
-    def __init__(self, component_name, source_file, accepts_inputs=True, accepts_outputs=True, defaults=None, required_vars=None):
+    def __init__(self, component_name, source_file, defaults=None, required_vars=None):
         """
         A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
         """
         self.component_name = component_name
         self.source_file = source_file
-        self.accepts_inputs = accepts_inputs
-        self.accepts_outputs = accepts_outputs
         self.defaults = defaults
         self.required_vars = required_vars
 
@@ -102,13 +105,13 @@ class FlowElement:
     This is either a ProcessGroup, Processor, InputPort, or OutputPort
     Do not call __init__ directly, use FlowElement.load()
     """
-    def __init__(self, name, parent_path, element_type, downstream):
+    def __init__(self, name, parent_path, _type, connections):
         self._id = None
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
-        self.element_type = element_type
-        self.downstream
+        self._type = _type
+        self.connections
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
@@ -133,10 +136,14 @@ class FlowElement:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._parent_id = _id
 
+    @property
+    def type(self):
+        return self._type
+
     @staticmethod
     def load(elem_dict, flow):
-        if not isinstance(elem_dict, dict) or not elem_dict.get('element_type'):
-            raise FlowLibException("FlowElement.load() requires a dict with a element_type field")
+        if not isinstance(elem_dict, dict) or not elem_dict.get('type'):
+            raise FlowLibException("FlowElement.load() requires a dict with a 'type' field, one of ['processor', 'process_group', 'input_port', 'output_port']")
 
         name = elem_dict.get('name')
         if not name or len(name) < 1:
@@ -144,20 +151,21 @@ class FlowElement:
         if Flow.PG_DELIMETER in name:
             raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
 
-        if elem_dict.get('element_type') == 'ProcessGroup':
+        elem_dict['_type'] = elem_dict.pop('type')
+        if elem_dict.get('_type') == 'process_group':
             return ProcessGroup(**elem_dict).load(flow)
-        elif elem_dict.get('element_type') == 'Processor':
+        elif elem_dict.get('_type') == 'processor':
             return Processor(**elem_dict)
-        elif elem_dict.get('element_type') == 'InputPort':
+        elif elem_dict.get('_type') == 'input_port':
             return InputPort(**elem_dict)
-        elif elem_dict.get('element_type') == 'OutputPort':
+        elif elem_dict.get('_type') == 'output_port':
             return OutputPort(**elem_dict)
         else:
-            raise FlowLibException("Only ProcessGroups, Processors, InputPorts, or OutputPorts are allowed")
+            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'input_port', 'output_port']")
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, element_type, component_ref, vars=None, downstream=None):
+    def __init__(self, name, parent_path, _type, component_ref, vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -167,10 +175,10 @@ class ProcessGroup(FlowElement):
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
-        self.element_type = element_type
+        self._type = _type
         self.component_ref = component_ref
         self.vars = vars
-        self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
+        self.connections = [Connection(**c) for c in connections] if connections else None
         self.elements = dict()
 
     def load(self, flow):
@@ -184,7 +192,6 @@ class ProcessGroup(FlowElement):
         except KeyError as e:
             raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_file))
 
-        # TODO: Check that a component does not reference itself recursively
         raw['source_file'] = file_ref
         loaded_component = FlowComponent(**raw)
         if not self.component_ref in flow.loaded_components:
@@ -203,46 +210,27 @@ class ProcessGroup(FlowElement):
             elem_dict['parent_path'] = "{}/{}".format(self.parent_path, self.name)
             el = FlowElement.load(elem_dict, flow)
 
-            # Validate that only 1 input/output port is contained in a PG
-            # TODO: Would there ever be a scenario where we wanted multiple inputs or outputs?
-            if isinstance(el, InputPort):
-                if found_input == True:
-                    raise FlowLibException("Only a single input port is allowed per ProcessGroup, found multiple in {}".format(loaded_component.file_ref))
-                found_input = True
-            elif isinstance(el, OutputPort):
-                if found_output == True:
-                    raise FlowLibException("Only a single output port is allowed per ProcessGroup, found multiple in {}".format(loaded_component.file_ref))
-                found_output = True
+            if isinstance(el, ProcessGroup):
+                if el.component_ref == self.component_ref:
+                    raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(self.component_ref))
 
             if self.elements.get(el.name):
                 raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, ref))
             else:
                 self.elements[el.name] = el
 
-        # Validate that the component accepts an input/output if one was found
-        if found_input and not loaded_component.accepts_inputs:
-            raise FlowLibException("{} does not accept an input port".format(loaded_component.file_ref))
-        elif found_output and not loaded_component.accepts_outputs:
-            raise FlowLibException("{} does not accept an output port".format(loaded_component.file_ref))
-
-        # Validate that the component specifies an input/output if it accepts them
-        if not found_input and loaded_component.accepts_inputs:
-            raise FlowLibException("{} accepts an input but there are no InputPorts defined".format(loaded_component.file_ref))
-        elif not found_output and loaded_component.accepts_outputs:
-            raise FlowLibException("{} accepts an output but there are no OutputPorts defined".format(loaded_component.file_ref))
-
         return self
 
 
 class Processor(FlowElement):
-    def __init__(self, name, parent_path, element_type, config, downstream=None):
+    def __init__(self, name, parent_path, _type, config, connections=None):
         self._id = None
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
-        self.element_type = element_type
+        self._type = _type
         self.config = ProcessorConfig(config.pop('package_id'), **config)
-        self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
+        self.connections = [Connection(**c) for c in connections] if connections else None
 
 
 class ProcessorConfig(ProcessorConfigDTO):
@@ -255,39 +243,41 @@ class ProcessorConfig(ProcessorConfigDTO):
 
 
 class InputPort(FlowElement):
-    def __init__(self, name, parent_path, element_type, downstream=None):
+    def __init__(self, name, parent_path, _type, connections=None):
         self._id = None
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
-        self.element_type = element_type
-        self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
+        self._type = _type
+        self.connections = [Connection(**c) for c in connections] if connections else None
 
 
 class OutputPort(FlowElement):
-    def __init__(self, name, parent_path, element_type, downstream=None):
+    def __init__(self, name, parent_path, _type, connections=None):
         self._id = None
         self._parent_id = None
         self.name = name
         self.parent_path = parent_path
-        self.element_type = element_type
-        self.downstream = [DownstreamConnection(**d) for d in downstream] if downstream else None
+        self._type = _type
+        self.connections = [Connection(**c) for c in connections] if connections else None
 
 
-class DownstreamConnection:
-    def __init__(self, name, relationships):
+class Connection:
+    def __init__(self, name, from_port=None, to_port=None, relationships=None):
         self.name = name
+        self.from_port = from_port
+        self.to_port = to_port
         self.relationships = relationships
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
 
 
-class Controller:
-    def __init__(self, name, package_id, properties):
-        self.name = name
-        self.package_id = package_id
-        self.properties = properties
+# class Controller:
+#     def __init__(self, name, package_id, properties):
+#         self.name = name
+#         self.package_id = package_id
+#         self.properties = properties
 
-    def __repr__(self):
-        return pprint.pformat(self.__dict__)
+#     def __repr__(self):
+#         return pprint.pformat(self.__dict__)

@@ -64,7 +64,7 @@ def deploy_flow_yaml(config):
         # create_controllers(flow)
         replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
         create_canvas_elements_recursive(flow.elements, root)
-        create_connections_recursive(flow, flow.elements, flow.loaded_components)
+        create_connections_recursive(flow, flow.elements)
 
     except FlowLibException as e:
         logging.error(e)
@@ -139,27 +139,24 @@ def create_canvas_elements_recursive(elements, parent_pg):
         elif isinstance(el, OutputPort):
             create_output_port(el, parent_pg)
         else:
-            raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
+            raise FlowLibException("Unsupported Element Type: {}".format(el.type))
 
 
-def create_connections_recursive(flow, elements, loaded_components, source_component=None, parent_element=None):
+def create_connections_recursive(flow, elements):
     """
     Recursively creates the connections between elements defined in the Flow
+    :param flow: The Flow to create connections for
+    :type flow: Flow
     :param elements: a list of FlowElements to connect together
     :type elements: list(FlowElement)
-    :param loaded_components: The components that were imported during flow.init()
-    :type loaded_components: map(str:model.FlowComponent)
-    :param parent_element: The parent elements of the current ProcessGroup or None if this is the root flow
-    :type parent_element: model.ProcessGroup or None
     """
     for el in elements.values():
         if isinstance(el, ProcessGroup):
-            source_component = loaded_components[el.component_ref]
-            create_connections_recursive(flow, el.elements, loaded_components, source_component, el)
-        elif el.element_type in ['Processor', 'InputPort', 'OutputPort']:
-            create_downstream_connections(flow, el, elements, source_component, parent_element)
+            create_connections_recursive(flow, el.elements)
+        elif el.type in ['processor', 'input_port', 'output_port']:
+            create_connections(flow, el)
         else:
-            raise FlowLibException("Unsupported Element Type: {}".format(el.element_type))
+            raise FlowLibException("Unsupported Element Type: {}".format(el.type))
 
 
 def create_process_group(element, parent_pg):
@@ -263,65 +260,103 @@ def create_output_port(element, parent_pg):
     return op
 
 
-def create_downstream_connections(flow, element, all_elements, source_component, parent=None):
+def create_connections(flow, source_element):
     """
     Create the downstream connections for the element on the NiFi canvas
-    :param element: The source FlowElement to connect to its downstreams
-    :type element: FlowElement
-    :param source_component: The source component of the current element
-    :type source_component: FlowComponent
-    :param parent: The parent element if it exists
-    :type parent: FlowElement
+    :param flow: The Flow to create connections for
+    :type flow: Flow
+    :param source_element: The source FlowElement to connect to its downstreams
+    :type source_element: FlowElement
     """
-    logging.info('Creating downstream connections for element: {}/{}'.format(element.parent_path, element.name))
+    logging.info("Creating downstream connections for element: {}/{}".format(source_element.parent_path, source_element.name))
+    parent = flow.get_parent_element(source_element)
     # Validate no inputs or outputs on the root canvas
-    if not source_component and (isinstance(element, InputPort) or isinstance(element, OutputPort)):
-        raise FlowLibException("Input and Output ports may only be contained inside a component (ProcessGroup)")
-    # Validate that a parent element was provided if connecting an outputPort to a downstream InputPort of another PG
-    if isinstance(element, OutputPort) and not parent:
-        raise FlowLibException("The parent element is required in order to create an OutputPort")
+    if not parent and (isinstance(source_element, InputPort) or isinstance(source_element, OutputPort)):
+        raise FlowLibException("Input and Output ports are not allowed in the root process group")
 
-    # Get the source element NiFi entity by id
-    #   - For ProcessGroups, we need to get the id of the OutputPort element id for the source ProcessGroup.
-    #   - For OutputPorts, the downstream relationships are defined in the parent ProcessGroup and
-    #     all_elements is the dict of elements contained in the parent
-    downstream = element.downstream
-    if isinstance(element, ProcessGroup):
-        # We already validated output ports during init, so just grab the first one
-        source_op = [e for e in element.elements.values() if isinstance(e, OutputPort)][0]
-        source = get_nifi_entity_by_id('output_port', source_op.id)
-    elif isinstance(element, InputPort):
-        source = get_nifi_entity_by_id('input_port', element.id)
-    elif isinstance(element, Processor):
-        source = get_nifi_entity_by_id('processor', element.id)
-    elif isinstance(element, OutputPort):
-        downstream = parent.downstream
-        # We need to go one more level up in depth on the canvas to get the target elements
-        all_elements = flow.get_parent_element(parent).elements
-        source = get_nifi_entity_by_id('output_port', element.id)
+    connections = source_element.connections
+    if isinstance(source_element, OutputPort):
+        if parent.connections:
+            connections = [c for c in parent.connections if c.from_port == source_element.name]
+        else:
+            connections = None
 
-    if downstream:
-        for d in downstream:
-            dest_element = all_elements.get(d.name)
+    if connections:
+        for c in connections:
+            # Find the NiFi Entity ID of the source element
+            if isinstance(source_element, Processor) or isinstance(source_element, InputPort):
+                elements = parent.elements
+                source = get_nifi_entity_by_id(source_element.type, source_element.id)
+            elif isinstance(source_element, OutputPort):
+                # if source is an output port then we need to to search the next parent's elements for the downstream element
+                elements = flow.get_parent_element(parent).elements
+                source = get_nifi_entity_by_id(source_element.type, source_element.id)
+            else:
+                raise FlowLibException("""
+                    Something went wrong, failed while recursively connecting flow elements on the canvas.
+                    Cannot create downstream connections for elements of type {}""".format(type(source_element)))
+
+            dest_element = elements.get(c.name)
             if not dest_element:
-                raise FlowLibException("The downstream connection element for {} is not defined in {}".format(element.name, source_component.source_file))
+                raise FlowLibException("The destination element {} is not defined, must be one of: {}".format(c.name, elements.keys()))
 
-            # Get the destincation element NiFi entity by id
-            # for ProcessGroups, we need to get the id of the InputPort element id for the
-            # destincation ProcessGroup
-            if isinstance(dest_element, ProcessGroup):
-                # We already validated input ports during init, so just grab the first one
-                dest_element = [e for e in dest_element.elements.values() if isinstance(e, InputPort)][0]
-                dest = get_nifi_entity_by_id('input_port', dest_element.id)
-            elif isinstance(dest_element, OutputPort):
-                dest = get_nifi_entity_by_id('output_port', dest_element.id)
-            elif isinstance(dest_element, Processor):
-                dest = get_nifi_entity_by_id('processor', dest_element.id)
-            elif isinstance(dest_element, InputPort):
-                raise FlowLibException("The downstream connection element for {} cannot be an InputPort: {}".format(element.name, source_component.source_file))
+            # Find the NiFi Entity ID of the dest element
+            if isinstance(dest_element, Processor) or isinstance(dest_element, OutputPort):
+                dest = get_nifi_entity_by_id(dest_element.type, dest_element.id)
+            elif isinstance(dest_element, ProcessGroup):
+                d = [v for k,v in dest_element.elements.items() if isinstance(v, InputPort) and k == c.to_port][0]
+                dest = get_nifi_entity_by_id(d.type, d.id)
+            else:
+                raise FlowLibException("""Connections cannot be defined for downstream elements of type 'input_port'.
+                  InputPorts can only be referenced from outside of the current component""")
 
-            logging.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, d.relationships))
-            canvas.create_connection(source, dest, d.relationships)
+            logging.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
+            canvas.create_connection(source, dest, c.relationships)
+    else:
+        logging.debug("Terminal node, no downstream connections found for element {}".format(source_element.name))
+
+
+    # # Get the source element NiFi entity by id
+    # #   - For ProcessGroups, we need to get the id of the OutputPort element for the source ProcessGroup.
+    # #   - For OutputPorts, the downstream relationships are defined in the parent ProcessGroup and
+    # #     all_elements is the dict of elements contained in the parent
+    # connections = element.connections
+    # if isinstance(element, ProcessGroup):
+    #     # We already validated output ports during init, so just grab the first one
+    #     source_op = [e for e in element.elements.values() if isinstance(e, OutputPort)][0]
+    #     source = get_nifi_entity_by_id('output_port', source_op.id)
+    # elif isinstance(element, InputPort):
+    #     source = get_nifi_entity_by_id('input_port', element.id)
+    # elif isinstance(element, Processor):
+    #     source = get_nifi_entity_by_id('processor', element.id)
+    # elif isinstance(element, OutputPort):
+    #     connections = parent.connections
+    #     # We need to go one more level up in depth on the canvas to get the target elements
+    #     all_elements = flow.get_parent_element(parent).elements
+    #     source = get_nifi_entity_by_id('output_port', element.id)
+
+    # if connections:
+    #     for c in connections:
+    #         dest_element = all_elements.get(c.name)
+    #         if not dest_element:
+    #             raise FlowLibException("The DownstreamConnection element for {} is not defined in {}".format(element.name, source_component.source_file))
+
+    #         # Get the destincation element NiFi entity by id
+    #         # for ProcessGroups, we need to get the id of the InputPort element id for the
+    #         # destincation ProcessGroup
+    #         if isinstance(dest_element, ProcessGroup):
+    #             # We already validated input ports during init, so just grab the first one
+    #             dest_element = [e for e in dest_element.elements.values() if isinstance(e, InputPort)][0]
+    #             dest = get_nifi_entity_by_id('input_port', dest_element.id)
+    #         elif isinstance(dest_element, OutputPort):
+    #             dest = get_nifi_entity_by_id('output_port', dest_element.id)
+    #         elif isinstance(dest_element, Processor):
+    #             dest = get_nifi_entity_by_id('processor', dest_element.id)
+    #         elif isinstance(dest_element, InputPort):
+    #             raise FlowLibException("The downstream connection element for {} cannot be an InputPort: {}".format(element.name, source_component.source_file))
+
+    #         logging.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
+    #         canvas.create_connection(source, dest, .relationships)
 
 
 def get_nifi_entity_by_id(kind, identifier):
@@ -329,7 +364,7 @@ def get_nifi_entity_by_id(kind, identifier):
     :param kind: One of input_port, output_port, processor, process_group
     :param identifier: The NiFi API identifier uuid of the entity
     """
-    logging.debug('Getting Nifi {} Entity with id: {}'.format(kind, identifier))
+    logging.debug("Getting Nifi {} Entity with id: {}".format(kind, identifier))
     if kind == 'input_port':
         e = nipyapi.nifi.InputPortsApi().get_input_port(identifier)
     elif kind == 'output_port':
