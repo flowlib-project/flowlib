@@ -1,5 +1,13 @@
 # B23 FlowLib #
 
+### Developer Getting Started ###
+
+```bash
+virtualenv env --python=python3
+source env/bin/activate
+pip install -e ./flowlib
+```
+
 ### Resources ###
 
 [flowlib/](./flowlib/README.md) - A python module and cli tool for deploying NiFi flows from YAML
