@@ -5,7 +5,7 @@
 ```bash
 virtualenv env --python=python3
 source env/bin/activate
-pip install -e ./flowlib
+pip install -e ./
 ```
 
 ### Resources ###

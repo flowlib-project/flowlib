@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
+import imp
+import os
+
 from setuptools import setup, find_packages
+
+version = imp.load_source(
+    'flowlib.version', os.path.join('flowlib', 'version.py')).version
 
 setup(
     name="b23-flowlib",
-    version="0.1",
+    version=str(version),
     packages=find_packages(),
     install_requires=['nipyapi>=0.12.1', 'pyyaml'],
     author="David Kegley",
