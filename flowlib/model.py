@@ -49,33 +49,28 @@ class Flow:
         """
         :param f: A fileobj which defines a root level DataFlow
         :type f: io.TextIOWrapper
+        :raises: FlowLibException
         """
         raw = yaml.safe_load(f)
         name = raw.get('name')
         version = str(raw.get('version'))
         controllers = raw.get('controllers')
         canvas = raw.get('canvas')
-        return Flow(name, version, controllers, canvas, os.path.dirname(f.name))
+        flow = Flow(name, version, controllers, canvas, os.path.dirname(f.name))
+        logging.info("Initializing root Flow: {}".format(flow.name))
+        for elem_dict in flow.canvas:
+            elem_dict['parent_path'] = flow.name
+            el = FlowElement.load(elem_dict, flow)
+            if flow.elements.get(el.name):
+                raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
+            else:
+                flow.elements[el.name] = el
+        return flow
 
-    # # TODO:
+    # TODO: Initialize a Flow.elements from a running nifi instance
     # @staticmethod
     # def load_from_nifi(url):
     #     nipyapi.config.nifi_config.host = nifi_url
-
-    def init(self):
-        """
-        :raises: FlowLibException
-        """
-        logging.info("Initializing root Flow: {}".format(self.flow_name))
-        for elem_dict in self.canvas:
-            elem_dict['parent_path'] = self.flow_name
-            el = FlowElement.load(elem_dict, self)
-            if self.elements.get(el.name):
-                raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
-            else:
-                self.elements[el.name] = el
-
-        return self
 
     def get_parent_element(self, element):
         """

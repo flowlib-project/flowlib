@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import copy
 import logging
 import re
@@ -9,6 +10,7 @@ from nipyapi import canvas
 from nipyapi.nifi import models
 from nipyapi.nifi import apis
 
+import version
 from model import (FlowLibException, Flow, FlowComponent, FlowElement,
     ProcessGroup, Processor, InputPort, OutputPort)
 
@@ -16,14 +18,20 @@ from model import (FlowLibException, Flow, FlowComponent, FlowElement,
 TOP_LEVEL_PG_LOCATION = (300, 100)
 VAR_WRAPPER = "$({})"
 
-# TODO: Add a --dry-run command flag so that we can validate flows completely before
-#   attempting to deploy to a running NiFi instance
+# TODO: include git revision if possible
+DEPLOYMENT_VERSION_INFO = """B23 FlowLib
+version: {}
+git-revision: {}
+
+NiFi Flow
+version: {}
+"""
 
 def validate_flow(config):
     try:
-        flow = Flow.load_from_file(config.flow_yaml).init()
-        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
-        # validate_connections_recursive(flow.elements, flow.loaded_components)
+        flow = Flow.load_from_file(config.flow_yaml)
+        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components) # move to flow.load_from_file()
+        flow.validate()
     except FlowLibException as e:
         logging.error(e)
         sys.exit(1)
@@ -31,8 +39,7 @@ def validate_flow(config):
 
 def deploy_flow_yaml(config):
     """
-    :param config: A FlowLibConfig
-    :type config: FlowGenConfig
+    :type config: FlowLibConfig
     """
     logging.info("Deploying NiFi flow from YAML with config:")
     logging.info(config)
@@ -42,27 +49,32 @@ def deploy_flow_yaml(config):
     root_id = nipyapi.canvas.get_root_pg_id()
 
     try:
-        flow = Flow.load_from_file(config.flow_yaml).init()
-        logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.flow_name, root_id))
+        flow = Flow.load_from_file(config.flow_yaml)
+        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+        # flow.validate()
 
-        # TODO: Check deployed flow to see if a flow already exists or require --force, if not
-        # then check if root process group is the same as the one being deployed,
-        # should we set the version in the pg name or comments?
+        logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.name, root_id))
         root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
-        root.component.name = flow.flow_name
+
+        # TODO: Check here if there is a flow already deployed
+        # deployed_flow = Flow.load_from_nifi(nifi_url)
+        # flow.compare(deployed_flow)
+
+        # Update root process group metadata with new flow version info
+        root.component.name = flow.name
+        root.component.comments = DEPLOYMENT_VERSION_INFO.format(version.version, version.git_revision,  flow.version)
 
         # TODO: Stop all source processors and wait for queues to drain completely.
-        # Then stop all remaining processors and remove all connections
+        # Then stop all remaining processors and remove all connections ?
 
         # TODO: It is probably more reliable to delete all processors and connections and re-deploy
         # to a blank canvas. This will involve reading the state and setting the state directly in zookeeper
-        # for the newly deployed processors
+        # for the newly deployed processors ?
 
         # Set root pg name
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
         # create_controllers(flow)
-        replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
         create_canvas_elements_recursive(flow.elements, root)
         create_connections_recursive(flow, flow.elements)
 

@@ -2,7 +2,7 @@
 
 def parse_git_revision():
     # TODO: popen git rev-parse HEAD
-    return "No git revision found"
+    return "Not Found"
 
 # TODO: handle snapshot versions if no git tag
 
