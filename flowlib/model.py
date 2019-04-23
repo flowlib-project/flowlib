@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import yaml
 import logging
@@ -12,12 +13,14 @@ class FlowLibException(Exception):
 class Flow:
     PG_DELIMETER = '/'
 
-    def __init__(self, flow_name, controllers, canvas, flow_root_dir):
+    def __init__(self, name, version, controllers, canvas, flow_root_dir):
         """
         The root Flow class should be initialized from a flow.yaml with a canvas field
         This is what will be deployed to the root ProcessGroup of the target nifi instance
-        :param flow_name: The name of the Flow
-        :type flow_name: str
+        :param name: The name of the Flow
+        :type name: str
+        :param version: The version of the Flow
+        :type version: str
         :param controllers: The root controllers for the root canvas
         :type controllers: list(Controller)
         :param canvas: The root elements of the flow
@@ -30,7 +33,8 @@ class Flow:
           Initialized by calling flow.init()
         :type elements: dict(str:FlowElement)
         """
-        self.flow_name = flow_name
+        self.name = name
+        self.version = version
         self.controllers = controllers
         self.canvas = canvas
         self.flow_root_dir = flow_root_dir ## todo: Create a --flow-lib-dir flag for loading components
@@ -40,17 +44,18 @@ class Flow:
     def __repr__(self):
         return pprint.pformat(self.__dict__)
 
-    @classmethod
-    def load_from_file(cls, f):
+    @staticmethod
+    def load_from_file(f):
         """
         :param f: A fileobj which defines a root level DataFlow
         :type f: io.TextIOWrapper
         """
         raw = yaml.safe_load(f)
-        name = raw.get('flow_name')
+        name = raw.get('name')
+        version = str(raw.get('version'))
         controllers = raw.get('controllers')
         canvas = raw.get('canvas')
-        return cls(name, controllers, canvas, os.path.dirname(f.name))
+        return Flow(name, version, controllers, canvas, os.path.dirname(f.name))
 
     # # TODO:
     # @staticmethod
