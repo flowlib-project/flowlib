@@ -1,4 +1,5 @@
-flow_name: Demo Flow
+name: Demo Flow
+version: 1.0
 
 # TODO: Allow Common Default properties for processors?
 #   How would these be passed down and merged with child components?
@@ -22,7 +23,10 @@ flow_name: Demo Flow
 # default_auto_terminate_relationships: False
 
 # TODO: Config for removing OutputPorts which have no downstream connections?
+# A `is_terminal: bool` attribute for process_group elements so that we can skip creation of OutputPorts?
 # e.g. some components will define output ports which might be unused
+
+# TODO: Add VariableRegistry vars for Flow and for Components
 
 controllers: []
 
