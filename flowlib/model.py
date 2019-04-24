@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 import os
+import copy
+import re
 import yaml
 import logging
 import pprint
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 
+VAR_WRAPPER = "$({})"
+PG_NAME_DELIMETER = '/'
+
 class FlowLibException(Exception):
     pass
 
-
 class Flow:
-    PG_DELIMETER = '/'
-
     def __init__(self, name, version, controllers, canvas, flow_root_dir):
         """
         The root Flow class should be initialized from a flow.yaml with a canvas field
@@ -67,7 +69,9 @@ class Flow:
             else:
                 flow.elements[el.name] = el
 
+        _replace_flow_element_vars(flow.elements, flow.loaded_components)
         return flow
+
 
     # TODO: Initialize a Flow.elements from a running nifi instance
     # @classmethod
@@ -81,7 +85,7 @@ class Flow:
         :type element: FlowElement
         """
         target = self
-        names = element.parent_path.split(Flow.PG_DELIMETER)
+        names = element.parent_path.split(PG_NAME_DELIMETER)
         for n in names[1:]:
             elements = target.elements
             target = elements.get(n)
@@ -150,7 +154,7 @@ class FlowElement:
         name = elem_dict.get('name')
         if not name or len(name) < 1:
             raise FlowLibException("Invalid element with parent path: {}. Element names may not be empty".format(elem_dict.get('parent_path')))
-        if Flow.PG_DELIMETER in name:
+        if PG_NAME_DELIMETER in name:
             raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
 
         elem_dict['_type'] = elem_dict.pop('type')
@@ -205,8 +209,6 @@ class ProcessGroup(FlowElement):
                 if not v in self.vars:
                     raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, loaded_component.file_ref))
 
-        found_input = False
-        found_output = False
         # Call FlowElement.load() on each element in the process_group
         for elem_dict in process_group:
             elem_dict['parent_path'] = "{}/{}".format(self.parent_path, self.name)
@@ -275,11 +277,50 @@ class Connection:
         return pprint.pformat(self.__dict__)
 
 
-# class Controller:
-#     def __init__(self, name, package_id, properties):
-#         self.name = name
-#         self.package_id = package_id
-#         self.properties = properties
+def _replace_flow_element_vars(elements, loaded_components):
+    """
+    Recusively apply the variable evaluation to each element in the flow
+    :param elements: The elements to deploy
+    :type elements: list(flowlib.model.FlowElement)
+    :param loaded_components: The components that were imported during flow.init()
+    :type loaded_components: map(str:flowlib.model.FlowComponent)
+    """
+    for el in elements.values():
+        if isinstance(el, ProcessGroup):
+            source_component = loaded_components[el.component_ref]
+            _replace_vars(el, source_component)
+            _replace_flow_element_vars(el.elements, loaded_components)
 
-#     def __repr__(self):
-#         return pprint.pformat(self.__dict__)
+
+def _replace_vars(process_group, source_component):
+    """
+    Replace vars for all Processor elements inside a given ProcessGroup
+
+    Note: We already valdated that required vars were present during flow.init()
+      so don't worry about it here
+
+    :param process_group: The processorGroup processors that need vars evaluated
+    :type process_group: flowlib.model.ProcessGroup
+    :param component: The source component that the processGroup was created from
+    :type component: flowlib.model.FlowComponent
+    """
+    # Create a dict of vars to replace
+    replacements = copy.deepcopy(source_component.defaults) or dict()
+    if process_group.vars:
+        for key,val in process_group.vars.items():
+            replacements[key] = val
+
+    # Format each var name with the expected VAR_WRAPPER
+    # so that we can do a lookup when we find a pattern match
+    wrapped_vars = dict()
+    for k,v in replacements.items():
+        wrapped_vars[VAR_WRAPPER.format(k)] = v
+
+    esc_keys = [re.escape(key) for key in wrapped_vars.keys()]
+    pattern = re.compile(r'(' + '|'.join(esc_keys) + r')')
+
+    # Apply var replacements for each value of processor.config.properties
+    for el in process_group.elements.values():
+        if isinstance(el, Processor):
+            for k,v in el.config.properties.items():
+                el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
