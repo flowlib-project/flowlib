@@ -23,11 +23,10 @@ VAR_WRAPPER = "$({})"
 
 # TODO: include git revision if possible
 DEPLOYMENT_VERSION_INFO = """B23 FlowLib
-version: {}
-git-revision: {}
+flowlib version: {}
+git release: {}
 
-NiFi Flow
-version: {}
+flow.yaml version: {}
 """
 
 def validate_flow(config):
@@ -65,7 +64,7 @@ def deploy_flow_yaml(config):
 
         # Update root process group metadata with new flow version info
         root.component.name = flow.name
-        root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_revision__,  flow.version)
+        root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_version__,  flow.version)
 
         # TODO: Stop all source processors and wait for queues to drain completely.
         # Then stop all remaining processors and remove all connections ?

@@ -44,8 +44,8 @@ class Flow:
     def __repr__(self):
         return pprint.pformat(self.__dict__)
 
-    @staticmethod
-    def load_from_file(f):
+    @classmethod
+    def load_from_file(cls, f):
         """
         :param f: A fileobj which defines a root level DataFlow
         :type f: io.TextIOWrapper
@@ -56,7 +56,8 @@ class Flow:
         version = str(raw.get('version'))
         controllers = raw.get('controllers')
         canvas = raw.get('canvas')
-        flow = Flow(name, version, controllers, canvas, os.path.dirname(f.name))
+
+        flow = cls(name, version, controllers, canvas, os.path.dirname(f.name))
         logging.info("Initializing root Flow: {}".format(flow.name))
         for elem_dict in flow.canvas:
             elem_dict['parent_path'] = flow.name
@@ -65,12 +66,13 @@ class Flow:
                 raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
             else:
                 flow.elements[el.name] = el
+
         return flow
 
     # TODO: Initialize a Flow.elements from a running nifi instance
-    # @staticmethod
-    # def load_from_nifi(url):
-    #     nipyapi.config.nifi_config.host = nifi_url
+    # @classmethod
+    # def load_from_nifi(cls, url):
+    #     nipyapi.config.nifi_config.host = url
 
     def get_parent_element(self, element):
         """

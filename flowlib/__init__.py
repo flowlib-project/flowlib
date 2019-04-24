@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from flowlib.version import *
+from flowlib.version import version, git_version
 
-__version__ = version
-__git_revision__ = git_revision
+__author__ = "B23"
+__version__ = str(version)
+__git_version__ = git_version

@@ -4,12 +4,11 @@ A python module and cli tool for deploying NiFi flows from YAML
 
 ### TODO ###
 
-- Add run script for flowlib setup.py in local dev
 - Implement flow.validate()
   - check connections are valid
   - warn on unconnected elements
-- Implement flow.load_from_nifi() static method to initialize a flow from a running NiFi instance
-- Implement flow.compare(other) for diffing flows
+- Implement flow.load_from_nifi() factory classmethod to initialize a flow from a running NiFi instance
+- Implement flow.compare(other) for diffing flow.elements trees
 
 
 ### Concepts ###

@@ -3,7 +3,7 @@
 ### Developer Getting Started ###
 
 ```bash
-virtualenv env --python=python3
+virtualenv env --python=$(which python3)
 source env/bin/activate
 pip install -e ./
 ```
