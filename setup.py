@@ -28,6 +28,7 @@ def git_version(version):
         if repo.is_dirty():
             return '{sha}.dirty'.format(sha=sha)
 
+        # TODO: Check that an official release tag exists
         return 'release:{version}+{sha}'.format(version=version, sha=sha)
     else:
         return 'dirty'

@@ -11,7 +11,10 @@ DEPLOYMENT_VERSION_INFO = """B23 FlowLib {}
 
 Flow
 version: {}
-"""
+
+DO NOT CHANGE ANYTHING ABOVE THIS LINE
+""" # TODO: Append flow comments below
+
 
 def deploy_flow(flow, nifi_endpoint, dry_run=False):
     # TODO: implement dry_run
