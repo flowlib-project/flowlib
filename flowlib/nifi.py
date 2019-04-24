@@ -6,10 +6,11 @@ import flowlib
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
 
 TOP_LEVEL_PG_LOCATION = (300, 100)
-DEPLOYMENT_VERSION_INFO = """B23 FlowLib
-b23-flowlib release: {}
-b23-flowlib git-sha: {}
-flow version: {}
+DEPLOYMENT_VERSION_INFO = """B23 FlowLib {}
+{}
+
+Flow
+version: {}
 """
 
 def deploy_flow(flow, nifi_endpoint, dry_run=False):
