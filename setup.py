@@ -18,10 +18,11 @@ def git_version(version):
         repo = git.Repo('.git')
     except ImportError:
         logger.warning('git python module not found, unable to parse git version')
-        return ''
+        return 'dirty'
     except Exception as e:
         logger.warning('Cannot compute the git version. {}'.format(e))
-        return ''
+        return 'dirty'
+
     if repo:
         sha = repo.head.commit.hexsha
         if repo.is_dirty():
@@ -29,7 +30,7 @@ def git_version(version):
 
         return 'release:{version}+{sha}'.format(version=version, sha=sha)
     else:
-        return 'no_git_version'
+        return 'dirty'
 
 def write_version(filename=os.path.join('flowlib', 'git_version')):
     text = "{}".format(git_version(version))
