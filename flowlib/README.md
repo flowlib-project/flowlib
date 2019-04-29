@@ -4,10 +4,12 @@ A python module and cli tool for deploying NiFi flows from YAML
 
 ### TODO ###
 
+- Decouple models from canvas element evaluation, add a parser module which mutates a Flow
 - Implement flow.validate()
+  - variables replaced successfully
   - check connections are valid
   - warn on unconnected elements
-- Implement flow.load_from_nifi() factory classmethod to initialize a flow from a running NiFi instance
+- Implement factory to initialize a Flow from a running NiFi instance
 - Implement flow.compare(other) for diffing flow.elements trees
 
 

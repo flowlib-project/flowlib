@@ -6,14 +6,27 @@ import flowlib
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
 
 TOP_LEVEL_PG_LOCATION = (300, 100)
-DEPLOYMENT_VERSION_INFO = """B23 FlowLib {}
+DEPLOYMENT_VERSION_INFO = """This NiFi Flow was generated and deployed by B23 FlowLib
+B23 FlowLib {}
 {}
 
 Flow
 version: {}
 
-DO NOT CHANGE ANYTHING ABOVE THIS LINE
-""" # TODO: Append flow comments below
+-- DO NOT CHANGE ANYTHING ABOVE THIS LINE --
+{}
+"""
+
+
+def init_from_nifi(flow, url):
+    """
+    Initialize a Flow from from a running NiFi instance
+    :param flow: An unitialized Flow instance
+    :type flow: flowlib.model.Flow
+    :param url: A NiFi api endpoint
+    :type url: str
+    """
+    pass
 
 
 def deploy_flow(flow, nifi_endpoint, dry_run=False):
@@ -37,7 +50,7 @@ def deploy_flow(flow, nifi_endpoint, dry_run=False):
 
     # Update root process group metadata with version info
     root.component.name = flow.name
-    root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_version__,  flow.version)
+    root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_version__,  flow.version, flow.comments)
     nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
     # _create_controllers_recursive(flow)

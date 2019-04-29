@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
-import os
-import copy
-import re
-import yaml
-import logging
+from abc import ABC
+
 import pprint
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 
-VAR_WRAPPER = "$({})"
 PG_NAME_DELIMETER = '/'
 
 class FlowLibException(Exception):
     pass
 
 class Flow:
-    def __init__(self, name, version, controllers, canvas, flow_root_dir):
+    # TODO: Add is_valid=False attribute which we set to True once initialization completes successfully
+    # TODO: Add flow_source property which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
+    def __init__(self):
         """
-        The root Flow class should be initialized from a flow.yaml with a canvas field
-        This is what will be deployed to the root ProcessGroup of the target nifi instance
+        The Flow model. Do not use this constructor directly, instead use flowlib.api.new_flow()
         :param name: The name of the Flow
         :type name: str
         :param version: The version of the Flow
@@ -27,57 +24,27 @@ class Flow:
         :type controllers: list(Controller)
         :param canvas: The root elements of the flow
         :type canvas: list(FlowElement)
-        :param flow_root_dir: The path to the directory containing flow.yaml
-        :type flow_root_dir: str
+        :param component_dir: The path to the directory containing flow.yaml
+        :type component_dir: str
         :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
         :type loaded_components: dict(str:FlowComponent)
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling flow.init()
         :type elements: dict(str:FlowElement)
         """
-        self.name = name
-        self.version = version
-        self.controllers = controllers
-        self.canvas = canvas
-        self.flow_root_dir = flow_root_dir ## todo: Create a --flow-lib-dir flag for loading components
+        self.name = None
+        self.version = None
+        self.controllers = None
+        self.canvas = None
+        self.component_dir = None
+        self.comments = None
         self.loaded_components = dict()
         self.elements = dict()
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
 
-    @classmethod
-    def load_from_file(cls, f):
-        """
-        :param f: A fileobj which defines a root level DataFlow
-        :type f: io.TextIOWrapper
-        :raises: FlowLibException
-        """
-        raw = yaml.safe_load(f)
-        name = raw.get('name')
-        version = str(raw.get('version'))
-        controllers = raw.get('controllers')
-        canvas = raw.get('canvas')
-
-        flow = cls(name, version, controllers, canvas, os.path.dirname(f.name))
-        logging.info("Initializing root Flow: {}".format(flow.name))
-        for elem_dict in flow.canvas:
-            elem_dict['parent_path'] = flow.name
-            el = FlowElement.load(elem_dict, flow)
-            if flow.elements.get(el.name):
-                raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
-            else:
-                flow.elements[el.name] = el
-
-        _replace_flow_element_vars(flow.elements, flow.loaded_components)
-        return flow
-
-
-    # TODO: Initialize a Flow.elements from a running nifi instance
-    # @classmethod
-    # def load_from_nifi(cls, url):
-    #     nipyapi.config.nifi_config.host = url
-
+    # TODO: Unit test this
     def get_parent_element(self, element):
         """
         A helper method for looking up parent elements from a breadcrumb path
@@ -106,10 +73,10 @@ class FlowComponent:
         return pprint.pformat(self.__dict__)
 
 
-class FlowElement:
+class FlowElement(ABC):
     """
+    An abstract parent class for things that might appear on the flow's canvas
     This is either a ProcessGroup, Processor, InputPort, or OutputPort
-    Do not call __init__ directly, use FlowElement.load()
     """
     def __init__(self, name, parent_path, _type, connections):
         self._id = None
@@ -119,8 +86,28 @@ class FlowElement:
         self._type = _type
         self.connections
 
-    def __repr__(self):
-        return pprint.pformat(self.__dict__)
+    @staticmethod
+    def from_dict(elem_dict):
+        if not isinstance(elem_dict, dict) or not elem_dict.get('type'):
+            raise FlowLibException("FlowElement.from_dict() requires a dict with a 'type' field, one of ['processor', 'process_group', 'input_port', 'output_port']")
+
+        name = elem_dict.get('name')
+        if not name or len(name) < 1:
+            raise FlowLibException("Element names may not be empty. Found invalid element with parent path: {}".format(elem_dict.get('parent_path')))
+        if PG_NAME_DELIMETER in name:
+            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
+
+        elem_dict['_type'] = elem_dict.pop('type')
+        if elem_dict.get('_type') == 'process_group':
+            return ProcessGroup(**elem_dict)
+        elif elem_dict.get('_type') == 'processor':
+            return Processor(**elem_dict)
+        elif elem_dict.get('_type') == 'input_port':
+            return InputPort(**elem_dict)
+        elif elem_dict.get('_type') == 'output_port':
+            return OutputPort(**elem_dict)
+        else:
+            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'input_port', 'output_port']")
 
     @property
     def id(self):
@@ -146,28 +133,8 @@ class FlowElement:
     def type(self):
         return self._type
 
-    @staticmethod
-    def load(elem_dict, flow):
-        if not isinstance(elem_dict, dict) or not elem_dict.get('type'):
-            raise FlowLibException("FlowElement.load() requires a dict with a 'type' field, one of ['processor', 'process_group', 'input_port', 'output_port']")
-
-        name = elem_dict.get('name')
-        if not name or len(name) < 1:
-            raise FlowLibException("Invalid element with parent path: {}. Element names may not be empty".format(elem_dict.get('parent_path')))
-        if PG_NAME_DELIMETER in name:
-            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
-
-        elem_dict['_type'] = elem_dict.pop('type')
-        if elem_dict.get('_type') == 'process_group':
-            return ProcessGroup(**elem_dict).load(flow)
-        elif elem_dict.get('_type') == 'processor':
-            return Processor(**elem_dict)
-        elif elem_dict.get('_type') == 'input_port':
-            return InputPort(**elem_dict)
-        elif elem_dict.get('_type') == 'output_port':
-            return OutputPort(**elem_dict)
-        else:
-            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'input_port', 'output_port']")
+    def __repr__(self):
+        return pprint.pformat(self.__dict__)
 
 
 class ProcessGroup(FlowElement):
@@ -186,44 +153,6 @@ class ProcessGroup(FlowElement):
         self.vars = vars
         self.connections = [Connection(**c) for c in connections] if connections else None
         self.elements = dict()
-
-    def load(self, flow):
-        logging.info("Loading ProcessGroup: {}".format(self.name))
-        file_ref = os.path.join(flow.flow_root_dir, self.component_ref)
-        with open(file_ref) as f:
-            raw = yaml.safe_load(f)
-
-        try:
-            process_group = raw.pop('process_group')
-        except KeyError as e:
-            raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_file))
-
-        raw['source_file'] = file_ref
-        loaded_component = FlowComponent(**raw)
-        if not self.component_ref in flow.loaded_components:
-            flow.loaded_components[self.component_ref] = loaded_component
-
-        # Validate required variables are present
-        if loaded_component.required_vars:
-            for v in loaded_component.required_vars:
-                if not v in self.vars:
-                    raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, loaded_component.file_ref))
-
-        # Call FlowElement.load() on each element in the process_group
-        for elem_dict in process_group:
-            elem_dict['parent_path'] = "{}/{}".format(self.parent_path, self.name)
-            el = FlowElement.load(elem_dict, flow)
-
-            if isinstance(el, ProcessGroup):
-                if el.component_ref == self.component_ref:
-                    raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(self.component_ref))
-
-            if self.elements.get(el.name):
-                raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, ref))
-            else:
-                self.elements[el.name] = el
-
-        return self
 
 
 class Processor(FlowElement):
@@ -275,52 +204,3 @@ class Connection:
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
-
-
-def _replace_flow_element_vars(elements, loaded_components):
-    """
-    Recusively apply the variable evaluation to each element in the flow
-    :param elements: The elements to deploy
-    :type elements: list(flowlib.model.FlowElement)
-    :param loaded_components: The components that were imported during flow.init()
-    :type loaded_components: map(str:flowlib.model.FlowComponent)
-    """
-    for el in elements.values():
-        if isinstance(el, ProcessGroup):
-            source_component = loaded_components[el.component_ref]
-            _replace_vars(el, source_component)
-            _replace_flow_element_vars(el.elements, loaded_components)
-
-
-def _replace_vars(process_group, source_component):
-    """
-    Replace vars for all Processor elements inside a given ProcessGroup
-
-    Note: We already valdated that required vars were present during flow.init()
-      so don't worry about it here
-
-    :param process_group: The processorGroup processors that need vars evaluated
-    :type process_group: flowlib.model.ProcessGroup
-    :param component: The source component that the processGroup was created from
-    :type component: flowlib.model.FlowComponent
-    """
-    # Create a dict of vars to replace
-    replacements = copy.deepcopy(source_component.defaults) or dict()
-    if process_group.vars:
-        for key,val in process_group.vars.items():
-            replacements[key] = val
-
-    # Format each var name with the expected VAR_WRAPPER
-    # so that we can do a lookup when we find a pattern match
-    wrapped_vars = dict()
-    for k,v in replacements.items():
-        wrapped_vars[VAR_WRAPPER.format(k)] = v
-
-    esc_keys = [re.escape(key) for key in wrapped_vars.keys()]
-    pattern = re.compile(r'(' + '|'.join(esc_keys) + r')')
-
-    # Apply var replacements for each value of processor.config.properties
-    for el in process_group.elements.values():
-        if isinstance(el, Processor):
-            for k,v in el.config.properties.items():
-                el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)

@@ -4,6 +4,7 @@ import argparse
 class FlowLibConfig:
     def __init__(self, **kwargs):
         self.flow_yaml = kwargs.get('flow_yaml')
+        self.component_dir = kwargs.get('component_dir')
         self.nifi_address = kwargs.get('nifi_address')
         self.nifi_port = kwargs.get('nifi_port')
 
@@ -16,10 +17,12 @@ class FlowLibCLI:
         self.parser = argparse.ArgumentParser(description="Deploy a NiFi flow from YAML")
         # TODO: Add --validate arg to check that the given flow can be loaded successfully
         # TODO: Add --version arg
+        # TODO: --flow-yaml is a required argument
         self.parser.add_argument('--flow-yaml',
             nargs='?',
             type=argparse.FileType('r'),
             default='./flow.yaml',
+            required=True,
             help='YAML file defining a NiFi flow')
         self.parser.add_argument('--nifi-address',
             type = str,
@@ -30,5 +33,9 @@ class FlowLibCLI:
             type = str,
             default = '8080',
             help = 'HTTP port for the NiFi API'
+        )
+        self.parser.add_argument('--component-dir',
+            type = str,
+            help = 'A directory containing re-useable flowlib components'
         )
         self.config = FlowLibConfig(**vars(self.parser.parse_args()))
