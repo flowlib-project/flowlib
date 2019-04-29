@@ -11,20 +11,26 @@ class FlowLibException(Exception):
     pass
 
 class Flow:
-    # TODO: Add is_valid=False attribute which we set to True once initialization completes successfully
-    # TODO: Add flow_source property which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
+    # TODO: Add is_valid=False attr which we set to True once initialization completes successfully
+    # TODO: Add flow_source attr which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
+    # TODO: Add flowlib_version attr
+    # TODO: Add flowlib_release attr
     def __init__(self):
         """
         The Flow model. Do not use this constructor directly, instead use flowlib.api.new_flow()
         :param name: The name of the Flow
         :type name: str
+        :param flowlib_version: The current version of the flowlib library
+        :type flowlib_version: str
+        :param flowlib_release: The current git release of flowlib library
+        :type flowlib_release: str
         :param version: The version of the Flow
         :type version: str
         :param controllers: The root controllers for the root canvas
         :type controllers: list(Controller)
         :param canvas: The root elements of the flow
         :type canvas: list(FlowElement)
-        :param component_dir: The path to the directory containing flow.yaml
+        :param component_dir: The path to the directory containing reuseable flow components
         :type component_dir: str
         :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
         :type loaded_components: dict(str:FlowComponent)
@@ -33,6 +39,8 @@ class Flow:
         :type elements: dict(str:FlowElement)
         """
         self.name = None
+        self.flowlib_version = None
+        self.flowlib_release = None
         self.version = None
         self.controllers = None
         self.canvas = None

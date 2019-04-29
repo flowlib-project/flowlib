@@ -11,7 +11,13 @@ logging.config.fileConfig(log_config)
 
 def main():
     cli = FlowLibCLI()
-    flowlib.api.deploy_flow_yaml(cli.config)
+
+    if cli.config.flow_yaml:
+        flowlib.api.deploy_flow_yaml(cli.config)
+    elif cli.config.export_yaml:
+        flowlib.api.export_flow_yaml(cli.config)
+    # elif cli.config.validate:
+    #     flowlib.api.validate_flow(cli.config)
 
 if __name__ == '__main__':
     main()

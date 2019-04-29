@@ -5,6 +5,7 @@ import re
 import os
 import yaml
 
+import flowlib
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
     Processor, ProcessGroup)
 
@@ -19,6 +20,8 @@ def init_from_file(flow, _file, component_dir):
     :type f: io.TextIOWrapper
     """
     raw = yaml.safe_load(_file)
+    flow.flowlib_version = flowlib.__version__
+    flow.flowlib_release = flowlib.__git_version__
     flow.name = raw.get('name')
     flow.version = str(raw.get('version'))
     flow.controllers = raw.get('controllers')

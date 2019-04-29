@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import logging
+import re
+
 import nipyapi
 
-import flowlib
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
 
 TOP_LEVEL_PG_LOCATION = (300, 100)
-DEPLOYMENT_VERSION_INFO = """This NiFi Flow was generated and deployed by B23 FlowLib
-B23 FlowLib {}
-{}
+DEPLOYMENT_VERSION_INFO = """This NiFi Flow was deployed by
+B23 FlowLib
+version: {}
+release: {}
 
 Flow
 version: {}
@@ -17,16 +19,28 @@ version: {}
 {}
 """
 
+MATCH_LIB_VERSION = r'B23 FlowLib\sversion:\s(.*)'
+MATCH_LIB_RELEASE = r'B23 FlowLib\sversion:.*\srelease:\s(.*)'
+MATCH_FLOW_VERSION = r'Flow\sversion:\s(.*)'
+MATCH_FLOW_COMMENTS = r'-- DO NOT CHANGE ANYTHING ABOVE THIS LINE --\s(.*)'
 
-def init_from_nifi(flow, url):
+
+def init_from_nifi(flow, nifi_endpoint):
     """
     Initialize a Flow from from a running NiFi instance
     :param flow: An unitialized Flow instance
     :type flow: flowlib.model.Flow
-    :param url: A NiFi api endpoint
-    :type url: str
+    :param nifi_endpoint: A NiFi api endpoint
+    :type nifi_endpoint: str
     """
-    pass
+    nipyapi.config.nifi_config.host = nifi_endpoint
+    root_id = nipyapi.canvas.get_root_pg_id()
+    root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
+    flow.name = root.component.name
+    _init_flow_meta_info(flow, root.component.comments)
+    # _init_flow_elements_recursive(flow, root)
+    # _init_flow_connections_recursive(flow, root)
+
 
 
 def deploy_flow(flow, nifi_endpoint, dry_run=False):
@@ -50,7 +64,7 @@ def deploy_flow(flow, nifi_endpoint, dry_run=False):
 
     # Update root process group metadata with version info
     root.component.name = flow.name
-    root.component.comments = DEPLOYMENT_VERSION_INFO.format(flowlib.__version__, flowlib.__git_version__,  flow.version, flow.comments)
+    root.component.comments = DEPLOYMENT_VERSION_INFO.format(flow.flowlib_version, flow.flowlib_release,  flow.version, flow.comments)
     nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
     # _create_controllers_recursive(flow)
@@ -271,3 +285,25 @@ def _create_connections(flow, source_element):
             nipyapi.canvas.create_connection(source, dest, c.relationships)
     else:
         logging.debug("Terminal node, no downstream connections found for element {}".format(source_element.name))
+
+
+def _init_flow_meta_info(flow, desc):
+    lib_version_pattern = re.compile(MATCH_LIB_VERSION)
+    lib_version = lib_version_pattern.findall(desc)
+    if lib_version:
+        flow.lib_version = lib_version[0]
+
+    lib_release_pattern = re.compile(MATCH_LIB_RELEASE)
+    lib_release = lib_release_pattern.findall(desc)
+    if lib_release:
+        flow.lib_release = lib_release[0]
+
+    flow_version_pattern = re.compile(MATCH_FLOW_VERSION)
+    flow_version = flow_version_pattern.findall(desc)
+    if flow_version:
+        flow.version = flow_version[0]
+
+    flow_comments_pattern = re.compile(MATCH_FLOW_COMMENTS)
+    flow_comments = flow_comments_pattern.findall(desc)
+    if flow_comments:
+        flow.comments = flow_comments[0]
