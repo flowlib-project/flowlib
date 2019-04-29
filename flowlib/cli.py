@@ -17,11 +17,11 @@ class FlowLibCLI:
         self.parser = argparse.ArgumentParser(description="Deploy a NiFi flow from YAML")
         # TODO: Add --validate arg to check that the given flow can be loaded successfully
         # TODO: Add --version arg
-        # TODO: --flow-yaml is a required argument
+        # TODO: Add --dry-run arg
+        # TODO: Argument groups for when you are deploying from yaml and exporting from NiFi to yaml
         self.parser.add_argument('--flow-yaml',
             nargs='?',
             type=argparse.FileType('r'),
-            default='./flow.yaml',
             required=True,
             help='YAML file defining a NiFi flow')
         self.parser.add_argument('--nifi-address',

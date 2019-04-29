@@ -1,6 +1,12 @@
 name: Demo Flow
 version: 1.0
 
+comments: |
+  This is a sample NiFi flow to be deployed to NiFi by B23 FlowLib.
+  B23 FlowLib allows users to define NiFi flows as re-useable NiFi components
+  which can be loaded into a root flow.yaml and deployed *idempotently* (work in progress)
+  to a running NiFi instance
+
 # TODO: Allow Common Default properties for processors?
 #   How would these be passed down and merged with child components?
 # processor_defaults:
@@ -16,7 +22,7 @@ version: 1.0
 # TODO: Should controllers be global or at the component level?
 # similar to required_vars, we could have required_controllers
 
-# TODO: Add support for Remoteprocess_group Elements
+# TODO: Add support for remote_process_group Elements
 
 # TODO: Add config for terminating unspecified relationships automatically?
 #   How should we handle overriding which relationships to auto-terminate inside a component with multiple processors?
