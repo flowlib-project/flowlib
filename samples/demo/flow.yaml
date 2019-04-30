@@ -1,0 +1,48 @@
+name: PDF Processor Demo Flow
+version: 1.0
+
+comments: |
+  This is a demo NiFi flow that was deployed to NiFi by B23 FlowLib.
+  B23 FlowLib allows users to define NiFi flows as re-useable NiFi components
+  which can be loaded into a root flow.yaml and deployed *idempotently* to a running
+  NiFi instance.
+
+  This demo flow will watch for PDF files to land in Amazon S3, download the PDFs,
+  process the PDFs, and then write the parsed results back to the same S3 bucket
+  in the output directory
+
+controllers: []
+
+canvas:
+
+# TODO: How to inject AWS credentials ??
+
+- name: list-fetch
+  type: process_group
+  component_ref: common/s3_list_fetch_with_retry.yaml
+  vars:
+    s3_bucket: kegs-b23-s3
+    s3_region: us-east-1
+    s3_prefix: /flowlib/pdfs
+  connections:
+  - name: process-pdfs
+    from_port: output
+    to_port: input
+
+- name: process-pdfs
+  type: process_group
+  component_ref: demo/process_pdfs.yaml
+  connections:
+  - name: write-to-s3
+    from_port: output
+    to_port: input
+
+# update attributes with filenames ?
+
+- name: write-to-s3
+  type: process_group
+  component_ref: common/s3_write_with_retry.yaml
+  vars:
+    s3_bucket: kegs-b23-s3
+    s3_region: us-east-1
+    s3_prefix: /flowlib/pdfs-parsed/

@@ -1,4 +1,4 @@
-name: Demo Flow
+name: Test Data Flow
 version: 1.0
 
 comments: |
@@ -46,7 +46,7 @@ canvas:
   vars:
     s3_bucket: stackspace-us-east-1
     s3_region: us-east-1
-    s3_prefix: /abc/def/
+    s3_prefix: /binaries/
   connections:
   - name: debug
     from_port: output
@@ -58,6 +58,7 @@ canvas:
   vars:
     s3_bucket: stackspace-us-west-1
     s3_region: us-west-1
+    s3_prefix: /binaries/
   connections:
   - name: debug
     from_port: output

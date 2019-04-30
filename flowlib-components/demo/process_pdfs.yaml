@@ -1,0 +1,19 @@
+component_name: Process PDFs
+
+process_group:
+- name: input
+  type: input_port
+  connections:
+  - name: process-pdf
+
+- name: process-pdf
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.DebugFlow
+    properties: {}
+  connections:
+  - name: output
+    relationships: ['success', 'failure']
+
+- name: output
+  type: output_port

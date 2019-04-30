@@ -1,0 +1,26 @@
+component_name: S3 Write With Retry
+
+defaults:
+  s3_prefix: /
+
+required_vars:
+- s3_bucket
+- s3_region
+
+process_group:
+- name: input
+  type: input_port
+  connections:
+  - name: put-s3
+
+- name: put-s3
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.PutS3Object
+    properties:
+      Bucket: $(s3_bucket)
+      Region: $(s3_region)
+      Object Key: $(s3_prefix)${filename}
+  connections:
+  - name: put-s3
+    relationships: ['failure']
