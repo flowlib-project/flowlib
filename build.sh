@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # todo: Get tag from git tag else tag as latest
+#DIRTY=""
+#[[ -z $(git status -s) ]] || DIRTY="dirty"
 
 TAG="$1"
 if [ -z "$TAG" ]; then
