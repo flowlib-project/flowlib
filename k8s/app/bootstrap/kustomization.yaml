@@ -3,3 +3,6 @@ kind: Kustomization
 
 resources:
 - ./ns.yaml
+- ./service-account.yaml
+- ./role.yaml
+- ./role-binding.yaml

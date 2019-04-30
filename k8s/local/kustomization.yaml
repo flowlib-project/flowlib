@@ -3,12 +3,16 @@ kind: Kustomization
 
 namespace: b23-data-platform
 
+commonAnnotations:
+  b23.io/stack-type: nifi
+  # b23.io/stack-id: asdf-uuid
+
 commonLabels:
   environment: local
   owner: b23-data-platform
 
-bases:
-- ../app/common
+# bases:
+# - ../app/bootstrap
 
 resources:
 - ./nifi-service.yaml
