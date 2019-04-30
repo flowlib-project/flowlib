@@ -36,13 +36,15 @@ def new_flow_from_nifi(nifi_endpoint=None):
     return flow
 
 
-# def validate_flow(config):
-#     try:
-#         flow = new_flow(flow_yaml=config.flow_yaml)
-#         # flow.validate()
-#     except FlowLibException as e:
-#         logging.error(e)
-#         sys.exit(1)
+def validate_flow_yaml(config):
+    logging.info("Validating NiFi Flow YAML...")
+    try:
+        new_flow_from_file(config.component_dir, config.flow_yaml)
+        # todo: validate connections, init nifi processor DTOs, etc..
+        # but dont actually try to connect to the NiFi API
+    except FlowLibException as e:
+        logging.error(e)
+        sys.exit(1)
 
 
 def export_flow_yaml(config):

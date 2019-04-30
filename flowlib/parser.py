@@ -138,13 +138,15 @@ def _replace_vars(process_group, source_component):
 
 def _find_component_dir(flow_source_path):
     """
+    TODO: Support merging component directories
+
     Find a valid flowlib component directory if it was not specified with --component-dir
     From highest to lowest precedence:
     1. First check the directory containing the source flow.yaml for a lib/ directory
     2. Then check the FLOWLIB_COMPONENT_DIR environment variable
     ...
     """
-    if os.path.isdir(os.path.join(flow_source_path, 'lib')):
-        return os.path.join(flow_source_path, 'lib')
+    if os.path.isdir(os.path.join(flow_source_path, 'components')):
+        return os.path.join(flow_source_path, 'components')
     else:
-        return os.getenv('FLOWLIB_COMPONENT_DIR', '/etc/flowlib/lib')
+        return os.getenv('FLOWLIB_COMPONENT_DIR', '/etc/flowlib/components')

@@ -10,6 +10,7 @@ class FlowLibConfig:
     def __init__(self, **kwargs):
         self.flow_yaml = kwargs.get('flow_yaml')
         self.export_yaml = kwargs.get('export_yaml')
+        self.validate = kwargs.get('validate')
         self.component_dir = kwargs.get('component_dir')
         self.nifi_host = kwargs.get('nifi_host')
         self.nifi_port = kwargs.get('nifi_port')
@@ -21,8 +22,6 @@ class FlowLibConfig:
 class FlowLibCLI:
     def __init__(self):
         self.parser = argparse.ArgumentParser(prog="B23 FlowLib", description="A python library and cli for deploying NiFi flows from YAML")
-        # TODO: Add --validate arg to check that the given flow can be loaded successfully
-        # TODO: Add --dry-run arg
         self.parser.add_argument('--version',
             action='version',
             version='%(prog)s {} {}'.format(flowlib.__version__, flowlib.__git_version__)
@@ -40,6 +39,11 @@ class FlowLibCLI:
         self.parser.add_argument('--component-dir',
             type = str,
             help = 'A directory containing re-useable flowlib components'
+        )
+        # TODO: --flow-yaml is required when validate is True
+        self.parser.add_argument('--validate',
+            action='store_true',
+            help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
         )
         self.mx_group = self.parser.add_mutually_exclusive_group(required=True)
         self.mx_group.add_argument('--flow-yaml',
