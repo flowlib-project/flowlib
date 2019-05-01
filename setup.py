@@ -43,7 +43,7 @@ setup(
     name="b23-flowlib",
     version=version,
     packages=find_packages(exclude=['tests*']),
-    package_data={'': ["flowlib/git_version"]},
+    package_data={'flowlib': ["git_version", "logging.conf"]},
     include_package_data=True,
     install_requires=['nipyapi>=0.12.1', 'pyyaml'],
     author="David Kegley",

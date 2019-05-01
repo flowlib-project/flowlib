@@ -4,8 +4,7 @@ if [ -z "$FLOW" ]; then
   echo "[Error] missing required positional argument: /path/to/flow.yaml"
   exit 1;
 fi
-FLOW_DIR=$(dirname $FLOW)
-FLOW_NAME=$(basename $FLOW_DIR)
+FLOW_NAME=$(basename $(dirname $FLOW))
 
 # Validate the flow.yaml
 flowlib  --flow-yaml ${FLOW} --component-dir "$(dirname $0)/flowlib-components" --validate
@@ -27,7 +26,7 @@ fi
 docker build $(dirname $0) \
   -f $(dirname $0)/flow.dockerfile \
   -t b23-dataflows/$FLOW_NAME:$TAG \
-  --build-arg FLOW_DIR=$FLOW_DIR
+  --build-arg FLOW=$FLOW
 
 docker tag b23-dataflows/$FLOW_NAME:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-dataflows/$FLOW_NAME:$TAG
 docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-dataflows/$FLOW_NAME:$TAG

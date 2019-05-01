@@ -1,7 +1,2 @@
 __pycache__
-flowlib/git_version
-k8s/
-.gitignore
-env/
-*.egg-info/
-.vscode/
+git_version
