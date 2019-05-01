@@ -2,25 +2,42 @@ component_name: S3 List Fetch With Retry
 
 defaults:
   s3_min_object_age: 5m
-  s3_prefix: /
+  s3_prefix: ""
 
 required_vars:
 - s3_bucket
 - s3_region
+- s3_access_key
+- s3_secret_key
 
 process_group:
 - name: list-s3
   type: processor
   config:
     package_id: org.apache.nifi.processors.aws.s3.ListS3
+    scheduling_strategy: 'TIMER_DRIVEN'
+    scheduling_period: '10 sec'
     properties:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
+      Access Key: $(s3_access_key)
+      Secret Key: $(s3_secret_key)
       prefix: $(s3_prefix)
       min-age: $(s3_min_object_age)
   connections:
-  - name: fetch-s3
+  - name: filter-directories
     relationships: ['success']
+
+- name: filter-directories
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.RouteOnAttribute
+    auto_terminated_relationships: ['unmatched']
+    properties:
+      is_file: ${filename:endsWith('/'):not()}
+  connections:
+  - name: fetch-s3
+    relationships: ['is_file']
 
 - name: fetch-s3
   type: processor
@@ -29,6 +46,8 @@ process_group:
     properties:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
+      Access Key: $(s3_access_key)
+      Secret Key: $(s3_secret_key)
   connections:
   - name: fetch-s3
     relationships: ['failure']

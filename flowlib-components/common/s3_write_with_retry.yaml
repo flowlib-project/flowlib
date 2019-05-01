@@ -1,11 +1,13 @@
 component_name: S3 Write With Retry
 
 defaults:
-  s3_prefix: /
+  s3_prefix: ""
 
 required_vars:
 - s3_bucket
 - s3_region
+- s3_access_key
+- s3_secret_key
 
 process_group:
 - name: input
@@ -17,10 +19,13 @@ process_group:
   type: processor
   config:
     package_id: org.apache.nifi.processors.aws.s3.PutS3Object
+    auto_terminated_relationships: ['success']
     properties:
       Bucket: $(s3_bucket)
       Region: $(s3_region)
-      Object Key: $(s3_prefix)${filename}
+      Access Key: $(s3_access_key)
+      Secret Key: $(s3_secret_key)
+      Object Key: ${destination}
   connections:
   - name: put-s3
     relationships: ['failure']
