@@ -132,8 +132,10 @@ def _replace_vars(process_group, source_component):
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
         if isinstance(el, Processor):
-            for k,v in el.config.properties.items():
-                el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
+            if (len(wrapped_vars.keys()) > 0):
+                for k,v in el.config.properties.items():
+                    pattern.sub(lambda x: wrapped_vars[x.group()], v)
+                    el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
 
 
 def _find_component_dir(flow_source_path):

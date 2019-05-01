@@ -12,8 +12,7 @@ class FlowLibConfig:
         self.export_yaml = kwargs.get('export_yaml')
         self.validate = kwargs.get('validate')
         self.component_dir = kwargs.get('component_dir')
-        self.nifi_host = kwargs.get('nifi_host')
-        self.nifi_port = kwargs.get('nifi_port')
+        self.nifi_endpoint = kwargs.get('nifi_endpoint')
 
     def __repr__(self):
         return str(self.__dict__)
@@ -26,15 +25,10 @@ class FlowLibCLI:
             action='version',
             version='%(prog)s {} {}'.format(flowlib.__version__, flowlib.__git_version__)
         )
-        self.parser.add_argument('--nifi-host',
+        self.parser.add_argument('--nifi-endpoint',
             type = str,
-            default = 'localhost',
-            help = 'A NiFi server host'
-        )
-        self.parser.add_argument('--nifi-port',
-            type = str,
-            default = '8080',
-            help = 'HTTP port for the NiFi API'
+            default = 'http://localhost:8080/nifi-api',
+            help = 'A NiFi server endpoint'
         )
         self.parser.add_argument('--component-dir',
             type = str,

@@ -52,9 +52,8 @@ def export_flow_yaml(config):
     :type config: FlowLibConfig
     """
     logging.info("Exporting NiFi flow to YAML...")
-    nifi_endpoint = "http://{}:{}/nifi-api".format(config.nifi_host, config.nifi_port)
     try:
-        flow = new_flow_from_nifi(nifi_endpoint)
+        flow = new_flow_from_nifi(config.nifi_endpoint)
         yaml.dump(flow, config.export_yaml, default_flow_style=False)
     except FlowLibException as e:
         logging.error(e)
@@ -66,10 +65,9 @@ def deploy_flow_yaml(config):
     :type config: FlowLibConfig
     """
     logging.info("Deploying NiFi flow from YAML...")
-    nifi_endpoint = "http://{}:{}/nifi-api".format(config.nifi_host, config.nifi_port)
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
-        flowlib.nifi.deploy_flow(flow, nifi_endpoint)
+        flowlib.nifi.deploy_flow(flow, config.nifi_endpoint)
     except FlowLibException as e:
         logging.error(e)
         sys.exit(1)
