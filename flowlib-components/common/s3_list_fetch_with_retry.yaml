@@ -1,14 +1,14 @@
 component_name: S3 List Fetch With Retry
 
 defaults:
-  s3_min_object_age: 5m
-  s3_prefix: ""
+  min_object_age: 5m
+  prefix: ""
 
 required_vars:
-- s3_bucket
-- s3_region
-- s3_access_key
-- s3_secret_key
+- bucket
+- region
+- aws_access_key
+- aws_secret_key
 
 process_group:
 - name: list-s3
@@ -18,12 +18,12 @@ process_group:
     scheduling_strategy: 'TIMER_DRIVEN'
     scheduling_period: '10 sec'
     properties:
-      Bucket: $(s3_bucket)
-      Region: $(s3_region)
-      Access Key: $(s3_access_key)
-      Secret Key: $(s3_secret_key)
-      prefix: $(s3_prefix)
-      min-age: $(s3_min_object_age)
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
+      prefix: "{{ prefix }}"
+      min-age: "{{ min_object_age }}"
   connections:
   - name: filter-directories
     relationships: ['success']
@@ -44,10 +44,10 @@ process_group:
   config:
     package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
     properties:
-      Bucket: $(s3_bucket)
-      Region: $(s3_region)
-      Access Key: $(s3_access_key)
-      Secret Key: $(s3_secret_key)
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
   connections:
   - name: fetch-s3
     relationships: ['failure']

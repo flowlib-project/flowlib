@@ -19,11 +19,11 @@ canvas:
   type: process_group
   component_ref: common/s3_list_fetch_with_retry.yaml
   vars:
-    s3_bucket: kegs-b23-dataflow-demos
-    s3_region: us-east-1
-    s3_prefix: demo-data/input
-    s3_access_key: AKIA43S572GR7SUSKWUK
-    s3_secret_key: 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
+    bucket: kegs-b23-dataflow-demos
+    region: us-east-1
+    prefix: demo-data/input
+    aws_access_key: AKIA43S572GR7SUSKWUK
+    aws_secret_key: 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
   connections:
   - name: process-pdfs
     from_port: output
@@ -32,18 +32,28 @@ canvas:
 - name: process-pdfs
   type: process_group
   component_ref: demo/process_pdfs.yaml
-  vars:
-    destination_prefix: demo-data/output
+  connections:
+  - name: update-filename
+    from_port: output
+
+- name: update-filename
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.attributes.UpdateAttribute
+    auto_terminated_relationships: ['failure']
+    properties:
+      file_dest: demo-data/output/${filename:substringBeforeLast('.')}.json
   connections:
   - name: write-to-s3
-    from_port: output
+    relationships: ['success']
     to_port: input
 
 - name: write-to-s3
   type: process_group
   component_ref: common/s3_write_with_retry.yaml
   vars:
-    s3_bucket: kegs-b23-dataflow-demos
-    s3_region: us-east-1
-    s3_access_key: AKIA43S572GR7SUSKWUK
-    s3_secret_key: 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
+    bucket: kegs-b23-dataflow-demos
+    region: us-east-1
+    aws_access_key: AKIA43S572GR7SUSKWUK
+    aws_secret_key: 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
+    destination_attribute: file_dest

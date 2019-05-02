@@ -1,8 +1,7 @@
 component_name: Process PDFs
 
 defaults: {}
-required_vars:
-- destination_prefix
+required_vars: []
 
 process_group:
 - name: input
@@ -17,17 +16,6 @@ process_group:
     auto_terminated_relationships: ['failure']
     properties:
       Destination: flowfile-content
-  connections:
-  - name: update-filename
-    relationships: ['success']
-
-- name: update-filename
-  type: processor
-  config:
-    package_id: org.apache.nifi.processors.attributes.UpdateAttribute
-    auto_terminated_relationships: ['failure']
-    properties:
-      destination: $(destination_prefix)/${filename:substringBeforeLast('.')}.json
   connections:
   - name: output
     relationships: ['success']
