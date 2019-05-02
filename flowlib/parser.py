@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
 import logging
-import jinja2
 import copy
 import os
 import yaml
+
+import jinja2
+from jinja2 import Environment
 
 import flowlib
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
     Processor, ProcessGroup)
 
-VAR_WRAPPER = "$({})"
+def _env_var(value, key):
+    return os.getenv(key, value)
+env = Environment()
+env.filters['env_var'] = _env_var
+
 
 def init_from_file(flow, _file, component_dir):
     """
@@ -124,7 +130,7 @@ def _replace_vars(process_group, source_component):
     for el in process_group.elements.values():
         if isinstance(el, Processor):
             for k,v in el.config.properties.items():
-                t = jinja2.Template(v)
+                t = env.from_string(v)
                 el.config.properties[k] = t.render(**context)
 
 
