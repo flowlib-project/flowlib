@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
+import jinja2
 import copy
-import re
 import os
 import yaml
 
@@ -115,27 +115,17 @@ def _replace_vars(process_group, source_component):
     :type component: flowlib.model.FlowComponent
     """
     # Create a dict of vars to replace
-    replacements = copy.deepcopy(source_component.defaults) or dict()
+    context = copy.deepcopy(source_component.defaults) or dict()
     if process_group.vars:
         for key,val in process_group.vars.items():
-            replacements[key] = val
-
-    # Format each var name with the expected VAR_WRAPPER
-    # so that we can do a lookup when we find a pattern match
-    wrapped_vars = dict()
-    for k,v in replacements.items():
-        wrapped_vars[VAR_WRAPPER.format(k)] = v
-
-    esc_keys = [re.escape(key) for key in wrapped_vars.keys()]
-    pattern = re.compile(r'(' + '|'.join(esc_keys) + r')')
+            context[key] = val
 
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
         if isinstance(el, Processor):
-            if (len(wrapped_vars.keys()) > 0):
-                for k,v in el.config.properties.items():
-                    pattern.sub(lambda x: wrapped_vars[x.group()], v)
-                    el.config.properties[k] = pattern.sub(lambda x: wrapped_vars[x.group()], v)
+            for k,v in el.config.properties.items():
+                t = jinja2.Template(v)
+                el.config.properties[k] = t.render(**context)
 
 
 def _find_component_dir(flow_source_path):
