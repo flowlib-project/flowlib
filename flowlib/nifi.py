@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
 import re
+from urllib3.exceptions import MaxRetryError
 
 import nipyapi
 
@@ -25,6 +27,20 @@ MATCH_FLOW_VERSION = r'Flow\sversion:\s(.*)'
 MATCH_FLOW_COMMENTS = r'-- DO NOT CHANGE ANYTHING ABOVE THIS LINE --\s(.*)'
 
 
+def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
+    logging.info("Waiting for NiFi api to be ready at {}...".format(nifi_endpoint))
+    nipyapi.config.nifi_config.host = nifi_endpoint
+    i = 0
+    while i < retries:
+        try:
+            nipyapi.nifi.FlowApi().get_process_group_status('root')
+            return
+        except MaxRetryError as e:
+            i += 1
+            time.sleep(delay)
+    raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
+
+
 def init_from_nifi(flow, nifi_endpoint):
     """
     Initialize a Flow from from a running NiFi instance
@@ -33,7 +49,7 @@ def init_from_nifi(flow, nifi_endpoint):
     :param nifi_endpoint: A NiFi api endpoint
     :type nifi_endpoint: str
     """
-    nipyapi.config.nifi_config.host = nifi_endpoint
+    wait_for_nifi_api(nifi_endpoint)
     root_id = nipyapi.canvas.get_root_pg_id()
     root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
     flow.name = root.component.name
@@ -43,10 +59,8 @@ def init_from_nifi(flow, nifi_endpoint):
 
 
 
-def deploy_flow(flow, nifi_endpoint, dry_run=False):
-    # TODO: implement dry_run
-
-    nipyapi.config.nifi_config.host = nifi_endpoint
+def deploy_flow(flow, nifi_endpoint):
+    wait_for_nifi_api(nifi_endpoint)
     root_id = nipyapi.canvas.get_root_pg_id()
     root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
     logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.name, root_id))
