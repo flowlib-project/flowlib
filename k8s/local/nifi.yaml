@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nifi
-  namespace: system
 spec:
   selector:
     matchLabels:
@@ -12,9 +11,11 @@ spec:
       labels:
         app: nifi
     spec:
+      imagePullSecrets:
+      - name: aws-ecr-registry
       containers:
       - name: nifi
-        image: dbkegley/nifi:1.8.0
+        image: 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:latest
         imagePullPolicy: Always
         env:
         - name: NIFI_WEB_HTTP_HOST

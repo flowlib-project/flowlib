@@ -1,13 +1,13 @@
-kind: Service
 apiVersion: v1
+kind: Service
 metadata:
-  name: nifi-http
-spec:
-  type: LoadBalancer
-  selector:
+  name: nifi
+  labels:
     app: nifi
+spec:
   ports:
     - protocol: TCP
-      port: 8080
       targetPort: 8080
-      name: nifi
+      port: 8080
+  selector:
+    app: nifi
