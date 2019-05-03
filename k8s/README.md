@@ -10,6 +10,7 @@ $ kubectl apply -k ./k8s/app/bootstrap
 $ kubectl apply -k ./k8s/local
 ```
 
+Run: `kubectl port-forward svc/nifi 8080:8080`
 The NiFi UI is available at: `http://localhost:8080/nifi/`
 
 To use NiFi and FlowLib through BDP, add the local cluster through the BDP UI:
@@ -46,7 +47,7 @@ type: kubernetes.io/dockerconfigjson
 EOF
 ```
 
-### Cloud ###
+### Cloud [WIP] ###
 
 ```bash
 $ kubectl apply -k ./k8s/cloud/aws
@@ -54,8 +55,7 @@ $ kubectl apply -k ./k8s/cloud/aws
 $ kubectl apply -k ./k8s/cloud/gcp
 ```
 
-
-## Todo ##
+### Todo ###
 
 - Fix cloud storage classes
 - [Fix cloud node affinity patching](https://github.com/kubernetes-sigs/kustomize/issues/937)
