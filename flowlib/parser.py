@@ -32,14 +32,19 @@ def init_from_file(flow, _file, component_dir):
     flow.version = str(raw.get('version'))
     flow.controllers = raw.get('controllers')
     flow.canvas = raw.get('canvas')
-    flow.comments = raw.get('comments', "")
+    flow.comments = raw.get('comments', '')
 
+    # If --component-dir is specified, use that. Otherwise use
+    # the components/ directory relative to flow.yaml
     if component_dir:
-        flow.component_dir = component_dir
+        flow.component_dir = os.path.abspath(component_dir)
     else:
-        flow.component_dir = _find_component_dir(os.path.dirname(_file.name))
+        flow.component_dir = os.path.abspath(os.path.join(os.path.dirname(_file.name), 'components'))
 
-    logging.info("Initializing root Flow {} from file {} with component lib {}".format(flow.name, _file.name, flow.component_dir))
+    logging.info("Loading component lib: {}".format(flow.component_dir))
+    _load_components(flow.component_dir, flow)
+
+    logging.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
     for elem_dict in flow.canvas:
         elem_dict['parent_path'] = flow.name
         el = FlowElement.from_dict(elem_dict)
@@ -55,40 +60,48 @@ def init_from_file(flow, _file, component_dir):
     _replace_flow_element_vars(flow.elements, flow.loaded_components)
 
 
+def _load_components(component_dir, flow):
+    for root, subdirs, files in os.walk(component_dir):
+        for _file in files:
+            if _file.endswith('.yaml') or _file.endswith('.yml'):
+                logging.info("Loading component: {}".format(_file))
+                with open(os.path.join(root, _file)) as f:
+                    raw_component = yaml.safe_load(f)
+                    raw_component['source_file'] = f.name
+
+                loaded_component = FlowComponent(**raw_component)
+                component_ref = loaded_component.source_file.split(component_dir)[1].lstrip(os.sep)
+                flow.loaded_components[component_ref] = loaded_component
+
+
 def _init_component(pg_element, flow):
     logging.info("Loading ProcessGroup: {}".format(pg_element.name))
-    file_ref = os.path.join(flow.component_dir, pg_element.component_ref)
-    with open(file_ref) as f:
-        raw = yaml.safe_load(f)
-
-    try:
-        process_group = raw.pop('process_group')
-    except KeyError as e:
-        raise FlowLibException("FlowLib component does not contain a process_group field: {}".format(loaded_component.source_file))
-
-    raw['source_file'] = file_ref
-    loaded_component = FlowComponent(**raw)
-    if not pg_element.component_ref in flow.loaded_components:
-        flow.loaded_components[pg_element.component_ref] = loaded_component
+    component = flow.loaded_components.get(pg_element.component_ref)
+    if not component:
+        parent = flow.get_parent_element(pg_element)
+        source = parent.source_file if hasattr(parent, 'source_file') else 'Root:flow.yaml'
+        raise FlowLibException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
+            pg_element.component_ref, pg_element.name, source))
 
     # Validate required variables are present
-    if loaded_component.required_vars:
-        for v in loaded_component.required_vars:
+    if component.required_vars:
+        for v in component.required_vars:
             if not v in pg_element.vars:
-                raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, loaded_component.file_ref))
+                raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, component.source_file))
 
     # Call FlowElement.from_dict() on each element in the process_group
-    for elem_dict in process_group:
+    for elem_dict in component.process_group:
         elem_dict['parent_path'] = "{}/{}".format(pg_element.parent_path, pg_element.name)
         el = FlowElement.from_dict(elem_dict)
 
         if isinstance(el, ProcessGroup):
             if el.component_ref == pg_element.component_ref:
                 raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_ref))
-            _init_component(el, flow)
+            else:
+                _init_component(el, flow)
 
         if pg_element.elements.get(el.name):
-            raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, ref))
+            raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, pg_element.component_ref))
         else:
             pg_element.elements[el.name] = el
 
@@ -132,19 +145,3 @@ def _replace_vars(process_group, source_component):
             for k,v in el.config.properties.items():
                 t = env.from_string(v)
                 el.config.properties[k] = t.render(**context)
-
-
-def _find_component_dir(flow_source_path):
-    """
-    TODO: Support merging component directories
-
-    Find a valid flowlib component directory if it was not specified with --component-dir
-    From highest to lowest precedence:
-    1. First check the directory containing the source flow.yaml for a lib/ directory
-    2. Then check the FLOWLIB_COMPONENT_DIR environment variable
-    ...
-    """
-    if os.path.isdir(os.path.join(flow_source_path, 'components')):
-        return os.path.join(flow_source_path, 'components')
-    else:
-        return os.getenv('FLOWLIB_COMPONENT_DIR', '/etc/flowlib/components')

@@ -2,13 +2,12 @@
 import git
 
 import logging
-import imp
+import importlib
 import os
 from setuptools import setup, find_packages
 
 logger = logging.getLogger(__name__)
-
-version = imp.load_source(
+version = importlib.import_module(
     'flowlib.version', os.path.join('flowlib', 'version.py')).version
 
 def git_version(version):
@@ -28,7 +27,6 @@ def git_version(version):
         if repo.is_dirty():
             return '{sha}.dirty'.format(sha=sha)
 
-        # TODO: Check that an official release tag exists
         return 'release:{version}+{sha}'.format(version=version, sha=sha)
     else:
         return 'dirty'
