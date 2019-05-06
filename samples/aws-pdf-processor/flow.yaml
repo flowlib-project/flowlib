@@ -31,7 +31,7 @@ canvas:
 
 - name: process-pdfs
   type: process_group
-  component_ref: demo/process_pdfs.yaml
+  component_ref: pdf/process_pdfs.yaml
   connections:
   - name: update-filename
     from_port: output
