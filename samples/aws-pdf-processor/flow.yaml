@@ -11,19 +11,24 @@ comments: |
   process the PDFs, and then write the parsed results back to the same S3 bucket
   in the output directory
 
+globals:
+  bucket: 'kegs-b23-dataflow-demos'
+  region: 'us-east-1'
+  aws_access_key: "{{ 'AKIA43S572GR7SUSKWUK' | env('AWS_ACCESS_KEY') }}"
+  aws_secret_key: "{{ '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' | env('AWS_SECRET_KEY') }}"
+
 controllers: []
 
 canvas:
-
 - name: list-fetch
   type: process_group
   component_ref: common/s3_list_fetch_with_retry.yaml
   vars:
-    bucket: kegs-b23-dataflow-demos
-    region: us-east-1
+    bucket: "{{ bucket }}"
+    region: "{{ region }}"
     prefix: demo-data/input
-    aws_access_key: AKIA43S572GR7SUSKWUK
-    aws_secret_key: 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
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
   connections:
   - name: process-pdfs
     from_port: output
@@ -52,8 +57,8 @@ canvas:
   type: process_group
   component_ref: common/s3_write_with_retry.yaml
   vars:
-    bucket: kegs-b23-dataflow-demos
-    region: us-east-1
-    aws_access_key: AKIA43S572GR7SUSKWUK
-    aws_secret_key: 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
+    bucket: "{{ bucket }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
     destination_attribute: file_dest

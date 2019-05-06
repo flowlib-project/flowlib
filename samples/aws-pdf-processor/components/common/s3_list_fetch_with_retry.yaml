@@ -1,12 +1,12 @@
 component_name: S3 List Fetch With Retry
 
 defaults:
-  aws_access_key: ''
-  aws_secret_key: ''
   min_object_age: 5m
-  prefix: ""
+  prefix: ''
 
 required_vars:
+- aws_access_key
+- aws_secret_key
 - bucket
 - region
 
@@ -20,8 +20,8 @@ process_group:
     properties:
       Bucket: "{{ bucket }}"
       Region: "{{ region }}"
-      Access Key: "{{ aws_access_key | env_var('AWS_ACCESS_KEY') }}"
-      Secret Key: "{{ aws_secret_key | env_var('AWS_SECRET_KEY') }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
       prefix: "{{ prefix }}"
       min-age: "{{ min_object_age }}"
   connections:
@@ -46,8 +46,8 @@ process_group:
     properties:
       Bucket: "{{ bucket }}"
       Region: "{{ region }}"
-      Access Key: "{{ aws_access_key | env_var('AWS_ACCESS_KEY') }}"
-      Secret Key: "{{ aws_secret_key | env_var('AWS_SECRET_KEY') }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
   connections:
   - name: fetch-s3
     relationships: ['failure']

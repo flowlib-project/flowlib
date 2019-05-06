@@ -1,8 +1,5 @@
 component_name: Process PDFs
 
-defaults: {}
-required_vars: []
-
 process_group:
 - name: input
   type: input_port
