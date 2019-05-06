@@ -43,6 +43,7 @@ class Flow:
         self.canvas = None
         self.component_dir = None
         self.comments = None
+        self.globals = None
         self.raw = None
         self.loaded_components = dict()
         self.elements = dict()

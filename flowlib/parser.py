@@ -11,10 +11,19 @@ import flowlib
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
     Processor, ProcessGroup)
 
-def _env_var(value, key):
-    return os.getenv(key, value)
+
+def env_global(key):
+    val = os.getenv(key)
+    if not val:
+        logging.warn("Environment variable {} is undefined and no default was provided.".format(key))
+    return val
+
+def env_filter(default, key):
+    return os.getenv(key, default)
+
 env = Environment()
-env.filters['env_var'] = _env_var
+env.filters['env'] = env_filter
+env.globals['env'] = env_global
 
 
 def init_from_file(flow, _file, component_dir):
@@ -31,12 +40,21 @@ def init_from_file(flow, _file, component_dir):
     flow.flowlib_release = flowlib.__git_version__
     flow.name = raw.get('name')
     flow.version = str(raw.get('version'))
-    flow.controllers = raw.get('controllers')
+    flow.controllers = raw.get('controllers', [])
     flow.canvas = raw.get('canvas')
     flow.comments = raw.get('comments', '')
+    flow.globals = raw.get('globals', {})
 
-    # If --component-dir is specified, use that. Otherwise use
-    # the components/ directory relative to flow.yaml
+    # Jinja template the global vars
+    for k,v in flow.globals.items():
+        t = env.from_string(v)
+        flow.globals[k] = t.render()
+
+    # Set jinja globals for templating process_group.vars and processor.properties later
+    env.globals.update(**flow.globals)
+
+    # If --component-dir is specified, use that.
+    # Otherwise use the components/ directory relative to flow.yaml
     if component_dir:
         flow.component_dir = os.path.abspath(component_dir)
     else:
@@ -130,19 +148,20 @@ def _replace_vars(process_group, source_component):
     """
     Replace vars for all Processor elements inside a given ProcessGroup
 
-    Note: We already valdated that required vars were present during flow.init()
-      so don't worry about it here
+    Note: We already valdated that required vars were present during
+        _init_component() so don't worry about it here
 
-    :param process_group: The processorGroup processors that need vars evaluated
+    :param process_group: The process_group processors that need vars evaluated
     :type process_group: flowlib.model.ProcessGroup
     :param component: The source component that the processGroup was created from
     :type component: flowlib.model.FlowComponent
     """
     # Create a dict of vars to replace
-    context = copy.deepcopy(source_component.defaults) or dict()
+    context = copy.deepcopy(source_component.defaults)
     if process_group.vars:
         for key,val in process_group.vars.items():
-            context[key] = val
+            t = env.from_string(val)
+            context[key] = t.render(**context)
 
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
