@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
-import pprint
-
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 
 PG_NAME_DELIMETER = '/'
@@ -11,10 +9,7 @@ class FlowLibException(Exception):
     pass
 
 class Flow:
-    # TODO: Add is_valid=False attr which we set to True once initialization completes successfully
     # TODO: Add flow_source attr which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
-    # TODO: Add flowlib_version attr
-    # TODO: Add flowlib_release attr
     def __init__(self):
         """
         The Flow model. Do not use this constructor directly, instead use flowlib.api.new_flow()
@@ -30,6 +25,8 @@ class Flow:
         :type controllers: list(Controller)
         :param canvas: The root elements of the flow
         :type canvas: list(FlowElement)
+        :param raw: The raw yaml text of the flow.yaml
+        :type raw: io.TextIOWrapper
         :param component_dir: The path to the directory containing reuseable flow components
         :type component_dir: str
         :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
@@ -46,11 +43,12 @@ class Flow:
         self.canvas = None
         self.component_dir = None
         self.comments = None
+        self.raw = None
         self.loaded_components = dict()
         self.elements = dict()
 
     def __repr__(self):
-        return pprint.pformat(self.__dict__)
+        return str(vars(self))
 
     # TODO: Unit test this
     def get_parent_element(self, element):
@@ -68,7 +66,7 @@ class Flow:
 
 
 class FlowComponent:
-    def __init__(self, component_name, source_file, process_group, defaults=None, required_vars=None):
+    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_vars=[]):
         """
         A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
         """
@@ -77,9 +75,10 @@ class FlowComponent:
         self.defaults = defaults
         self.required_vars = required_vars
         self.process_group = process_group
+        self.raw = raw
 
     def __repr__(self):
-        return pprint.pformat(self.__dict__)
+        return str(vars(self))
 
 
 class FlowElement(ABC):
@@ -143,7 +142,7 @@ class FlowElement(ABC):
         return self._type
 
     def __repr__(self):
-        return pprint.pformat(self.__dict__)
+        return str(vars(self))
 
 
 class ProcessGroup(FlowElement):
@@ -181,7 +180,7 @@ class ProcessorConfig(ProcessorConfigDTO):
         self.package_id = package_id
 
     def __repr__(self):
-        return pprint.pformat(self.__dict__)
+        return str(vars(self))
 
 
 class InputPort(FlowElement):
@@ -212,4 +211,4 @@ class Connection:
         self.relationships = relationships
 
     def __repr__(self):
-        return pprint.pformat(self.__dict__)
+        return str(vars(self))

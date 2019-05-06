@@ -2,6 +2,7 @@
 import logging
 import time
 import re
+from jinja2 import Template
 from urllib3.exceptions import MaxRetryError
 
 import nipyapi
@@ -9,22 +10,28 @@ import nipyapi
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
 
 TOP_LEVEL_PG_LOCATION = (300, 100)
-DEPLOYMENT_VERSION_INFO = """This NiFi Flow was deployed by
-B23 FlowLib
-version: {}
-release: {}
+FLOW_DEPLOYMENT_INFO = """
+### DO NOT CHANGE ANYTHING BELOW THIS LINE ###
+This NiFi Flow was generated and deployed by B23 FlowLib
+version: {{ flowlib_version }}
+release: {{ flowlib_release }}
 
-Flow
-version: {}
+### flow.yaml ###
 
--- DO NOT CHANGE ANYTHING ABOVE THIS LINE --
-{}
+{{ flow_raw }}
+
+### components ###
+{% for c in flow_components %}
+# {{ c.ref }} #
+
+{{ c.raw }}
+{% endfor %}
 """
 
 MATCH_LIB_VERSION = r'B23 FlowLib\sversion:\s(.*)'
 MATCH_LIB_RELEASE = r'B23 FlowLib\sversion:.*\srelease:\s(.*)'
-MATCH_FLOW_VERSION = r'Flow\sversion:\s(.*)'
-MATCH_FLOW_COMMENTS = r'-- DO NOT CHANGE ANYTHING ABOVE THIS LINE --\s(.*)'
+MATCH_FLOW_YAML = r'### flow.yaml ###\s(.*)\s# components #'
+MATCH_COMPONENTS = r'### components ###\s(.*)'
 
 
 def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
@@ -65,20 +72,25 @@ def deploy_flow(flow, nifi_endpoint):
     root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
     logging.info("Deploying {} to NiFi root canvas ID: {}".format(flow.name, root_id))
 
-    # TODO: Check here if there is a flow already deployed
-    # deployed_flow = Flow.load_from_nifi(nifi_url)
-    # flow.compare(deployed_flow)
-
-    # TODO: Stop all source processors and wait for queues to drain completely.
-    # Then stop all remaining processors and remove all connections ?
-
-    # TODO: It is probably more reliable to delete all processors and connections and re-deploy
-    # to a blank canvas. This will involve reading the state and setting the state directly in zookeeper
-    # for the newly deployed processors ?
-
     # Update root process group metadata with version info
     root.component.name = flow.name
-    root.component.comments = DEPLOYMENT_VERSION_INFO.format(flow.flowlib_version, flow.flowlib_release,  flow.version, flow.comments)
+
+    # TODO: Filter loaded_components that are actually used in this flow
+
+    # reset fps
+    flow.raw.seek(0)
+    for c in flow.loaded_components.values():
+        if c.raw:
+            c.raw.seek(0)
+
+    context = {
+        'flowlib_version': flow.flowlib_version,
+        'flowlib_release': flow.flowlib_release,
+        'flow_raw': flow.raw.read(),
+        'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
+    }
+    t = Template(FLOW_DEPLOYMENT_INFO)
+    root.component.comments = t.render(context)
     nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
 
     # _create_controllers_recursive(flow)
@@ -311,13 +323,3 @@ def _init_flow_meta_info(flow, desc):
     lib_release = lib_release_pattern.findall(desc)
     if lib_release:
         flow.lib_release = lib_release[0]
-
-    flow_version_pattern = re.compile(MATCH_FLOW_VERSION)
-    flow_version = flow_version_pattern.findall(desc)
-    if flow_version:
-        flow.version = flow_version[0]
-
-    flow_comments_pattern = re.compile(MATCH_FLOW_COMMENTS)
-    flow_comments = flow_comments_pattern.findall(desc)
-    if flow_comments:
-        flow.comments = flow_comments[0]

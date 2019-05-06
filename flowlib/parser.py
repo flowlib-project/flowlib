@@ -22,10 +22,11 @@ def init_from_file(flow, _file, component_dir):
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
     :type flow: flowlib.model.Flow
-    :param f: A File object
-    :type f: io.TextIOWrapper
+    :param _file: A File object
+    :type _file: io.TextIOWrapper
     """
     raw = yaml.safe_load(_file)
+    flow.raw = _file
     flow.flowlib_version = flowlib.__version__
     flow.flowlib_release = flowlib.__git_version__
     flow.name = raw.get('name')
@@ -65,11 +66,15 @@ def _load_components(component_dir, flow):
         for _file in files:
             if _file.endswith('.yaml') or _file.endswith('.yml'):
                 logging.info("Loading component: {}".format(_file))
-                with open(os.path.join(root, _file)) as f:
-                    raw_component = yaml.safe_load(f)
-                    raw_component['source_file'] = f.name
 
+                # init the component from file
+                f = open(os.path.join(root, _file))
+                raw_component = yaml.safe_load(f)
+                raw_component['source_file'] = f.name
+                raw_component['raw'] = f
                 loaded_component = FlowComponent(**raw_component)
+
+                # save the component so it can be instantiated later
                 component_ref = loaded_component.source_file.split(component_dir)[1].lstrip(os.sep)
                 flow.loaded_components[component_ref] = loaded_component
 

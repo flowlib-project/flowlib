@@ -21,7 +21,6 @@ def new_flow_from_file(component_dir, flow_yaml):
     if isinstance(flow_yaml, str):
         flow_yaml = open(flow_yaml)
     flowlib.parser.init_from_file(flow, flow_yaml, component_dir)
-    flow_yaml.close()
     return flow
 
 
@@ -39,7 +38,7 @@ def new_flow_from_nifi(nifi_endpoint=None):
 def validate_flow_yaml(config):
     logging.info("Validating NiFi Flow YAML...")
     try:
-        new_flow_from_file(config.component_dir, config.flow_yaml)
+        flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         # todo: validate connections, init nifi processor DTOs, etc..
         # but dont actually try to connect to the NiFi API
     except FlowLibException as e:
