@@ -6,8 +6,8 @@ TAG="$1"
 if [ -z "$TAG" ] || [ "$DIRTY" == "dirty" ]; then
   TAG="latest"
 else
-  git tag -a v$TAG -m "B23 FlowLib release: $TAG" || true
-  git push origin --tags || true
+  git tag -a v$TAG -m "B23 FlowLib release: $TAG"
+  git push origin --tags
 fi
 
 # Remove dist/ if it exists
