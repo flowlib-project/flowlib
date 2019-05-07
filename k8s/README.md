@@ -47,15 +47,24 @@ type: kubernetes.io/dockerconfigjson
 EOF
 ```
 
-### Cloud [WIP] ###
+ECR registry policy json
 
-```bash
-$ kubectl apply -k ./k8s/cloud/aws
-# or
-$ kubectl apply -k ./k8s/cloud/gcp
+```json
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPullForB23UserAccounts",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::883886641571:root"
+      },
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ]
+    }
+  ]
+}
 ```
-
-##### TODO
-
-- Fix cloud storage classes
-- [Fix cloud node affinity patching](https://github.com/kubernetes-sigs/kustomize/issues/937)

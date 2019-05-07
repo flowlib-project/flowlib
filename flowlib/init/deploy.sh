@@ -9,8 +9,13 @@ flow_name=$(echo $flow_info | awk '{print $1}')
 flow_version=$(echo $flow_info | awk '{print $2}')
 flow_image="b23-dataflows/$flow_name:$flow_version"
 
+# Login to ECR
+$(aws ecr get-login --no-include-email --region us-east-1)
+
+# Build flow image
 docker build . -t $flow_image
 
+# Create kubernetes deployment and service
 kubectl apply -f - << EOF
 apiVersion: v1
 kind: Service
@@ -65,10 +70,13 @@ spec:
           containerPort: 8080
 EOF
 
+# Cleanup on ctrl-c or kill
 trap "echo Exit.. Undeploying $flow_name; \
   kubectl -n b23-data-platform delete svc $flow_name; \
   kubectl -n b23-data-platform delete deployments.apps $flow_name; \
   popd > /dev/null" KILL TERM HUP INT;
 
 echo "Waiting for $flow_name deployment..." && sleep 3
+
+# Start kubectl proxying on http://127.0.0.1:8080
 kubectl port-forward svc/$flow_name 8080:8080
