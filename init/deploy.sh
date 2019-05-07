@@ -4,7 +4,7 @@ dir=$(pwd)
 
 # parse flow.version and flow.name from stdout
 echo "Validating $dir/flow.yaml"
-flow_info=$(flowlib --validate --flow-yaml ./flow.yaml 2> /dev/null| awk -F: '{print $2}')
+flow_info=$(flowlib --validate --flow-yaml ./flow.yaml 2> /dev/null | awk -F: '{print $2}')
 flow_name=$(echo $flow_info | awk '{print $1}')
 flow_version=$(echo $flow_info | awk '{print $2}')
 flow_image="b23-dataflows/$flow_name:$flow_version"

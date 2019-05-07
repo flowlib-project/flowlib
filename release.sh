@@ -1,17 +1,24 @@
 #!/usr/bin/env bash -e
-
-# TODO: Get tag from git tag else tag as latest
-#DIRTY=""
-#[[ -z $(git status -s) ]] || DIRTY="dirty"
+DIRTY=""
+[[ -z $(git status -s) ]] || DIRTY="dirty"
 
 TAG="$1"
-if [ -z "$TAG" ]; then
+if [ -z "$TAG" ] || [ "$DIRTY" == "dirty" ]; then
   TAG="latest"
+else
+  git tag -a v$TAG -m "B23 FlowLib release: $TAG"
+  git push origin --tags
 fi
 
-# Login to ECR
-$(aws ecr get-login --no-include-email --region us-east-1)
+# Build FlowLib
+rm -r $dir/dist/
+python setup.py sdist
 
-docker build --no-cache $(dirname $0) -t b23-flowlib:$TAG
-docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
-docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+# Upload dist/b23-flowlib-$RELEASE.tar.gz
+
+# Login to ECR
+# $(aws ecr get-login --no-include-email --region us-east-1)
+
+# docker build --no-cache $(dirname $0) -t b23-flowlib:$TAG
+# docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+# docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
