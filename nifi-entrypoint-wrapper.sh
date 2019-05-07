@@ -1,6 +1,5 @@
 #!/bin/sh -e
-printf "Executing entrypoint-wrapper.sh...\n"
-flowlib --flow-yaml /etc/flowlib/flow.yaml > /tmp/flowlib-deploy.log &
+printf "Executing nifi-entrypoint-wrapper.sh...\n"
 
 # For liveness/readiness probes and so flowlib can deploy to 127.0.0.1:8080/nifi-api
 # and kubectl port-forward svc/nifi 8080:8080

@@ -10,8 +10,10 @@ ENV SCRIPTS_DIR=/opt/nifi/scripts
 COPY entrypoint-wrapper.sh ${SCRIPTS_DIR}/entrypoint-wrapper.sh
 COPY dist/${FLOWLIB_DIST} /tmp/${FLOWLIB_DIST}
 RUN chown nifi:nifi /tmp/${FLOWLIB_DIST} && \
-    chown nifi:nifi ${SCRIPTS_DIR}/entrypoint-wrapper.sh && \
-    chmod 750 ${SCRIPTS_DIR}/entrypoint-wrapper.sh && \
+    chown nifi:nifi ${SCRIPTS_DIR}/nifi-entrypoint-wrapper.sh && \
+    chown nifi:nifi ${SCRIPTS_DIR}/flow-entrypoint-wrapper.sh && \
+    chmod 750 ${SCRIPTS_DIR}/nifi-entrypoint-wrapper.sh && \
+    chmod 750 ${SCRIPTS_DIR}/flow-entrypoint-wrapper.sh && \
     rm -rf /var/lib/apt/lists/*
 
 USER nifi
@@ -19,7 +21,8 @@ RUN pip3 install --user /tmp/${FLOWLIB_DIST} && \
     rm /tmp/${FLOWLIB_DIST}
 
 ENV PATH="/home/nifi/.local/bin:${PATH}"
-ENTRYPOINT ["../scripts/entrypoint-wrapper.sh"]
+ENTRYPOINT ["../scripts/nifi-entrypoint-wrapper.sh"]
 
 ONBUILD COPY components/ /etc/flowlib/components/
 ONBUILD COPY flow.yaml /etc/flowlib/flow.yaml
+ONBUILD ENTRYPOINT ["../scripts/flow-entrypoint-wrapper.sh"]
