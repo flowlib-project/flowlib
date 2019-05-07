@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
+import shutil
 import yaml
 
 import flowlib.nifi
 import flowlib.parser
 from flowlib.model import FlowLibException, Flow
 from flowlib.logger import log
+
+
+def init_flow_scaffold(dest):
+    if os.path.exists(dest):
+        raise FlowLibException("--scaffold={} destination already exists.".format(dest))
+
+    init_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'init'))
+    shutil.copytree(init_dir, dest)
 
 
 def new_flow_from_file(component_dir, flow_yaml):

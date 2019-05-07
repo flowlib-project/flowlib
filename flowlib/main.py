@@ -7,7 +7,9 @@ from flowlib.cli import FlowLibCLI
 def main():
     cli = FlowLibCLI()
 
-    if cli.config.validate:
+    if cli.config.scaffold:
+        flowlib.api.init_flow_scaffold(cli.config.scaffold)
+    elif cli.config.validate:
         flowlib.api.validate_flow_yaml(cli.config)
     elif cli.config.flow_yaml:
         flowlib.api.deploy_flow_yaml(cli.config)
