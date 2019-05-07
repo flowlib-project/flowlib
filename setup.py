@@ -7,7 +7,7 @@ setup(
     setup_requires=['setuptools_scm'],
     packages=find_packages(exclude=['tests*']),
     package_data={
-        'flowlib': ['logging.conf']
+        'flowlib': ['logging.conf', 'init/*'],
     },
     include_package_data=True,
     install_requires=['nipyapi>=0.12.1', 'pyyaml', 'jinja2', 'urllib3<1.25,>=1.21.1'],
