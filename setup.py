@@ -1,19 +1,9 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
-def get_flowlib_version():
-    from setuptools_scm.version import get_local_dirty_tag
-    def clean_scheme(version):
-        return get_local_dirty_tag(version) if version.dirty else '+clean'
-
-    return {
-        'local_scheme': clean_scheme,
-        'write_to': 'version.py'
-    }
-
 setup(
     name="b23-flowlib",
-    use_scm_version=get_flowlib_version,
+    use_scm_version=True,
     setup_requires=['setuptools_scm'],
     packages=find_packages(exclude=['tests*']),
     package_data={
