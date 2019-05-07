@@ -3,8 +3,7 @@
 ### FlowLib User Getting Started ###
 
 ```shell
-VERSION="0.1.0"
-wget https://github.com/B23admin/b23-flowlib/releases/download/v$VERSION/b23-flowlib-$VERSION.tar.gz
+# Download the latest release archive from: https://github.com/B23admin/b23-flowlib/releases/latest
 pip install b23-flowlib-$VERSION.tar.gz
 flowlib --scaffold=./new-project-dir
 ```
