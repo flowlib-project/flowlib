@@ -22,7 +22,7 @@ class FlowLibCLI:
         self.parser = argparse.ArgumentParser(prog="B23 FlowLib", description="A python library and cli for deploying NiFi flows from YAML")
         self.parser.add_argument('--version',
             action = 'version',
-            version = '%(prog)s {} {}'.format(flowlib.__version__, flowlib.__git_version__)
+            version = '%(prog)s {}'.format(flowlib.__version__)
         )
         self.parser.add_argument('--nifi-endpoint',
             type = str,
