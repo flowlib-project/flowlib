@@ -37,7 +37,6 @@ class Flow:
         """
         self.name = None
         self.flowlib_version = None
-        self.flowlib_release = None
         self.version = None
         self.controllers = None
         self.canvas = None

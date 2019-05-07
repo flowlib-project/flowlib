@@ -14,7 +14,6 @@ FLOW_DEPLOYMENT_INFO = """
 ### DO NOT CHANGE ANYTHING BELOW THIS LINE ###
 This NiFi Flow was generated and deployed by B23 FlowLib
 version: {{ flowlib_version }}
-release: {{ flowlib_release }}
 
 ### flow.yaml ###
 
@@ -85,7 +84,6 @@ def deploy_flow(flow, nifi_endpoint):
 
     context = {
         'flowlib_version': flow.flowlib_version,
-        'flowlib_release': flow.flowlib_release,
         'flow_raw': flow.raw.read(),
         'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
     }

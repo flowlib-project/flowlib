@@ -52,7 +52,6 @@ def init_from_file(flow, _file, component_dir):
     raw = yaml.safe_load(_file)
     flow.raw = _file
     flow.flowlib_version = flowlib.__version__
-    flow.flowlib_release = flowlib.__git_version__
     flow.name = _validate_name(raw.get('name'))
     flow.version = _validate_version(str(raw.get('version')))
     flow.controllers = raw.get('controllers', [])
