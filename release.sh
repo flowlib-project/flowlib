@@ -6,7 +6,7 @@ TAG=$(python ./setup.py --version)
 if echo $TAG | grep 'dev'; then
   TAG="latest"
 else
-  git tag -a v$TAG -m "B23 FlowLib release: v$TAG"
+  git tag -a v$TAG -m "B23 FlowLib release: v$TAG" || true
   git push origin --tags
 fi
 
