@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import logging
 import copy
 import os
+import re
 import yaml
 
 import jinja2
 from jinja2 import Environment
 
 import flowlib
+from flowlib.logger import log
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
     Processor, ProcessGroup)
 
@@ -15,7 +16,7 @@ from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
 def env_global(key):
     val = os.getenv(key)
     if not val:
-        logging.warn("Environment variable {} is undefined and no default was provided.".format(key))
+        log.warn("Environment variable {} is undefined and no default was provided.".format(key))
     return val
 
 def env_filter(default, key):
@@ -34,12 +35,26 @@ def init_from_file(flow, _file, component_dir):
     :param _file: A File object
     :type _file: io.TextIOWrapper
     """
+    def _validate_name(name):
+        image_regex = '^[a-z0-9]+(?:[._-]{1,2}[a-z0-9]+)*$'
+        pattern = re.compile(image_regex)
+        if not pattern.match(name):
+            raise FlowLibException("The Flow name must match the regular expression: '{}'".format(image_regex))
+        return name
+
+    def _validate_version(version):
+        tag_regex = '^[\w][\w.-]{0,127}$'
+        pattern = re.compile(tag_regex)
+        if not pattern.match(version):
+            raise FlowLibException("The Flow version must match the regular expression: '{}'".format(tag_regex))
+        return version
+
     raw = yaml.safe_load(_file)
     flow.raw = _file
     flow.flowlib_version = flowlib.__version__
     flow.flowlib_release = flowlib.__git_version__
-    flow.name = raw.get('name')
-    flow.version = str(raw.get('version'))
+    flow.name = _validate_name(raw.get('name'))
+    flow.version = _validate_version(str(raw.get('version')))
     flow.controllers = raw.get('controllers', [])
     flow.canvas = raw.get('canvas')
     flow.comments = raw.get('comments', '')
@@ -60,10 +75,10 @@ def init_from_file(flow, _file, component_dir):
     else:
         flow.component_dir = os.path.abspath(os.path.join(os.path.dirname(_file.name), 'components'))
 
-    logging.info("Loading component lib: {}".format(flow.component_dir))
+    log.info("Loading component lib: {}".format(flow.component_dir))
     _load_components(flow.component_dir, flow)
 
-    logging.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
+    log.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
     for elem_dict in flow.canvas:
         elem_dict['parent_path'] = flow.name
         el = FlowElement.from_dict(elem_dict)
@@ -83,7 +98,7 @@ def _load_components(component_dir, flow):
     for root, subdirs, files in os.walk(component_dir):
         for _file in files:
             if _file.endswith('.yaml') or _file.endswith('.yml'):
-                logging.info("Loading component: {}".format(_file))
+                log.info("Loading component: {}".format(_file))
 
                 # init the component from file
                 f = open(os.path.join(root, _file))
@@ -98,7 +113,7 @@ def _load_components(component_dir, flow):
 
 
 def _init_component(pg_element, flow):
-    logging.info("Loading ProcessGroup: {}".format(pg_element.name))
+    log.info("Loading ProcessGroup: {}".format(pg_element.name))
     component = flow.loaded_components.get(pg_element.component_ref)
     if not component:
         parent = flow.get_parent_element(pg_element)

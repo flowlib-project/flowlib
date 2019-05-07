@@ -8,8 +8,8 @@ def parse_git_version():
     except FileNotFoundError:
         return "git-version-not-found"
 
-version = 0.1
+version = "0.1.0"
 git_version = parse_git_version()
 
 if 'dirty' in git_version:
-    version = "pre-{}".format(version)
+    version = "{}-alpha".format(version)

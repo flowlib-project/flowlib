@@ -4,8 +4,6 @@ import sys
 
 import flowlib
 
-import logging
-
 class FlowLibConfig:
     def __init__(self, **kwargs):
         self.flow_yaml = kwargs.get('flow_yaml')

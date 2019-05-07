@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import logging
 import sys
 import yaml
 
 import flowlib.nifi
 import flowlib.parser
 from flowlib.model import FlowLibException, Flow
+from flowlib.logger import log
 
 
 def new_flow_from_file(component_dir, flow_yaml):
@@ -36,13 +36,16 @@ def new_flow_from_nifi(nifi_endpoint=None):
 
 
 def validate_flow_yaml(config):
-    logging.info("Validating NiFi Flow YAML...")
+    log.info("Validating NiFi Flow YAML...")
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
+        print("Flow is valid")
+        print("Flow Name: {}".format(flow.name), file=sys.stdout)
+        print("Flow Version: {}".format(flow.version), file=sys.stdout)
         # todo: validate connections, init nifi processor DTOs, etc..
         # but dont actually try to connect to the NiFi API
     except FlowLibException as e:
-        logging.error(e)
+        log.error(e)
         sys.exit(1)
 
 
@@ -50,12 +53,12 @@ def export_flow_yaml(config):
     """
     :type config: FlowLibConfig
     """
-    logging.info("Exporting NiFi flow to YAML...")
+    log.info("Exporting NiFi flow to YAML...")
     try:
         flow = new_flow_from_nifi(config.nifi_endpoint)
         yaml.dump(flow, config.export_yaml, default_flow_style=False)
     except FlowLibException as e:
-        logging.error(e)
+        log.error(e)
         sys.exit(1)
 
 
@@ -63,10 +66,10 @@ def deploy_flow_yaml(config):
     """
     :type config: FlowLibConfig
     """
-    logging.info("Deploying NiFi flow from YAML...")
+    log.info("Deploying NiFi flow from YAML...")
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         flowlib.nifi.deploy_flow(flow, config.nifi_endpoint)
     except FlowLibException as e:
-        logging.error(e)
+        log.error(e)
         sys.exit(1)
