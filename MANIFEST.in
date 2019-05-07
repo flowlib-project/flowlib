@@ -1,0 +1,4 @@
+include CHANGELOG.txt
+include README.md
+graft init/
+global-exclude __pycache__  *.pyc
