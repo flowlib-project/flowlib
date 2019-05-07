@@ -55,7 +55,7 @@ $ kubectl apply -k ./k8s/cloud/aws
 $ kubectl apply -k ./k8s/cloud/gcp
 ```
 
-### Todo ###
+##### TODO
 
 - Fix cloud storage classes
 - [Fix cloud node affinity patching](https://github.com/kubernetes-sigs/kustomize/issues/937)
