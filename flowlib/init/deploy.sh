@@ -72,8 +72,8 @@ EOF
 
 # Cleanup on ctrl-c or kill
 trap "echo Exit.. Undeploying $flow_name; \
-  kubectl -n b23-data-platform delete svc $flow_name; \
-  kubectl -n b23-data-platform delete deployments.apps $flow_name; \
+  kubectl delete svc $flow_name; \
+  kubectl delete deployments.apps $flow_name; \
   popd > /dev/null" KILL TERM HUP INT;
 
 echo "Waiting for $flow_name deployment..." && sleep 3
