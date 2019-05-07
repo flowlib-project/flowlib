@@ -32,7 +32,7 @@ MATCH_FLOW_YAML = r'### flow.yaml ###\s(.*)\s# components #'
 MATCH_COMPONENTS = r'### components ###\s(.*)'
 
 
-def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
+def wait_for_nifi_api(nifi_endpoint, retries=24, delay=5):
     log.info("Waiting for NiFi api to be ready at {}...".format(nifi_endpoint))
     nipyapi.config.nifi_config.host = nifi_endpoint
     i = 0
