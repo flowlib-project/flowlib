@@ -24,7 +24,7 @@ pip install -e ./
 ### Release ###
 
 ```shell
-RELEASE=0.1.1
+RELEASE=0.1.0
 git tag -a v$RELEASE -m "B23 FlowLib release: v$RELEASE"
 ./release.sh
 ```
