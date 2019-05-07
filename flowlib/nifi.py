@@ -28,7 +28,6 @@ version: {{ flowlib_version }}
 """
 
 MATCH_LIB_VERSION = r'B23 FlowLib\sversion:\s(.*)'
-MATCH_LIB_RELEASE = r'B23 FlowLib\sversion:.*\srelease:\s(.*)'
 MATCH_FLOW_YAML = r'### flow.yaml ###\s(.*)\s# components #'
 MATCH_COMPONENTS = r'### components ###\s(.*)'
 
@@ -316,8 +315,3 @@ def _init_flow_meta_info(flow, desc):
     lib_version = lib_version_pattern.findall(desc)
     if lib_version:
         flow.lib_version = lib_version[0]
-
-    lib_release_pattern = re.compile(MATCH_LIB_RELEASE)
-    lib_release = lib_release_pattern.findall(desc)
-    if lib_release:
-        flow.lib_release = lib_release[0]

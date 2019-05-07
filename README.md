@@ -21,6 +21,13 @@ pip install requirements-dev.txt
 pip install -e ./
 ```
 
+### Release ###
+
+```shell
+RELEASE=0.1.1
+git tag -a v$RELEASE -m "B23 FlowLib release: v$RELEASE"
+./release.sh
+```
 
 ### Resources ###
 

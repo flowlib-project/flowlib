@@ -7,7 +7,8 @@ RUN apt-get update && \
     apt-get install -y python3-pip
 
 ENV SCRIPTS_DIR=/opt/nifi/scripts
-COPY entrypoint-wrapper.sh ${SCRIPTS_DIR}/entrypoint-wrapper.sh
+COPY nifi-entrypoint-wrapper.sh ${SCRIPTS_DIR}/nifi-entrypoint-wrapper.sh
+COPY flow-entrypoint-wrapper.sh ${SCRIPTS_DIR}/flow-entrypoint-wrapper.sh
 COPY dist/${FLOWLIB_DIST} /tmp/${FLOWLIB_DIST}
 RUN chown nifi:nifi /tmp/${FLOWLIB_DIST} && \
     chown nifi:nifi ${SCRIPTS_DIR}/nifi-entrypoint-wrapper.sh && \
