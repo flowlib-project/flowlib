@@ -49,6 +49,7 @@ setup(
     description="A library for composing and deploying NiFi flows from YAML",
     keywords="b23 flowlib NiFi dataflow",
     url="https://b23.io",
+    download_url="https://github.com/B23admin/b23-flowlib/releases/latest",
     project_urls={
         "Source Code": "https://github.com/B23admin/b23-flowlib"
     },
