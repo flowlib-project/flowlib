@@ -6,12 +6,16 @@ TAG="$1"
 if [ -z "$TAG" ] || [ "$DIRTY" == "dirty" ]; then
   TAG="latest"
 else
-  git tag -a v$TAG -m "B23 FlowLib release: $TAG"
-  git push origin --tags
+  git tag -a v$TAG -m "B23 FlowLib release: $TAG" || true
+  git push origin --tags || true
+fi
+
+# Remove dist/ if it exists
+if [ -f ./dist ]; then
+  rm -r $dir/dist
 fi
 
 # Build FlowLib
-rm -r $dir/dist/
 python setup.py sdist
 
 # Upload dist/b23-flowlib-$RELEASE.tar.gz
