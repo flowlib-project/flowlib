@@ -3,7 +3,6 @@ ARG FLOWLIB_DIST=${FLOWLIB_DIST}
 
 USER root
 RUN apt-get update && \
-    apt-get install -y git && \
     apt-get install -y python3 && \
     apt-get install -y python3-pip
 
