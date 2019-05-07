@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import git
-
 import logging
 import importlib
 import os
@@ -32,9 +30,10 @@ def git_version(version):
         return 'dirty'
 
 def write_version(filename=os.path.join('flowlib', 'git_version')):
-    text = "{}".format(git_version(version))
-    with open(filename, 'w') as a:
-        a.write(text)
+    if not os.path.exists(filename):
+        text = "{}".format(git_version(version))
+        with open(filename, 'w') as a:
+            a.write(text)
 
 write_version()
 setup(

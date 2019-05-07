@@ -16,6 +16,7 @@ if [ -f ./dist ]; then
 fi
 
 # Build FlowLib
+rm flowlib/git_version
 python setup.py sdist
 DIST=$(ls ./dist)
 
