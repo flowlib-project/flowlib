@@ -2,8 +2,10 @@
 DIRTY=""
 [[ -z $(git status -s) ]] || DIRTY="dirty"
 
-TAG="$1"
-if [ -z "$TAG" ] || [ "$DIRTY" == "dirty" ]; then
+TAG=$(python -c "import os, importlib; \
+  print(importlib.import_module('flowlib.version', os.path.join('flowlib', 'version.py')).version)")
+
+if [ "$DIRTY" == "dirty" ]; then
   TAG="latest"
 else
   git tag -a v$TAG -m "B23 FlowLib release: $TAG"
