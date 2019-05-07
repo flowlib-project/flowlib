@@ -18,7 +18,7 @@ python setup.py sdist
 DIST=$(ls $dir/dist)
 
 # Login to ECR
-$(aws ecr get-login --no-include-email --region us-east-1)
+$(aws ecr get-login --region us-east-1 --no-include-email --registry-ids 883886641571)
 
 docker build $dir --build-arg FLOWLIB_DIST=$DIST --no-cache --tag b23-flowlib:$TAG
 docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
