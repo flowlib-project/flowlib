@@ -1,46 +1,24 @@
 # -*- coding: utf-8 -*-
-import logging
-import importlib
-import os
 from setuptools import setup, find_packages
 
-logger = logging.getLogger(__name__)
-version = importlib.import_module(
-    'flowlib.version', os.path.join('flowlib', 'version.py')).version
+def get_flowlib_version():
+    from setuptools_scm.version import get_local_dirty_tag
+    def clean_scheme(version):
+        return get_local_dirty_tag(version) if version.dirty else '+clean'
 
-def git_version(version):
-    repo = None
-    try:
-        import git
-        repo = git.Repo('.git')
-    except ImportError:
-        logger.warning('git python module not found, unable to parse git version')
-        return 'dirty'
-    except Exception as e:
-        logger.warning('Cannot compute the git version. {}'.format(e))
-        return 'dirty'
+    return {
+        'local_scheme': clean_scheme,
+        'write_to': 'version.py'
+    }
 
-    if repo:
-        sha = repo.head.commit.hexsha
-        if repo.is_dirty():
-            return '{sha}.dirty'.format(sha=sha)
-
-        return 'release:{version}+{sha}'.format(version=version, sha=sha)
-    else:
-        return 'dirty'
-
-def write_version(filename=os.path.join('flowlib', 'git_version')):
-    if not os.path.exists(filename):
-        text = "{}".format(git_version(version))
-        with open(filename, 'w') as a:
-            a.write(text)
-
-write_version()
 setup(
     name="b23-flowlib",
-    version=version,
+    use_scm_version=get_flowlib_version,
+    setup_requires=['setuptools_scm'],
     packages=find_packages(exclude=['tests*']),
-    package_data={'flowlib': ['git_version', 'logging.conf']},
+    package_data={
+        'flowlib': ['logging.conf']
+    },
     include_package_data=True,
     install_requires=['nipyapi>=0.12.1', 'pyyaml', 'jinja2', 'urllib3<1.25,>=1.21.1'],
     author="David Kegley",

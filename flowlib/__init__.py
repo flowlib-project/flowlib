@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
-from flowlib.version import version, git_version
+from pkg_resources import get_distribution, DistributionNotFound
 
 __author__ = "B23"
-__version__ = str(version)
-__git_version__ = git_version
+
+try:
+    __version__ = get_distribution('b23-flowlib').version
+except DistributionNotFound:
+    # package is not installed
+    pass
