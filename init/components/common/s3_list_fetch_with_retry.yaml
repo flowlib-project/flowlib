@@ -1,0 +1,58 @@
+component_name: S3 List Fetch With Retry
+
+defaults:
+  min_object_age: 5m
+  prefix: ''
+
+required_vars:
+- aws_access_key
+- aws_secret_key
+- bucket
+- region
+
+process_group:
+- name: list-s3
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.ListS3
+    scheduling_strategy: 'TIMER_DRIVEN'
+    scheduling_period: '10 sec'
+    properties:
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
+      prefix: "{{ prefix }}"
+      min-age: "{{ min_object_age }}"
+  connections:
+  - name: filter-directories
+    relationships: ['success']
+
+- name: filter-directories
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.RouteOnAttribute
+    auto_terminated_relationships: ['unmatched']
+    properties:
+      is_file: ${filename:endsWith('/'):not()}
+  connections:
+  - name: fetch-s3
+    relationships: ['is_file']
+
+- name: fetch-s3
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
+    properties:
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
+  connections:
+  - name: fetch-s3
+    relationships: ['failure']
+  - name: output
+    relationships: ['success']
+
+- name: output
+  type: output_port

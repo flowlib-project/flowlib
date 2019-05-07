@@ -1,0 +1,64 @@
+name: pdf-processor-demo-flow
+version: 1.0
+
+comments: |
+  This is a demo NiFi flow that was deployed to NiFi by B23 FlowLib.
+  B23 FlowLib allows users to define NiFi flows as re-useable NiFi components
+  which can be loaded into a root flow.yaml and deployed *idempotently* to a running
+  NiFi instance.
+
+  This demo flow will watch for PDF files to land in Amazon S3, download the PDFs,
+  process the PDFs, and then write the parsed results back to the same S3 bucket
+  in the output directory
+
+globals:
+  bucket: 'kegs-b23-dataflow-demos'
+  region: 'us-east-1'
+  aws_access_key: "{{ 'AKIA43S572GR7SUSKWUK' | env('AWS_ACCESS_KEY') }}"
+  aws_secret_key: "{{ '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' | env('AWS_SECRET_KEY') }}"
+
+controllers: []
+
+canvas:
+- name: list-fetch
+  type: process_group
+  component_ref: common/s3_list_fetch_with_retry.yaml
+  vars:
+    bucket: "{{ bucket }}"
+    region: "{{ region }}"
+    prefix: demo-data/input
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  connections:
+  - name: process-pdfs
+    from_port: output
+    to_port: input
+
+- name: process-pdfs
+  type: process_group
+  component_ref: pdf/process_pdfs.yaml
+  connections:
+  - name: update-filename
+    from_port: output
+
+- name: update-filename
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.attributes.UpdateAttribute
+    auto_terminated_relationships: ['failure']
+    properties:
+      file_dest: demo-data/output/${filename:substringBeforeLast('.')}.json
+  connections:
+  - name: write-to-s3
+    relationships: ['success']
+    to_port: input
+
+- name: write-to-s3
+  type: process_group
+  component_ref: common/s3_write_with_retry.yaml
+  vars:
+    bucket: "{{ bucket }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    destination_attribute: file_dest

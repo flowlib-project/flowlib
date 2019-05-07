@@ -1,0 +1,31 @@
+component_name: S3 Write With Retry
+
+defaults:
+  destination_attribute: "filename"
+
+required_vars:
+- aws_access_key
+- aws_secret_key
+- bucket
+- region
+
+process_group:
+- name: input
+  type: input_port
+  connections:
+  - name: put-s3
+
+- name: put-s3
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.PutS3Object
+    auto_terminated_relationships: ['success']
+    properties:
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Access Key: "{{ aws_access_key }}"
+      Secret Key: "{{ aws_secret_key }}"
+      Object Key: "{{ '${' + destination_attribute + '}' }}"
+  connections:
+  - name: put-s3
+    relationships: ['failure']
