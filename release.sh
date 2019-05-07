@@ -17,12 +17,13 @@ fi
 
 # Build FlowLib
 python setup.py sdist
+DIST=$(ls ./dist)
 
-# Upload dist/b23-flowlib-$RELEASE.tar.gz
+# Upload dist/b23-flowlib-$VERSION.tar.gz
 
 # Login to ECR
-# $(aws ecr get-login --no-include-email --region us-east-1)
+$(aws ecr get-login --no-include-email --region us-east-1)
 
-# docker build --build-arg FLOWLIB_VERSION=$TAG --no-cache $(dirname $0) -t b23-flowlib:$TAG
-# docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
-# docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+docker build --build-arg FLOWLIB_DIST=$DIST --no-cache $(dirname $0) -t b23-flowlib:$TAG
+docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG

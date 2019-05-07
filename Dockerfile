@@ -1,5 +1,5 @@
 FROM apache/nifi:1.8.0
-ARG FLOWLIB_VERSION=${FLOWLIB_VERSION}
+ARG FLOWLIB_DIST=${FLOWLIB_DIST}
 
 USER root
 RUN apt-get update && \
@@ -16,7 +16,7 @@ RUN chown nifi:nifi ${SCRIPTS_DIR}/entrypoint-wrapper.sh && \
 USER nifi
 
 # todo: ADD from https://github.com/releases
-ADD dist/b23-flowlib-${FLOWLIB_VERSION}.tar.gz /opt/flowlib
+ADD dist/${FLOWLIB_DIST} /opt/flowlib
 RUN pip3 install --user /opt/flowlib/
 ENV PATH="/home/nifi/.local/bin:${PATH}"
 
