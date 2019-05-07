@@ -68,7 +68,7 @@ EOF
 trap "echo Exit.. Undeploying $flow_name; \
   kubectl -n b23-data-platform delete svc $flow_name; \
   kubectl -n b23-data-platform delete deployments.apps $flow_name; \
-  popd" KILL TERM HUP INT EXIT;
+  popd > /dev/null" KILL TERM HUP INT;
 
 echo "Waiting for $flow_name deployment..." && sleep 3
 kubectl port-forward svc/$flow_name 8080:8080
