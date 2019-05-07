@@ -80,6 +80,8 @@ def deploy_flow_yaml(config):
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         flowlib.nifi.deploy_flow(flow, config.nifi_endpoint)
+        log.info("Flow deployment completed successfully")
     except FlowLibException as e:
+        log.error("Flow deployment failed")
         log.error(e)
         sys.exit(1)
