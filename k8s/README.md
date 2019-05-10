@@ -40,7 +40,6 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: aws-ecr-registry
-  namespace: b23-data-platform
 data:
   .dockerconfigjson: $(echo $configjson | /usr/bin/base64)
 type: kubernetes.io/dockerconfigjson
