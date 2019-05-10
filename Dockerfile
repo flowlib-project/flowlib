@@ -1,10 +1,13 @@
-FROM apache/nifi:1.8.0
+FROM 883886641571.dkr.ecr.us-east-1.amazonaws.com/arm32v7/nifi:1.8.0
+#FROM apache/nifi:1.8.0
 ARG FLOWLIB_DIST=${FLOWLIB_DIST}
 
 USER root
 RUN apt-get update && \
-    apt-get install -y python3 && \
-    apt-get install -y python3-pip
+    apt-get install -y \
+    python3-dev python3-pip \
+    libxml2-dev libxslt1-dev libz-dev \
+    libffi-dev libssl-dev
 
 ENV SCRIPTS_DIR=/opt/nifi/scripts
 COPY nifi-entrypoint-wrapper.sh ${SCRIPTS_DIR}/nifi-entrypoint-wrapper.sh
