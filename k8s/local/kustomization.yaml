@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: b23-data-platform
+namespace: default
 
 commonAnnotations:
   b23.io/stack-type: nifi

@@ -27,7 +27,7 @@ Run this on your cluster to create the ImagePullSecret for pulling images from E
 
 ```bash
 #!/usr/bin/env bash
-login_cmd=$(aws ecr get-login)
+login_cmd=$(aws ecr get-login --region us-east-1 --registry-ids 883886641571)
 username=$(echo $login_cmd | cut -d " " -f 4)
 password=$(echo $login_cmd | cut -d " " -f 6)
 endpoint=$(echo $login_cmd | cut -d " " -f 9)
@@ -35,7 +35,7 @@ auth=$(echo "$username:$password" | /usr/bin/base64)
 
 configjson="{ \"auths\": { \"${endpoint}\": { \"auth\": \"${auth}\" } } }"
 
-kubectl create -f - << EOF
+kubectl apply -f - << EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -48,15 +48,17 @@ EOF
 
 ECR registry policy json
 
+Get SomeUser info with `aws sts get-caller-identity`
+
 ```json
 {
   "Version": "2008-10-17",
   "Statement": [
     {
-      "Sid": "AllowPullForB23UserAccounts",
+      "Sid": "AllowPullAccountSomeUser",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::883886641571:root"
+        "AWS": "arn:aws:iam::$SomeUser_accountID:user/$SomeUser"
       },
       "Action": [
         "ecr:BatchCheckLayerAvailability",

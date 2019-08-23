@@ -10,7 +10,7 @@ flow_version=$(echo $flow_info | awk '{print $2}')
 flow_image="b23-dataflows/$flow_name:$flow_version"
 
 # Login to ECR
-$(aws ecr get-login --region us-east-1 --no-include-email --registry-ids 883886641571)
+$(aws ecr get-login --region us-east-1 --registry-ids 883886641571)
 
 # Build flow image
 docker build . -t $flow_image
