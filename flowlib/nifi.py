@@ -8,8 +8,8 @@ import nipyapi
 
 from flowlib.logger import log
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
+import flowlib.layout
 
-TOP_LEVEL_PG_LOCATION = (300, 100)
 FLOW_DEPLOYMENT_INFO = """
 ### DO NOT CHANGE ANYTHING BELOW THIS LINE ###
 This NiFi Flow was generated and deployed by B23 FlowLib
@@ -122,16 +122,21 @@ def _create_canvas_elements_recursive(elements, parent_pg):
     :param parent_pg: The process group in which to create the processors
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
+
+    # Generate a dictionary of {name: (x,y)} positions for each element
+    positions = flowlib.layout.generate_force_directed_layout(elements)
+
     for el in elements.values():
+        position = positions[el.name]
         if isinstance(el, ProcessGroup):
-            pg = _create_process_group(el, parent_pg)
+            pg = _create_process_group(el, parent_pg, position)
             _create_canvas_elements_recursive(el.elements, pg)
         elif isinstance(el, Processor):
-            _create_processor(el, parent_pg)
+            _create_processor(el, parent_pg, position)
         elif isinstance(el, InputPort):
-            _create_input_port(el, parent_pg)
+            _create_input_port(el, parent_pg, position)
         elif isinstance(el, OutputPort):
-            _create_output_port(el, parent_pg)
+            _create_output_port(el, parent_pg, position)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.type))
 
@@ -153,7 +158,7 @@ def _create_connections_recursive(flow, elements):
             raise FlowLibException("Unsupported Element Type: {}".format(el.type))
 
 
-def _create_process_group(element, parent_pg):
+def _create_process_group(element, parent_pg, position):
     """
     Create a Process Group on the NiFi canvas
     :param element: The Process Group to deploy
@@ -171,14 +176,14 @@ def _create_process_group(element, parent_pg):
         raise FlowLibException("Re-deploying a flow is not yet supported")
     else:
         log.debug("Creating ProcessGroup: {} with parent: {}".format(name, element.parent_path))
-        pg = nipyapi.canvas.create_process_group(parent_pg, name, TOP_LEVEL_PG_LOCATION)
+        pg = nipyapi.canvas.create_process_group(parent_pg, name, position)
 
     element.id = pg.id
     element.parent_id = parent_pg.id
     return pg
 
 
-def _create_processor(element, parent_pg):
+def _create_processor(element, parent_pg, position):
     """
     Create a Processor on the NiFi canvas
     :param element: The Processor to deploy
@@ -195,14 +200,14 @@ def _create_processor(element, parent_pg):
     else:
         log.debug("Creating Processor: {} with parent: {}".format(name, element.parent_path))
         tpe = nipyapi.nifi.models.DocumentedTypeDTO(type=element.config.package_id)
-        p = nipyapi.canvas.create_processor(parent_pg, tpe, TOP_LEVEL_PG_LOCATION, name, element.config)
+        p = nipyapi.canvas.create_processor(parent_pg, tpe, position, name, element.config)
 
     element.id = p.id
     element.parent_id = parent_pg.id
     return p
 
 
-def _create_input_port(element, parent_pg):
+def _create_input_port(element, parent_pg, position):
     """
     Create an Input Port on the NiFi canvas
     :param element: The InputPort to deploy
@@ -221,14 +226,14 @@ def _create_input_port(element, parent_pg):
         raise FlowLibException("Re-deploying a flow is not yet supported")
     else:
         log.debug("Creating InputPort: {} with parent: {}".format(name, element.parent_path))
-        ip = nipyapi.canvas.create_port(parent_pg.id, 'INPUT_PORT', name, 'STOPPED')
+        ip = nipyapi.canvas.create_port(parent_pg.id, 'INPUT_PORT', name, 'STOPPED', position=position)
 
     element.id = ip.id
     element.parent_id = parent_pg.id
     return ip
 
 
-def _create_output_port(element, parent_pg):
+def _create_output_port(element, parent_pg, position):
     """
     Create an Output Port on the NiFi canvas
     :param element: The Output Port to deploy
@@ -247,7 +252,7 @@ def _create_output_port(element, parent_pg):
         raise FlowLibException("Re-deploying a flow is not yet supported")
     else:
         log.debug("Creating OutputPort: {} with parent: {}".format(name, element.parent_path))
-        op = nipyapi.canvas.create_port(parent_pg.id, 'OUTPUT_PORT', name, 'STOPPED')
+        op = nipyapi.canvas.create_port(parent_pg.id, 'OUTPUT_PORT', name, 'STOPPED', position=position)
 
     element.id = op.id
     element.parent_id = parent_pg.id
