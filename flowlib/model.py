@@ -170,6 +170,9 @@ class Processor(FlowElement):
         self.name = name
         self.parent_path = parent_path
         self._type = _type
+
+        if not 'properties' in config:
+            config['properties'] = dict()
         self.config = ProcessorConfig(config.pop('package_id'), **config)
         self.connections = [Connection(**c) for c in connections] if connections else None
 
