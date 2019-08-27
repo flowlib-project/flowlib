@@ -22,6 +22,8 @@ $(aws ecr get-login --region us-east-1 --no-include-email --registry-ids 8838866
 
 docker build $dir --build-arg FLOWLIB_DIST=$DIST --no-cache --tag b23-flowlib:$TAG
 docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+docker tag b23-flowlib:$TAG 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:latest
 docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:$TAG
+docker push 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:latest
 
-echo "Done forget to upload the latest release to github: dist/$DIST"
+echo "Don't forget to upload the latest release to github: dist/$DIST"
