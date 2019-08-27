@@ -28,7 +28,7 @@ def generate_layout(elements, layout_type="spring"):
             for c in el.connections:
                 G.add_edge(el.name, c.name)
 
-    scale = 100 * len(G.nodes)  # Make the canvas size scale with the total number of elements
+    scale = 125 * len(G.nodes)  # Make the canvas size scale with the total number of elements
 
     if layout_type == "spring":
         positions = nx.spring_layout(G, scale=scale, center=TOP_LEVEL_PG_LOCATION, pos=initial_positions, k=100)
