@@ -64,11 +64,14 @@ def init_from_nifi(flow, nifi_endpoint):
 
 
 
-def deploy_flow(flow, nifi_endpoint):
+def deploy_flow(flow, nifi_endpoint, force=False):
     wait_for_nifi_api(nifi_endpoint)
     root_id = nipyapi.canvas.get_root_pg_id()
     root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
     log.info("Deploying {} to NiFi root canvas ID: {}".format(flow.name, root_id))
+
+    if force:
+        _force_cleanup_nifi_canvas()
 
     # Update root process group metadata with version info
     root.component.name = flow.name
@@ -315,3 +318,47 @@ def _init_flow_meta_info(flow, desc):
     lib_version = lib_version_pattern.findall(desc)
     if lib_version:
         flow.lib_version = lib_version[0]
+
+
+def _force_cleanup_nifi_canvas():
+    """
+    Clear out everything on the NiFi canvas so that flows can be re-deployed
+    """
+    log.info("Deleting all controllers...")
+    controllers = nipyapi.canvas.list_all_controllers(descendants=False)
+    for c in controllers:
+        nipyapi.canvas.delete_controller(c, force=True)
+
+    log.info("Deleting all connections...")
+    connections = nipyapi.canvas.list_all_connections(descendants=True)
+    for c in connections:
+        nipyapi.canvas.delete_connection(c, purge=True)
+
+    log.info("Deleting ports...")
+    ips = nipyapi.canvas.list_all_input_ports(descendants=False)
+    ops = nipyapi.canvas.list_all_output_ports(descendants=False)
+    for p in ips + ops:
+        nipyapi.canvas.delete_port(p)
+
+    log.info("Deleting remote process groups...")
+    rpgs = nipyapi.canvas.list_all_remote_process_groups(descendants=False)
+    for rpg in rpgs:
+        nipyapi.nifi.RemoteProcessGroupsApi().remove_remote_process_group(rpg.id, version=rpg.revision.version)
+
+    log.info("Deleting process groups...")
+    pgs = nipyapi.canvas.list_all_process_groups()
+    root_pg_id = nipyapi.canvas.get_root_pg_id()
+    for pg in list(filter(lambda pg: pg.id != root_pg_id, pgs)):
+        nipyapi.canvas.delete_process_group(pg, force=True)
+
+    log.info("Deleting processors...")
+    procs = nipyapi.canvas.list_all_processors()
+    for p in procs:
+        nipyapi.canvas.delete_processor(p, force=True)
+
+    log.info("Resetting canvas info...")
+    root_id = nipyapi.canvas.get_root_pg_id()
+    root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
+    root.component.name = "NiFi Flow"
+    root.component.comments = ""
+    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)

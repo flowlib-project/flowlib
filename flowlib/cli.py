@@ -12,6 +12,7 @@ class FlowLibConfig:
         self.scaffold = kwargs.get('scaffold')
         self.component_dir = kwargs.get('component_dir')
         self.nifi_endpoint = kwargs.get('nifi_endpoint')
+        self.force = kwargs.get('force', False)
 
     def __repr__(self):
         return str(self.__dict__)
@@ -36,6 +37,10 @@ class FlowLibCLI:
         self.parser.add_argument('--scaffold',
             type = str,
             help = 'Directory path to initialize with a new project scaffold'
+        )
+        self.parser.add_argument('--force',
+            action = 'store_true',
+            help = 'Force flowlib to overwrite an existing NiFi canvas'
         )
         # TODO: --flow-yaml should be required when validate is True
         self.parser.add_argument('--validate',
