@@ -124,7 +124,7 @@ def _create_canvas_elements_recursive(elements, parent_pg):
     """
 
     # Generate a dictionary of {name: (x,y)} positions for each element
-    positions = flowlib.layout.generate_force_directed_layout(elements)
+    positions = flowlib.layout.generate_layout(elements)
 
     for el in elements.values():
         position = positions[el.name]

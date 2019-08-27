@@ -4,7 +4,7 @@ import random
 
 TOP_LEVEL_PG_LOCATION = (300, 100)
 
-def generate_force_directed_layout(elements):
+def generate_layout(elements):
     """
     Generate a set of x,y positions given a set of elements and connections
     :param elements: The elements to deploy
