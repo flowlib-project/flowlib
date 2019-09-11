@@ -103,7 +103,7 @@ class FlowElement(ABC):
         if not name or len(name) < 1:
             raise FlowLibException("Element names may not be empty. Found invalid element with parent path: {}".format(elem_dict.get('parent_path')))
         if PG_NAME_DELIMETER in name:
-            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
+            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, Flow.PG_DELIMETER))
 
         elem_dict['_type'] = elem_dict.pop('type')
         if elem_dict.get('_type') == 'process_group':
