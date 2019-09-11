@@ -15,7 +15,7 @@ spec:
       - name: aws-ecr-registry
       containers:
       - name: nifi
-        image: 883886641571.dkr.ecr.us-east-1.amazonaws.com/b23-flowlib:latest
+        image: 883886641571.dkr.ecr.us-east-1.amazonaws.com/nifi-base:1.9.2
         imagePullPolicy: Always
         env:
         - name: NIFI_WEB_HTTP_HOST

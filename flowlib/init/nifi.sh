@@ -7,7 +7,7 @@ echo "Validating $dir/flow.yaml"
 flow_info=$(flowlib --validate --flow-yaml ./flow.yaml 2> /dev/null | awk -F: '{print $2}')
 flow_name=$(echo $flow_info | awk '{print $1}')
 flow_version=$(echo $flow_info | awk '{print $2}')
-flow_image="b23-dataflows/$flow_name:$flow_version"
+flow_image="b23.io/$flow_name:$flow_version"
 
 # Login to ECR
 $(aws ecr get-login --region us-east-1 --no-include-email --registry-ids 883886641571)
@@ -20,33 +20,33 @@ kubectl apply -f - << EOF
 apiVersion: v1
 kind: Service
 metadata:
-  name: $flow_name
+  name: nifi-dev
   labels:
-    app: $flow_name
+    app: nifi-dev
 spec:
   ports:
     - protocol: TCP
       targetPort: 8080
       port: 8080
   selector:
-    app: $flow_name
+    app: nifi-dev
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: $flow_name
+  name: nifi-dev
 spec:
   selector:
     matchLabels:
-      app: $flow_name
+      app: nifi-dev
   template:
     metadata:
       labels:
-        app: $flow_name
+        app: nifi-dev
     spec:
       containers:
-      - name: flow
-        image: $flow_image
+      - name: nifi
+        image: $image
         imagePullPolicy: Never
         env:
         - name: NIFI_WEB_HTTP_HOST
@@ -71,12 +71,10 @@ spec:
 EOF
 
 # Cleanup on ctrl-c or kill
-trap "echo Exit.. Undeploying $flow_name; \
-  kubectl delete svc $flow_name; \
-  kubectl delete deployments.apps $flow_name; \
+trap "echo Exit.. Undeploying nifi-dev; \
+  kubectl delete svc nifi-dev; \
+  kubectl delete deployments.apps nifi-dev; \
   popd > /dev/null" KILL TERM HUP INT;
 
-echo "Waiting for $flow_name deployment..." && sleep 3
-
-# Start kubectl proxying on http://127.0.0.1:8080
-kubectl port-forward svc/$flow_name 8080:8080
+echo "Waiting for local NiFi deployment..." && sleep 3
+kubectl port-forward svc/nifi-dev 8080:8080
