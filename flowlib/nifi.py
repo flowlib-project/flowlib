@@ -85,9 +85,6 @@ def deploy_flow(flow, nifi_endpoint, force=False):
     flow_pg_element = ProcessGroup(flow.name, None, "process_group", None)
     flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, is_flow_root=True)
 
-    # Update root process group metadata with version info
-    # flow_pg.component.name = flow.name
-
     # TODO: Filter loaded_components that are actually used in this flow
 
     # reset fps
@@ -96,14 +93,15 @@ def deploy_flow(flow, nifi_endpoint, force=False):
         if c.raw:
             c.raw.seek(0)
 
-    # context = {
-    #     'flowlib_version': flow.flowlib_version,
-    #     'flow_raw': flow.raw.read(),
-    #     'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
-    # }
-    # t = Template(FLOW_DEPLOYMENT_INFO)
-    # flow_pg.component.comments = t.render(context)
-    # nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
+    # Update flow process group metadata with version info
+    context = {
+        'flowlib_version': flow.flowlib_version,
+        'flow_raw': flow.raw.read(),
+        'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
+    }
+    t = Template(FLOW_DEPLOYMENT_INFO)
+    flow_pg.component.comments = t.render(context)
+    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
 
     # _create_controllers_recursive(flow)
     _create_canvas_elements_recursive(flow.elements, flow_pg)
