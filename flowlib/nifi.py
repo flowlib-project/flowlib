@@ -107,6 +107,16 @@ def deploy_flow(flow, nifi_endpoint, force=False):
     _create_canvas_elements_recursive(flow.elements, flow_pg)
     _create_connections_recursive(flow, flow.elements)
 
+    # find all deployed flows and re-organize the top level PGs
+    pgs = nipyapi.nifi.ProcessGroupsApi().get_process_groups(canvas_root_id).process_groups
+    log.info("Found {} deployed flows, updating top level canvas layout.".format(len(pgs)))
+    pgs = sorted(pgs, key=lambda e: e.component.name)
+    positions = flowlib.layout.generate_top_level_pg_positions(pgs)
+    for pg in pgs:
+        pg.component.position = positions.get(pg.component.name, flowlib.layout.DEFAULT_POSITION)
+        log.info("Setting position for {} to {}".format(pg.component.name, pg.position))
+        nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(pg.id, pg)
+
 
 def _get_nifi_entity_by_id(kind, identifier):
     """
