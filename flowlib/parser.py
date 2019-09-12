@@ -90,7 +90,7 @@ def init_from_file(flow, _file, component_dir):
         else:
             flow.elements[el.name] = el
 
-    _replace_flow_element_vars(flow.elements, flow.loaded_components)
+    _replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
 
 
 def _load_components(component_dir, flow):
@@ -143,7 +143,7 @@ def _init_component(pg_element, flow):
             pg_element.elements[el.name] = el
 
 
-def _replace_flow_element_vars(elements, loaded_components):
+def _replace_flow_element_vars_recursive(elements, loaded_components):
     """
     Recusively apply the variable evaluation to each element in the flow
     :param elements: The elements to deploy
@@ -155,7 +155,11 @@ def _replace_flow_element_vars(elements, loaded_components):
         if isinstance(el, ProcessGroup):
             source_component = loaded_components[el.component_ref]
             _replace_vars(el, source_component)
-            _replace_flow_element_vars(el.elements, loaded_components)
+            _replace_flow_element_vars_recursive(el.elements, loaded_components)
+        # This should be called for top-level processors of the flow only
+        # which would have access to the global context and nothing else
+        elif isinstance(el, Processor):
+            _inject_processor_properties(el)
 
 
 def _replace_vars(process_group, source_component):
@@ -180,6 +184,10 @@ def _replace_vars(process_group, source_component):
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
         if isinstance(el, Processor):
-            for k,v in el.config.properties.items():
-                t = env.from_string(v)
-                el.config.properties[k] = t.render(**context)
+            _inject_processor_properties(el, context)
+
+
+def _inject_processor_properties(processor, context=dict()):
+    for k,v in processor.config.properties.items():
+        t = env.from_string(v)
+        processor.config.properties[k] = t.render(**context)

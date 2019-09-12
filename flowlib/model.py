@@ -17,8 +17,6 @@ class Flow:
         :type name: str
         :param flowlib_version: The current version of the flowlib library
         :type flowlib_version: str
-        :param flowlib_release: The current git release of flowlib library
-        :type flowlib_release: str
         :param version: The version of the Flow
         :type version: str
         :param controllers: The root controllers for the root canvas
@@ -103,10 +101,12 @@ class FlowElement(ABC):
         if not name or len(name) < 1:
             raise FlowLibException("Element names may not be empty. Found invalid element with parent path: {}".format(elem_dict.get('parent_path')))
         if PG_NAME_DELIMETER in name:
-            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(self.name, Flow.PG_DELIMETER))
+            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, Flow.PG_DELIMETER))
 
         elem_dict['_type'] = elem_dict.pop('type')
         if elem_dict.get('_type') == 'process_group':
+            if elem_dict.get('vars'):
+                elem_dict['_vars'] = elem_dict.pop('vars')
             return ProcessGroup(**elem_dict)
         elif elem_dict.get('_type') == 'processor':
             return Processor(**elem_dict)
@@ -146,7 +146,7 @@ class FlowElement(ABC):
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, _type, component_ref, vars=None, connections=None):
+    def __init__(self, name, parent_path, _type, component_ref, _vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -158,7 +158,7 @@ class ProcessGroup(FlowElement):
         self.parent_path = parent_path
         self._type = _type
         self.component_ref = component_ref
-        self.vars = vars
+        self.vars = _vars
         self.connections = [Connection(**c) for c in connections] if connections else None
         self.elements = dict()
 

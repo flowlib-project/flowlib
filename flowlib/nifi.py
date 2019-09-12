@@ -65,16 +65,25 @@ def init_from_nifi(flow, nifi_endpoint):
 
 
 def deploy_flow(flow, nifi_endpoint, force=False):
+    """
+    Deploy a Flow to NiFi via the Rest api
+    :param flow: A Flow instance
+    :type flow: flowlib.model.Flow
+    """
     wait_for_nifi_api(nifi_endpoint)
-    root_id = nipyapi.canvas.get_root_pg_id()
-    root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
-    log.info("Deploying {} to NiFi root canvas ID: {}".format(flow.name, root_id))
+    canvas_root_id = nipyapi.canvas.get_root_pg_id()
+    canvas_root_pg = nipyapi.canvas.get_process_group(canvas_root_id, identifier_type='id')
+    log.info("Deploying {} to NiFi".format(flow.name))
 
-    if force:
-        _force_cleanup_nifi_canvas()
+    flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
+    if flow_pg and force:
+        if isinstance(flow_pg, list):
+            raise FlowLibException("Found multiple ProcessGroups named {}".format(flow.name))
+        else:
+            _force_cleanup_flow(flow_pg.id)
 
-    # Update root process group metadata with version info
-    root.component.name = flow.name
+    flow_pg_element = ProcessGroup(flow.name, None, "process_group", None)
+    flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, is_flow_root=True)
 
     # TODO: Filter loaded_components that are actually used in this flow
 
@@ -84,18 +93,29 @@ def deploy_flow(flow, nifi_endpoint, force=False):
         if c.raw:
             c.raw.seek(0)
 
+    # Update flow process group metadata with version info
     context = {
         'flowlib_version': flow.flowlib_version,
         'flow_raw': flow.raw.read(),
         'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
     }
     t = Template(FLOW_DEPLOYMENT_INFO)
-    root.component.comments = t.render(context)
-    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
+    flow_pg.component.comments = t.render(context)
+    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
 
     # _create_controllers_recursive(flow)
-    _create_canvas_elements_recursive(flow.elements, root)
+    _create_canvas_elements_recursive(flow.elements, flow_pg)
     _create_connections_recursive(flow, flow.elements)
+
+    # find all deployed flows and re-organize the top level PGs
+    pgs = nipyapi.nifi.ProcessGroupsApi().get_process_groups(canvas_root_id).process_groups
+    log.info("Found {} deployed flows, updating top level canvas layout.".format(len(pgs)))
+    pgs = sorted(pgs, key=lambda e: e.component.name)
+    positions = flowlib.layout.generate_top_level_pg_positions(pgs)
+    for pg in pgs:
+        pg.component.position = positions.get(pg.component.name, flowlib.layout.DEFAULT_POSITION)
+        log.info("Setting position for {} to {}".format(pg.component.name, pg.position))
+        nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(pg.id, pg)
 
 
 def _get_nifi_entity_by_id(kind, identifier):
@@ -161,7 +181,7 @@ def _create_connections_recursive(flow, elements):
             raise FlowLibException("Unsupported Element Type: {}".format(el.type))
 
 
-def _create_process_group(element, parent_pg, position):
+def _create_process_group(element, parent_pg, position, is_flow_root=False):
     """
     Create a Process Group on the NiFi canvas
     :param element: The Process Group to deploy
@@ -171,7 +191,11 @@ def _create_process_group(element, parent_pg, position):
     """
     # TODO: If we assert that the canvas is clean then we do not need to check if the
     # canvas elements already exist when creating processors, pgs, input/output ports
+
     name = "{}/{}".format(element.name, parent_pg.id)
+    if is_flow_root:
+        name = element.name
+
     log.info("Create or update ProcessGroup: {}".format(name))
     pg = nipyapi.canvas.get_process_group(name)
     if pg:
@@ -325,45 +349,17 @@ def _init_flow_meta_info(flow, desc):
         flow.lib_version = lib_version[0]
 
 
-def _force_cleanup_nifi_canvas():
+def _force_cleanup_flow(flow_pg_id):
     """
-    Clear out everything on the NiFi canvas so that flows can be re-deployed
+    Delete a deployed Flow from the NiFi canvas so that flows can be re-deployed
+    :param flow_pg_id: The id of the Flow's ProcessGroup
+    :type flow_pg_id: str
     """
-    log.info("Deleting all controllers...")
-    controllers = nipyapi.canvas.list_all_controllers(descendants=False)
-    for c in controllers:
-        nipyapi.canvas.delete_controller(c, force=True)
-
-    log.info("Deleting all connections...")
-    connections = nipyapi.canvas.list_all_connections(descendants=True)
+    log.info("Deleting flow connections...")
+    connections = nipyapi.canvas.list_all_connections(pg_id=flow_pg_id, descendants=True)
     for c in connections:
         nipyapi.canvas.delete_connection(c, purge=True)
 
-    log.info("Deleting ports...")
-    ips = nipyapi.canvas.list_all_input_ports(descendants=False)
-    ops = nipyapi.canvas.list_all_output_ports(descendants=False)
-    for p in ips + ops:
-        nipyapi.canvas.delete_port(p)
-
-    log.info("Deleting remote process groups...")
-    rpgs = nipyapi.canvas.list_all_remote_process_groups(descendants=False)
-    for rpg in rpgs:
-        nipyapi.nifi.RemoteProcessGroupsApi().remove_remote_process_group(rpg.id, version=rpg.revision.version)
-
-    log.info("Deleting process groups...")
-    pgs = nipyapi.canvas.list_all_process_groups()
-    root_pg_id = nipyapi.canvas.get_root_pg_id()
-    for pg in list(filter(lambda pg: pg.id != root_pg_id, pgs)):
-        nipyapi.canvas.delete_process_group(pg, force=True)
-
-    log.info("Deleting processors...")
-    procs = nipyapi.canvas.list_all_processors()
-    for p in procs:
-        nipyapi.canvas.delete_processor(p, force=True)
-
-    log.info("Resetting canvas info...")
-    root_id = nipyapi.canvas.get_root_pg_id()
-    root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
-    root.component.name = "NiFi Flow"
-    root.component.comments = ""
-    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(root_id, root)
+    log.info("Deleting flow process group...")
+    flow_pg = _get_nifi_entity_by_id('process_group', flow_pg_id)
+    nipyapi.canvas.delete_process_group(flow_pg, force=True)
