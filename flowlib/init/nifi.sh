@@ -1,19 +1,10 @@
 #!/usr/bin/env bash -e
-pushd $(dirname $0)
-dir=$(pwd)
-
-# parse flow.version and flow.name from stdout
-echo "Validating $dir/flow.yaml"
-flow_info=$(flowlib --validate --flow-yaml ./flow.yaml 2> /dev/null | awk -F: '{print $2}')
-flow_name=$(echo $flow_info | awk '{print $1}')
-flow_version=$(echo $flow_info | awk '{print $2}')
-flow_image="b23.io/$flow_name:$flow_version"
 
 # Login to ECR
 $(aws ecr get-login --region us-east-1 --no-include-email --registry-ids 883886641571)
 
 # Build flow image
-docker build . -t $flow_image
+docker build . -t b23.io/nifi-dev:latest
 
 # Create kubernetes deployment and service
 kubectl apply -f - << EOF
@@ -46,7 +37,7 @@ spec:
     spec:
       containers:
       - name: nifi
-        image: $image
+        image: b23.io/nifi-dev:latest
         imagePullPolicy: Never
         env:
         - name: NIFI_WEB_HTTP_HOST
@@ -73,8 +64,7 @@ EOF
 # Cleanup on ctrl-c or kill
 trap "echo Exit.. Undeploying nifi-dev; \
   kubectl delete svc nifi-dev; \
-  kubectl delete deployments.apps nifi-dev; \
-  popd > /dev/null" KILL TERM HUP INT;
+  kubectl delete deployments.apps nifi-dev" KILL TERM HUP INT;
 
 echo "Waiting for local NiFi deployment..." && sleep 3
 kubectl port-forward svc/nifi-dev 8080:8080
