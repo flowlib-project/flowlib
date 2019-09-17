@@ -22,7 +22,7 @@ controllers: []
 canvas:
 - name: list-fetch
   type: process_group
-  component_ref: common/s3_list_fetch_with_retry.yaml
+  component_path: common/s3_list_fetch_with_retry.yaml
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"
@@ -36,7 +36,7 @@ canvas:
 
 - name: process-pdfs
   type: process_group
-  component_ref: pdf/process_pdfs.yaml
+  component_path: pdf/process_pdfs.yaml
   connections:
   - name: update-filename
     from_port: output
@@ -55,7 +55,7 @@ canvas:
 
 - name: write-to-s3
   type: process_group
-  component_ref: common/s3_write_with_retry.yaml
+  component_path: common/s3_write_with_retry.yaml
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"

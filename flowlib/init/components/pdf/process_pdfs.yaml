@@ -1,4 +1,4 @@
-component_name: Process PDFs
+name: Process PDFs
 
 process_group:
 - name: input

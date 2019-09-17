@@ -1,4 +1,4 @@
-component_name: S3 Write With Retry
+name: S3 Write With Retry
 
 defaults:
   destination_attribute: "filename"

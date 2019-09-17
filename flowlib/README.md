@@ -8,7 +8,7 @@ A python module and cli tool for deploying NiFi flows from YAML
 `FlowComponent` - A re-useable process group definition
 
 ```yaml
-component_name: Port Tester
+name: Port Tester
 
 process_group:
 - name: success-input
@@ -44,7 +44,7 @@ process_group:
 ```yaml
 - name: port-tester
   type: process_group
-  component_ref: common/port_test.yaml
+  component_path: common/port_test.yaml
   connections:
   - name: debug
     from_port: success-output
