@@ -77,7 +77,7 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     # Create a new FlowDeployment and add all the loaded_components to it
     deployment = FlowDeployment(flow.name, flow.raw, flowlib.__version__)
     for component in flow.loaded_components.values():
-        deployment.add(DeployedComponent(component.name, component))
+        deployment.add(DeployedComponent(component.name, component.raw))
 
     canvas_root_id = nipyapi.canvas.get_root_pg_id()
     canvas_root_pg = nipyapi.canvas.get_process_group(canvas_root_id, identifier_type='id')

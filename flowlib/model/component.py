@@ -15,14 +15,3 @@ class FlowComponent:
 
     def __repr__(self):
         return str(vars(self))
-
-    def as_dict(self):
-        self.raw.seek(0)
-        return {
-            'name': self.name,
-            'source_file': self.source_file,
-            'defaults': self.defaults,
-            'required_vars': self.required_vars,
-            'process_group': self.process_group,
-            'raw': self.raw.read()
-        }
