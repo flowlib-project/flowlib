@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
+from flowlib.model import FlowLibException
+
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
+
 
 PG_NAME_DELIMETER = '/'
 
@@ -24,7 +27,7 @@ class Flow:
         :type raw: io.TextIOWrapper
         :param component_dir: The path to the directory containing reuseable flow components
         :type component_dir: str
-        :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
+        :param loaded_components: A map of components (component_path) loaded while initializing the flow, these are re-useable components
         :type loaded_components: dict(str:FlowComponent)
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling flow.init()
@@ -45,7 +48,9 @@ class Flow:
     def __repr__(self):
         return str(vars(self))
 
-    # TODO: Unit test this
+    def find_component_by_path(self, path):
+        return list(filter(lambda x: x.source_file == path, self.loaded_components.values()))[0]
+
     def get_parent_element(self, element):
         """
         A helper method for looking up parent elements from a breadcrumb path
@@ -126,7 +131,7 @@ class FlowElement(ABC):
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, _type, component_ref, _vars=None, connections=None):
+    def __init__(self, name, parent_path, _type, component_path, _vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -134,10 +139,12 @@ class ProcessGroup(FlowElement):
         """
         self._id = None
         self._parent_id = None
+        self.component_name = None
         self.name = name
+        self.component_path = component_path
         self.parent_path = parent_path
         self._type = _type
-        self.component_ref = component_ref
+
         self.vars = _vars
         self.connections = [Connection(**c) for c in connections] if connections else None
         self.elements = dict()
@@ -147,6 +154,7 @@ class Processor(FlowElement):
     def __init__(self, name, parent_path, _type, config, connections=None):
         self._id = None
         self._parent_id = None
+        self.src_component_name = None
         self.name = name
         self.parent_path = parent_path
         self._type = _type
