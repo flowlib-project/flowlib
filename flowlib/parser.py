@@ -9,8 +9,9 @@ from jinja2 import Environment
 
 import flowlib
 from flowlib.logger import log
-from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
-    Processor, ProcessGroup)
+from flowlib.model import FlowLibException
+from flowlib.model.component import FlowComponent
+from flowlib.model.flow import FlowElement, Processor, ProcessGroup
 
 
 def env_global(key):

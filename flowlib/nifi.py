@@ -7,7 +7,8 @@ from urllib3.exceptions import MaxRetryError
 import nipyapi
 
 from flowlib.logger import log
-from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
+from flowlib.model import FlowLibException
+from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
 import flowlib.layout
 
 FLOW_DEPLOYMENT_INFO = """
@@ -64,7 +65,7 @@ def init_from_nifi(flow, nifi_endpoint):
 
 
 
-def deploy_flow(flow, nifi_endpoint, force=False):
+def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
     :param flow: A Flow instance

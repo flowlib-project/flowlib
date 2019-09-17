@@ -5,9 +5,6 @@ from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 
 PG_NAME_DELIMETER = '/'
 
-class FlowLibException(Exception):
-    pass
-
 class Flow:
     # TODO: Add flow_source attr which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
     def __init__(self):
@@ -61,23 +58,6 @@ class Flow:
             elements = target.elements
             target = elements.get(n)
         return target
-
-
-class FlowComponent:
-    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_vars=[]):
-        """
-        A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
-        """
-        self.component_name = component_name
-        self.source_file = source_file
-        self.defaults = defaults
-        self.required_vars = required_vars
-        self.process_group = process_group
-        self.raw = raw
-
-    def __repr__(self):
-        return str(vars(self))
-
 
 class FlowElement(ABC):
     """

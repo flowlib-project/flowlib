@@ -6,7 +6,8 @@ import yaml
 
 import flowlib.nifi
 import flowlib.parser
-from flowlib.model import FlowLibException, Flow
+from flowlib.model import FlowLibException
+from flowlib.model.flow import Flow
 from flowlib.logger import log
 
 
