@@ -28,6 +28,10 @@ env.filters['env'] = env_filter
 env.globals['env'] = env_global
 
 
+# todo:
+def init_from_deployment():
+    pass
+
 def init_from_file(flow, _file, component_dir):
     """
     Initialize a Flow from from a yaml definition
@@ -82,6 +86,7 @@ def init_from_file(flow, _file, component_dir):
     for elem_dict in flow.canvas:
         elem_dict['parent_path'] = flow.name
         el = FlowElement.from_dict(elem_dict)
+        el.src_component_name = 'root'
 
         if isinstance(el, ProcessGroup):
             _init_component(el, flow)
@@ -91,7 +96,12 @@ def init_from_file(flow, _file, component_dir):
         else:
             flow.elements[el.name] = el
 
-    _replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+    _replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
+
+    # Filter loaded_components that are not used in this flow
+    for k,v in flow.loaded_components.items():
+        if not v.is_used:
+            del flow.loaded_components[k]
 
 
 def _load_components(component_dir, flow):
@@ -103,23 +113,27 @@ def _load_components(component_dir, flow):
                 # init the component from file
                 f = open(os.path.join(root, _file))
                 raw_component = yaml.safe_load(f)
-                raw_component['source_file'] = f.name
+                raw_component['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
                 raw_component['raw'] = f
                 loaded_component = FlowComponent(**raw_component)
 
                 # save the component so it can be instantiated later
-                component_ref = loaded_component.source_file.split(component_dir)[1].lstrip(os.sep)
-                flow.loaded_components[component_ref] = loaded_component
+                if flow.loaded_components.get(loaded_component.name):
+                    raise FlowLibException("A component named '{}' is already defined".format(loaded_component.name))
+                else:
+                    flow.loaded_components[loaded_component.name] = loaded_component
 
 
 def _init_component(pg_element, flow):
     log.info("Loading ProcessGroup: {}".format(pg_element.name))
-    component = flow.loaded_components.get(pg_element.component_ref)
+    component = flow.find_component_by_path(pg_element.component_path)
     if not component:
         parent = flow.get_parent_element(pg_element)
-        source = parent.source_file if hasattr(parent, 'source_file') else 'Root:flow.yaml'
+        source = parent.source_file if hasattr(parent, 'source_file') else 'root'
         raise FlowLibException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
-            pg_element.component_ref, pg_element.name, source))
+            pg_element.component_path, pg_element.name, source))
+    else:
+        pg_element.component_name = component.name
 
     # Validate required variables are present
     if component.required_vars:
@@ -131,22 +145,27 @@ def _init_component(pg_element, flow):
     for elem_dict in component.process_group:
         elem_dict['parent_path'] = "{}/{}".format(pg_element.parent_path, pg_element.name)
         el = FlowElement.from_dict(elem_dict)
+        el.src_component_name = component.name
 
         if isinstance(el, ProcessGroup):
-            if el.component_ref == pg_element.component_ref:
-                raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_ref))
+            if el.component_path == pg_element.component_path:
+                raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
             else:
                 _init_component(el, flow)
 
         if pg_element.elements.get(el.name):
-            raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, pg_element.component_ref))
+            raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in {}".format(el.name, pg_element.component_path))
         else:
             pg_element.elements[el.name] = el
 
+    component.is_used = True
 
-def _replace_flow_element_vars_recursive(elements, loaded_components):
+
+def _replace_flow_element_vars_recursive(flow, elements, loaded_components):
     """
     Recusively apply the variable evaluation to each element in the flow
+    :param flow: An unitialized Flow instance
+    :type flow: flowlib.model.Flow
     :param elements: The elements to deploy
     :type elements: list(flowlib.model.FlowElement)
     :param loaded_components: The components that were imported during flow.init()
@@ -154,9 +173,9 @@ def _replace_flow_element_vars_recursive(elements, loaded_components):
     """
     for el in elements.values():
         if isinstance(el, ProcessGroup):
-            source_component = loaded_components[el.component_ref]
+            source_component = flow.find_component_by_path(el.component_path)
             _replace_vars(el, source_component)
-            _replace_flow_element_vars_recursive(el.elements, loaded_components)
+            _replace_flow_element_vars_recursive(flow, el.elements, loaded_components)
         # This should be called for top-level processors of the flow only
         # which would have access to the global context and nothing else
         elif isinstance(el, Processor):
