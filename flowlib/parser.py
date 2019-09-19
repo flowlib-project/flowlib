@@ -72,7 +72,8 @@ def init_from_file(flow, _file, component_dir):
 
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
-    _set_global_helpers() # set controllers as empty dict for now so that the env helper is available for templating controller properties
+    # Set controllers as empty dict for now so that the env helper is available for templating controller properties
+    _set_global_helpers()
 
     # If --component-dir is specified, use that.
     # Otherwise use the components/ directory relative to flow.yaml
@@ -168,7 +169,7 @@ def _init_component_recursive(pg_element, flow):
             pg_element.elements[el.name] = el
 
 
-def replace_flow_element_vars_recursive(elements, loaded_components):
+def replace_flow_element_vars_recursive(flow, elements, loaded_components):
     """
     Recusively apply the variable evaluation to each element in the flow
     :param elements: The elements to deploy
@@ -180,10 +181,13 @@ def replace_flow_element_vars_recursive(elements, loaded_components):
         if isinstance(el, ProcessGroup):
             source_component = loaded_components[el.component_ref]
             _replace_vars(el, source_component)
-            replace_flow_element_vars_recursive(el.elements, loaded_components)
+            replace_flow_element_vars_recursive(flow, el.elements, loaded_components)
+
         # This should be called for top-level processors of the flow only
         # which would have access to the global context and nothing else
         elif isinstance(el, Processor):
+            # Top level processors may need to reference controller services, so set them explictly before templating
+            _set_global_helpers({ c.name: c for c in flow.controllers })
             _template_properties(el)
 
 

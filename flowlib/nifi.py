@@ -109,7 +109,7 @@ def deploy_flow(flow, nifi_endpoint, force=False):
     # We must wait until the controllers exist in NiFi before applying jinja templating
     # because the controller() helper needs to lookup controller IDs for injecting into the processor's properties
       # flowlib.parser.set_global_helpers(flow.controllers)
-    flowlib.parser.replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+    flowlib.parser.replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
 
     _create_canvas_elements_recursive(flow.elements, flow_pg)
     _create_connections_recursive(flow, flow.elements)
