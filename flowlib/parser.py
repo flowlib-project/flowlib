@@ -10,21 +10,14 @@ from jinja2 import Environment
 import flowlib
 from flowlib.logger import log
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
-    Processor, ProcessGroup)
+    Processor, ProcessGroup, Controller)
 
 
-def env_global(key):
-    val = os.getenv(key)
-    if not val:
-        log.warn("Environment variable {} is undefined and no default was provided.".format(key))
+def env_lookup(key, default=None):
+    val = os.getenv(key, default)
     return val
 
-def env_filter(default, key):
-    return os.getenv(key, default)
-
-env = Environment()
-env.filters['env'] = env_filter
-env.globals['env'] = env_global
+# TODO: Create a controller() global that can be used to lookup controller services in flow.controller
 
 
 def init_from_file(flow, _file, component_dir):
@@ -54,15 +47,22 @@ def init_from_file(flow, _file, component_dir):
     flow.flowlib_version = flowlib.__version__
     flow.name = _validate_name(raw.get('name'))
     flow.version = _validate_version(str(raw.get('version')))
-    flow.controllers = raw.get('controllers', [])
+    flow.controllers = raw.get('controllers', list())
     flow.canvas = raw.get('canvas')
     flow.comments = raw.get('comments', '')
-    flow.globals = raw.get('globals', {})
+    flow.globals = raw.get('globals', dict())
+
+    env = Environment()
+    env.globals['env'] = env_lookup
 
     # Jinja template the global vars
     for k,v in flow.globals.items():
         t = env.from_string(v)
         flow.globals[k] = t.render()
+
+    # Don't let anyone accidentally overwrite the env lookup
+    if 'env' in flow.globals:
+        del flow.globals['env']
 
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
@@ -76,6 +76,8 @@ def init_from_file(flow, _file, component_dir):
 
     log.info("Loading component lib: {}".format(flow.component_dir))
     _load_components(flow.component_dir, flow)
+
+    # flow.controllers = list(map(lambda c: Controller(c), flow.controllers))
 
     log.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
     for elem_dict in flow.canvas:
