@@ -12,12 +12,22 @@ from flowlib.logger import log
 from flowlib.model import (FlowLibException, FlowComponent, FlowElement,
     Processor, ProcessGroup, Controller)
 
+env = Environment()
 
-def env_lookup(key, default=None):
-    val = os.getenv(key, default)
-    return val
+def _set_global_helpers(controllers=dict()):
 
-# TODO: Create a controller() global that can be used to lookup controller services in flow.controller
+    def env_lookup(key, default=None):
+        value = os.getenv(key, default)
+        return value
+
+    def controller_lookup(name):
+        if name in controllers:
+            return controllers[name].id
+        else:
+            return None
+
+    env.globals['env'] = env_lookup
+    env.globals['controller'] = controller_lookup
 
 
 def init_from_file(flow, _file, component_dir):
@@ -52,20 +62,17 @@ def init_from_file(flow, _file, component_dir):
     flow.comments = raw.get('comments', '')
     flow.globals = raw.get('globals', dict())
 
-    env = Environment()
-    env.globals['env'] = env_lookup
-
     # Jinja template the global vars
     for k,v in flow.globals.items():
         t = env.from_string(v)
         flow.globals[k] = t.render()
 
-    # Don't let anyone accidentally overwrite the env lookup
-    if 'env' in flow.globals:
-        del flow.globals['env']
+    if 'env' in flow.globals or 'controller' in flow.globals:
+        log.warning("'env' and 'controller' are reserved words and should not be set inside of globals, these values will be overwritten.")
 
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
+    _set_global_helpers() # set controllers as empty dict for now so that the env helper is available for templating controller properties
 
     # If --component-dir is specified, use that.
     # Otherwise use the components/ directory relative to flow.yaml
@@ -77,7 +84,14 @@ def init_from_file(flow, _file, component_dir):
     log.info("Loading component lib: {}".format(flow.component_dir))
     _load_components(flow.component_dir, flow)
 
-    # flow.controllers = list(map(lambda c: Controller(c), flow.controllers))
+    # Construct and validate controllers for each one defined in flow.yaml
+    flow.controllers = list(map(lambda c: Controller(**c), flow.controllers))
+    if len(flow.controllers) != len(set(list(map(lambda c: c.name, flow.controllers)))):
+        raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
+
+    # Inject template vars into controller properties
+    for c in flow.controllers:
+        _template_properties(c)
 
     log.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
     for elem_dict in flow.canvas:
@@ -85,14 +99,12 @@ def init_from_file(flow, _file, component_dir):
         el = FlowElement.from_dict(elem_dict)
 
         if isinstance(el, ProcessGroup):
-            _init_component(el, flow)
+            _init_component_recursive(el, flow)
 
         if flow.elements.get(el.name):
-            raise FlowLibException("Root FlowElement is already defined: {}".format(el.name))
+            raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
         else:
             flow.elements[el.name] = el
-
-    _replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
 
 
 def _load_components(component_dir, flow):
@@ -101,19 +113,19 @@ def _load_components(component_dir, flow):
             if _file.endswith('.yaml') or _file.endswith('.yml'):
                 log.info("Loading component: {}".format(_file))
 
-                # init the component from file
+                # Init the component from file
                 f = open(os.path.join(root, _file))
                 raw_component = yaml.safe_load(f)
                 raw_component['source_file'] = f.name
                 raw_component['raw'] = f
                 loaded_component = FlowComponent(**raw_component)
 
-                # save the component so it can be instantiated later
+                # Save the component so it can be instantiated later
                 component_ref = loaded_component.source_file.split(component_dir)[1].lstrip(os.sep)
                 flow.loaded_components[component_ref] = loaded_component
 
 
-def _init_component(pg_element, flow):
+def _init_component_recursive(pg_element, flow):
     log.info("Loading ProcessGroup: {}".format(pg_element.name))
     component = flow.loaded_components.get(pg_element.component_ref)
     if not component:
@@ -122,11 +134,22 @@ def _init_component(pg_element, flow):
         raise FlowLibException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
             pg_element.component_ref, pg_element.name, source))
 
-    # Validate required variables are present
+    # Validate all required controllers are provided
+    for k,v in component.required_controllers.items():
+        if not k in pg_element.controllers:
+            raise FlowLibException("Missing required_controller. {} is not provided but is required by {}".format(k, component.source_file))
+
+        controller = flow.find_controller_by_name(pg_element.controllers[k])
+        if v != controller.config.package_id:
+            raise FlowLibException("Invalid controller reference. A controller of type {} was provided, but {} is required by {}".format(controller_type, v, component.source_file))
+
+        pg_element.controllers[k] = controller
+
+    # Validate all required variables are provided
     if component.required_vars:
         for v in component.required_vars:
             if not v in pg_element.vars:
-                raise FlowLibException("Missing Required Var. {} is undefined but is required by {}".format(v, component.source_file))
+                raise FlowLibException("Missing required_vars. {} is not provided but is required by {}".format(v, component.source_file))
 
     # Call FlowElement.from_dict() on each element in the process_group
     for elem_dict in component.process_group:
@@ -137,15 +160,15 @@ def _init_component(pg_element, flow):
             if el.component_ref == pg_element.component_ref:
                 raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_ref))
             else:
-                _init_component(el, flow)
+                _init_component_recursive(el, flow)
 
         if pg_element.elements.get(el.name):
-            raise FlowLibException("Found Duplicate Elements. FlowElement {} is already defined in: {}".format(el.name, pg_element.component_ref))
+            raise FlowLibException("Found Duplicate Elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
         else:
             pg_element.elements[el.name] = el
 
 
-def _replace_flow_element_vars_recursive(elements, loaded_components):
+def replace_flow_element_vars_recursive(elements, loaded_components):
     """
     Recusively apply the variable evaluation to each element in the flow
     :param elements: The elements to deploy
@@ -157,19 +180,19 @@ def _replace_flow_element_vars_recursive(elements, loaded_components):
         if isinstance(el, ProcessGroup):
             source_component = loaded_components[el.component_ref]
             _replace_vars(el, source_component)
-            _replace_flow_element_vars_recursive(el.elements, loaded_components)
+            replace_flow_element_vars_recursive(el.elements, loaded_components)
         # This should be called for top-level processors of the flow only
         # which would have access to the global context and nothing else
         elif isinstance(el, Processor):
-            _inject_processor_properties(el)
+            _template_properties(el)
 
 
 def _replace_vars(process_group, source_component):
     """
     Replace vars for all Processor elements inside a given ProcessGroup
 
-    Note: We already valdated that required vars were present during
-        _init_component() so don't worry about it here
+    Note: We already valdated that all required_vars were present during
+        _init_component_recursive() so don't worry about it here
 
     :param process_group: The process_group processors that need vars evaluated
     :type process_group: flowlib.model.ProcessGroup
@@ -183,13 +206,16 @@ def _replace_vars(process_group, source_component):
             t = env.from_string(val)
             context[key] = t.render(**context)
 
+    # Setup controller lookup helper for this process group
+    _set_global_helpers(process_group.controllers)
+
     # Apply var replacements for each value of processor.config.properties
     for el in process_group.elements.values():
         if isinstance(el, Processor):
-            _inject_processor_properties(el, context)
+            _template_properties(el, context)
 
 
-def _inject_processor_properties(processor, context=dict()):
-    for k,v in processor.config.properties.items():
+def _template_properties(el, context=dict()):
+    for k,v in el.config.properties.items():
         t = env.from_string(v)
-        processor.config.properties[k] = t.render(**context)
+        el.config.properties[k] = t.render(**context)

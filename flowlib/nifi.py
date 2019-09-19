@@ -8,6 +8,7 @@ import nipyapi
 
 from flowlib.logger import log
 from flowlib.model import FlowLibException, InputPort, OutputPort, ProcessGroup, Processor
+import flowlib.parser
 import flowlib.layout
 
 FLOW_DEPLOYMENT_INFO = """
@@ -103,9 +104,16 @@ def deploy_flow(flow, nifi_endpoint, force=False):
     flow_pg.component.comments = t.render(context)
     nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
 
-    # _create_controllers_recursive(flow)
+    _create_controllers(flow, flow_pg)
+
+    # We must wait until the controllers exist in NiFi before applying jinja templating
+    # because the controller() helper needs to lookup controller IDs for injecting into the processor's properties
+      # flowlib.parser.set_global_helpers(flow.controllers)
+    flowlib.parser.replace_flow_element_vars_recursive(flow.elements, flow.loaded_components)
+
     _create_canvas_elements_recursive(flow.elements, flow_pg)
     _create_connections_recursive(flow, flow.elements)
+    _set_controllers_enabled(flow, enabled=True)
 
     # find all deployed flows and re-organize the top level PGs
     pgs = nipyapi.nifi.ProcessGroupsApi().get_process_groups(canvas_root_id).process_groups
@@ -135,6 +143,38 @@ def _get_nifi_entity_by_id(kind, identifier):
     else:
         raise FlowLibException("{} is not a valid NiFi api type")
     return e
+
+
+def _create_controllers(flow, flow_pg):
+    """
+    Create the controller services for the flow
+    :param flow: A Flow instance
+    :type flow: flowlib.model.Flow
+    :param flow_pg: The process group of the root flow being deployed
+    :type flow_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    """
+    all_controller_types = list(map(lambda x: x.type, nipyapi.canvas.list_all_controller_types()))
+    for c in flow.controllers:
+        if c.config.package_id not in all_controller_types:
+            raise FlowLibException("{} is not a valid NiFi Controller Service type".format(c.config.package_id))
+
+        controller_type = nipyapi.nifi.models.DocumentedTypeDTO(type=c.config.package_id)
+        controller = nipyapi.canvas.create_controller(flow_pg, controller_type, name=c.name)
+        controller = nipyapi.canvas.get_controller(controller.id, identifier_type='id')
+        nipyapi.canvas.update_controller(controller, c.config)
+        c.id = controller.id
+        c.parent_id = flow_pg.id
+
+
+def _set_controllers_enabled(flow, enabled=True):
+    """
+    Start/Enable or Stop/Disable all controller services for a flow
+    :param flow: A Flow instance
+    :type flow: flowlib.model.Flow
+    """
+    for c in flow.controllers:
+        controller = nipyapi.canvas.get_controller(c.id, identifier_type='id')
+        nipyapi.canvas.schedule_controller(controller, enabled)
 
 
 def _create_canvas_elements_recursive(elements, parent_pg):
@@ -189,9 +229,6 @@ def _create_process_group(element, parent_pg, position, is_flow_root=False):
     :param parent_pg: The process group in which to create the new process group
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
-    # TODO: If we assert that the canvas is clean then we do not need to check if the
-    # canvas elements already exist when creating processors, pgs, input/output ports
-
     name = "{}/{}".format(element.name, parent_pg.id)
     if is_flow_root:
         name = element.name
