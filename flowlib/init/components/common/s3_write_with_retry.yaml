@@ -4,10 +4,11 @@ defaults:
   destination_attribute: "filename"
 
 required_vars:
-- aws_access_key
-- aws_secret_key
 - bucket
 - region
+
+required_controllers:
+  aws_credential_service: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
 
 process_group:
 - name: input
@@ -23,8 +24,7 @@ process_group:
     properties:
       Bucket: "{{ bucket }}"
       Region: "{{ region }}"
-      Access Key: "{{ aws_access_key }}"
-      Secret Key: "{{ aws_secret_key }}"
+      AWS Credentials Provider service: "{{ controller('aws_credential_service') }}"
       Object Key: "{{ '${' + destination_attribute + '}' }}"
   connections:
   - name: put-s3

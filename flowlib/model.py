@@ -2,6 +2,7 @@
 from abc import ABC
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
+from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
 
 PG_NAME_DELIMETER = '/'
 
@@ -20,7 +21,7 @@ class Flow:
         :param version: The version of the Flow
         :type version: str
         :param controllers: The root controllers for the root canvas
-        :type controllers: list(Controller)
+        :type controllers: dict(str:Controller)
         :param canvas: The root elements of the flow
         :type canvas: list(FlowElement)
         :param raw: The raw yaml text of the flow.yaml
@@ -48,6 +49,14 @@ class Flow:
     def __repr__(self):
         return str(vars(self))
 
+    def find_controller_by_name(self, name):
+        """
+        A helper method for looking up a controller by name
+        :param name: The name of the controller
+        :type name: str
+        """
+        return list(filter(lambda c: c.name == name, self.controllers))[0]
+
     # TODO: Unit test this
     def get_parent_element(self, element):
         """
@@ -64,13 +73,14 @@ class Flow:
 
 
 class FlowComponent:
-    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_vars=[]):
+    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_controllers=dict(), required_vars=[]):
         """
         A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
         """
         self.component_name = component_name
         self.source_file = source_file
         self.defaults = defaults
+        self.required_controllers = required_controllers
         self.required_vars = required_vars
         self.process_group = process_group
         self.raw = raw
@@ -146,7 +156,7 @@ class FlowElement(ABC):
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, _type, component_ref, _vars=None, connections=None):
+    def __init__(self, name, parent_path, _type, component_ref, controllers=dict(), _vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -158,6 +168,7 @@ class ProcessGroup(FlowElement):
         self.parent_path = parent_path
         self._type = _type
         self.component_ref = component_ref
+        self.controllers = controllers
         self.vars = _vars
         self.connections = [Connection(**c) for c in connections] if connections else None
         self.elements = dict()
@@ -212,6 +223,46 @@ class Connection:
         self.from_port = from_port
         self.to_port = to_port
         self.relationships = relationships
+
+    def __repr__(self):
+        return str(vars(self))
+
+
+class Controller:
+    def __init__(self, name, config):
+        self._id = None
+        self._parent_id = None
+        self.name = name
+
+        if not 'properties' in config:
+            config['properties'] = dict()
+        self.config = ControllerServiceConfig(config.pop('package_id'), **config)
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        if self._id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._id = _id
+
+    @property
+    def parent_id(self):
+        return self._parent_id
+
+    @parent_id.setter
+    def parent_id(self, _id):
+        if self._parent_id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._parent_id = _id
+
+
+class ControllerServiceConfig(ControllerServiceDTO):
+    def __init__(self, package_id, **kwargs):
+        super().__init__(**kwargs)
+        self.package_id = package_id
 
     def __repr__(self):
         return str(vars(self))
