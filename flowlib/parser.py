@@ -62,18 +62,18 @@ def init_from_file(flow, _file, component_dir):
     flow.comments = raw.get('comments', '')
     flow.globals = raw.get('globals', dict())
 
+    # Set controllers as empty dict for now so that the env helper is available for templating controller properties
+    _set_global_helpers()
+    if 'env' in flow.globals or 'controller' in flow.globals:
+        log.warning("'env' and 'controller' are reserved words and should not be set inside of globals, these values will be overwritten.")
+
     # Jinja template the global vars
     for k,v in flow.globals.items():
         t = env.from_string(v)
         flow.globals[k] = t.render()
 
-    if 'env' in flow.globals or 'controller' in flow.globals:
-        log.warning("'env' and 'controller' are reserved words and should not be set inside of globals, these values will be overwritten.")
-
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
-    # Set controllers as empty dict for now so that the env helper is available for templating controller properties
-    _set_global_helpers()
 
     # If --component-dir is specified, use that.
     # Otherwise use the components/ directory relative to flow.yaml
