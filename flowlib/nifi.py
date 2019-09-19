@@ -397,6 +397,13 @@ def _force_cleanup_flow(flow_pg_id):
     for c in connections:
         nipyapi.canvas.delete_connection(c, purge=True)
 
+    log.info("Deleting flow controller services...")
+    controllers = nipyapi.canvas.list_all_by_kind('controllers', pg_id=flow_pg_id, descendants=False)
+    if controllers and not isinstance(controllers, list):
+        controllers = [controllers]
+    for c in controllers:
+        nipyapi.canvas.delete_controller(c, force=True)
+
     log.info("Deleting flow process group...")
     flow_pg = _get_nifi_entity_by_id('process_group', flow_pg_id)
     nipyapi.canvas.delete_process_group(flow_pg, force=True)
