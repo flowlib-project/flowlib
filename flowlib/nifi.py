@@ -11,6 +11,7 @@ from flowlib.model import FlowLibException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
 import flowlib.layout
+import flowlib.parser
 
 FLOW_DEPLOYMENT_INFO = """
 ### DO NOT CHANGE ANYTHING BELOW THIS LINE ###
@@ -115,10 +116,9 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
 
     # We must wait until the controllers exist in NiFi before applying jinja templating
     # because the controller() helper needs to lookup controller IDs for injecting into the processor's properties
-      # flowlib.parser.set_global_helpers(flow.controllers)
     flowlib.parser.replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
 
-    _create_canvas_elements_recursive(flow.elements, flow_pg)
+    _create_canvas_elements_recursive(flow.elements, flow_pg, deployment)
     _create_connections_recursive(flow, flow.elements)
     _set_controllers_enabled(flow, enabled=True)
 
@@ -260,10 +260,6 @@ def _create_process_group(element, parent_pg, position, deployment, is_flow_root
 
         if is_flow_root:
             deployment.root_group_id = pg.id
-        else:
-            # Create empty dict for the new PG ID which will hold its stateful processors
-            deployed_component = deployment.get_component(element.component_name)
-            deployed_component.instances[pg.id] = dict()
 
     element.id = pg.id
     element.parent_id = parent_pg.id
@@ -297,7 +293,10 @@ def _create_processor(element, parent_pg, position, deployment):
                 deployment.root_processors[element.name] = p.id
             else:
                 deployed_component = deployment.get_component(element.src_component_name)
-                deployed_component.instances[parent_pg.id][element.name] = p.id
+                deployed_component.instances[element.parent_path + "/" + element.name] = {
+                    "group_id": parent_pg.id,
+                    "processor_id": p.id
+                }
 
     element.id = p.id
     element.parent_id = parent_pg.id

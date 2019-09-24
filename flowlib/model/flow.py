@@ -141,7 +141,7 @@ class FlowElement(ABC):
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, _type, component_ref, controllers=dict(), _vars=None, connections=None):
+    def __init__(self, name, parent_path, _type, component_path, controllers=dict(), _vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -154,7 +154,6 @@ class ProcessGroup(FlowElement):
         self.component_path = component_path
         self.parent_path = parent_path
         self._type = _type
-        self.component_ref = component_ref
         self.controllers = controllers
         self.vars = _vars
         self.connections = [Connection(**c) for c in connections] if connections else None

@@ -94,7 +94,7 @@ class DeployedComponent:
         :param raw_component: The yaml src of this loaded component
         :type raw_component: io.TextIOWrapper
         :param instances: The deployed instances of this component
-        :type instances: dict({pg_id: {proc_name: proc_id}})
+        :type instances: dict({element_path: {"group_id": pg_id, "processor_id": proc_id}})
         """
         self.name = name
         self.raw_component = raw_component

@@ -26,13 +26,9 @@ controllers:
 canvas:
 - name: list-fetch
   type: process_group
-<<<<<<< HEAD
   component_path: common/s3_list_fetch_with_retry.yaml
-=======
-  component_ref: common/s3_list_fetch_with_retry.yaml
   controllers:
     aws_credential_service: aws-s3-credentials
->>>>>>> 492d83cf4c3136a8bf9805dfc8758eb5d1c7726b
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"
@@ -63,13 +59,9 @@ canvas:
 
 - name: write-to-s3
   type: process_group
-<<<<<<< HEAD
   component_path: common/s3_write_with_retry.yaml
-=======
-  component_ref: common/s3_write_with_retry.yaml
   controllers:
     aws_credential_service: aws-s3-credentials
->>>>>>> 492d83cf4c3136a8bf9805dfc8758eb5d1c7726b
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"

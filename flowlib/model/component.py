@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 class FlowComponent:
-    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_controllers=dict(), required_vars=[]):
+    def __init__(self, name, source_file, process_group, raw, defaults=dict(), required_controllers=dict(), required_vars=[]):
         """
         A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
         """
-        self.component_name = component_name
+        self.name = name
         self.source_file = source_file
         self.defaults = defaults
         self.required_controllers = required_controllers
