@@ -14,21 +14,29 @@ comments: |
 globals:
   bucket: 'kegs-b23-dataflow-demos'
   region: 'us-east-1'
-  aws_access_key: "{{ 'AKIA43S572GR7SUSKWUK' | env('AWS_ACCESS_KEY') }}"
-  aws_secret_key: "{{ '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' | env('AWS_SECRET_KEY') }}"
 
-controllers: []
+controllers:
+- name: aws-s3-credentials
+  config:
+    package_id: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
+    properties:
+      Access Key: "{{ env('AWS_ACCESS_KEY', 'AKIA43S572GR7SUSKWUK') }}"
+      Secret Key: "{{ env('AWS_SECRET_KEY', '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') }}"
 
 canvas:
 - name: list-fetch
   type: process_group
+<<<<<<< HEAD
   component_path: common/s3_list_fetch_with_retry.yaml
+=======
+  component_ref: common/s3_list_fetch_with_retry.yaml
+  controllers:
+    aws_credential_service: aws-s3-credentials
+>>>>>>> 492d83cf4c3136a8bf9805dfc8758eb5d1c7726b
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"
     prefix: demo-data/input
-    aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
   connections:
   - name: process-pdfs
     from_port: output
@@ -55,10 +63,14 @@ canvas:
 
 - name: write-to-s3
   type: process_group
+<<<<<<< HEAD
   component_path: common/s3_write_with_retry.yaml
+=======
+  component_ref: common/s3_write_with_retry.yaml
+  controllers:
+    aws_credential_service: aws-s3-credentials
+>>>>>>> 492d83cf4c3136a8bf9805dfc8758eb5d1c7726b
   vars:
     bucket: "{{ bucket }}"
     region: "{{ region }}"
-    aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
     destination_attribute: file_dest
