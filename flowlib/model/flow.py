@@ -20,6 +20,8 @@ class Flow:
         :type flowlib_version: str
         :param version: The version of the Flow
         :type version: str
+        :param flow_src: The source that was used to initialize the Flow, a local or remote path
+        :type flow_src: str
         :param controllers: The root controllers for the root canvas
         :type controllers: dict(str:Controller)
         :param canvas: The root elements of the flow
@@ -35,6 +37,7 @@ class Flow:
         :type elements: dict(str:FlowElement)
         """
         self.name = None
+        self.flow_src = None
         self.flowlib_version = None
         self.version = None
         self.controllers = None

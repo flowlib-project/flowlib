@@ -58,6 +58,7 @@ def init_from_file(flow, _file, component_dir):
         return version
 
     raw = yaml.safe_load(_file)
+    flow.flow_src = os.path.abspath(_file.name)
     flow.raw = _file
     flow.flowlib_version = flowlib.__version__
     flow.name = _validate_name(raw.get('name'))

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import io
+import os
 import yaml
 import time
 import re
@@ -49,7 +50,7 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
     :param flow: A Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     """
     wait_for_nifi_api(nifi_endpoint)
 
@@ -107,7 +108,8 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     deployment.save(s)
 
     # Save to local file
-    with open('deployment.json', 'w') as f:
+    deployment_out = os.path.join(os.path.dirname(flow.flow_src), '.deployment.json')
+    with open(deployment_out, 'w') as f:
         s.seek(0)
         f.write(s.read())
 

@@ -30,7 +30,11 @@ def new_flow_from_file(component_dir, flow_yaml):
     """
     flow = Flow()
     if isinstance(flow_yaml, str):
-        flow_yaml = open(flow_yaml)
+        if flow_yaml.startswith('http://') or flow_yaml.startswith('https://'):
+            raise FlowLibException("Initializing a Flow from a remote URI is not yet supported")
+        else:
+            flow_yaml = open(flow_yaml)
+
     flowlib.parser.init_from_file(flow, flow_yaml, component_dir)
     return flow
 
