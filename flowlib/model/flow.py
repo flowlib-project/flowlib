@@ -149,7 +149,7 @@ class ProcessGroup(FlowElement):
         """
         self._id = None
         self._parent_id = None
-        self.component_name = None
+        self.src_component_name = None
         self.name = name
         self.component_path = component_path
         self.parent_path = parent_path
@@ -250,6 +250,3 @@ class ControllerServiceConfig(ControllerServiceDTO):
     def __init__(self, package_id, **kwargs):
         super().__init__(**kwargs)
         self.package_id = package_id
-
-    def __repr__(self):
-        return str(vars(self))

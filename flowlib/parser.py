@@ -31,9 +31,9 @@ def _set_global_helpers(controllers=dict()):
     env.globals['controller'] = controller_lookup
 
 
-# todo:
 def init_from_deployment():
-    pass
+    raise FlowLibException("This feature is not yet implemented")
+
 
 def init_from_file(flow, _file, component_dir):
     """
@@ -113,8 +113,6 @@ def init_from_file(flow, _file, component_dir):
         else:
             flow.elements[el.name] = el
 
-    replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
-
     # Filter loaded_components that are not used in this flow
     for k,v in flow.loaded_components.items():
         if not v.is_used:
@@ -150,7 +148,7 @@ def _init_component_recursive(pg_element, flow):
         raise FlowLibException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
             pg_element.component_path, pg_element.name, source))
     else:
-        pg_element.component_name = component.name
+        pg_element.src_component_name = component.name
 
     # Validate all required controllers are provided
     for k,v in component.required_controllers.items():
