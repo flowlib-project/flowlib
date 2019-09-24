@@ -1,6 +1,5 @@
 # flowlib
-deployment.yaml
-deployment.yml
+deployment.json
 
 # vscode
 .vscode

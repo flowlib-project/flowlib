@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import io
+import yaml
 import time
 import re
-from jinja2 import Template
 from urllib3.exceptions import MaxRetryError
 
 import nipyapi
@@ -12,27 +13,6 @@ from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
 import flowlib.layout
 import flowlib.parser
-
-FLOW_DEPLOYMENT_INFO = """
-### DO NOT CHANGE ANYTHING BELOW THIS LINE ###
-This NiFi Flow was generated and deployed by B23 FlowLib
-version: {{ flowlib_version }}
-
-### flow.yaml ###
-
-{{ flow_raw }}
-
-### components ###
-{% for c in flow_components %}
-# {{ c.ref }} #
-
-{{ c.raw }}
-{% endfor %}
-"""
-
-MATCH_LIB_VERSION = r'B23 FlowLib\sversion:\s(.*)'
-MATCH_FLOW_YAML = r'### flow.yaml ###\s(.*)\s# components #'
-MATCH_COMPONENTS = r'### components ###\s(.*)'
 
 
 def wait_for_nifi_api(nifi_endpoint, retries=24, delay=5):
@@ -60,11 +40,9 @@ def init_from_nifi(flow, nifi_endpoint):
     wait_for_nifi_api(nifi_endpoint)
     root_id = nipyapi.canvas.get_root_pg_id()
     root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
-    flow.name = root.component.name
-    _init_flow_meta_info(flow, root.component.comments)
-    # _init_flow_elements_recursive(flow, root)
-    # _init_flow_connections_recursive(flow, root)
 
+    deployment = FlowDeployment.from_dict(yaml.safe_load(root.component.comments))
+    flowlib.parser.init_from_deployment(flow, deployment)
 
 
 def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
@@ -101,17 +79,6 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
         if c.raw:
             c.raw.seek(0)
 
-    # TODO: Write the flow.deployment to the PG comments instead
-    # Update flow process group metadata with deployment info
-    context = {
-        'flowlib_version': flow.flowlib_version,
-        'flow_raw': flow.raw.read(),
-        'flow_components': [{'ref': k, 'raw': v.raw.read()} for k,v in flow.loaded_components.items()]
-    }
-    t = Template(FLOW_DEPLOYMENT_INFO)
-    flow_pg.component.comments = t.render(context)
-    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
-
     _create_controllers(flow, flow_pg)
 
     # We must wait until the controllers exist in NiFi before applying jinja templating
@@ -122,7 +89,7 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     _create_connections_recursive(flow, flow.elements)
     _set_controllers_enabled(flow, enabled=True)
 
-    # find all deployed flows and re-organize the top level PGs
+    # Find all deployed flows and re-organize the top level PGs
     pgs = nipyapi.nifi.ProcessGroupsApi().get_process_groups(canvas_root_id).process_groups
     log.info("Found {} deployed flows, updating top level canvas layout.".format(len(pgs)))
     pgs = sorted(pgs, key=lambda e: e.component.name)
@@ -132,8 +99,22 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
         log.info("Setting position for {} to {}".format(pg.component.name, pg.position))
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(pg.id, pg)
 
-    log.info(deployment.as_dict())
-    deployment.save()
+    # Get the updated flow PG
+    flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
+
+    # Write deployment yaml to buffer
+    s = io.StringIO()
+    deployment.save(s)
+
+    # Save to local file
+    with open('deployment.json', 'w') as f:
+        s.seek(0)
+        f.write(s.read())
+
+    # Save in NiFi instance PG comments
+    s.seek(0)
+    flow_pg.component.comments = s.read()
+    nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(flow_pg.id, flow_pg)
 
 
 def _get_nifi_entity_by_id(kind, identifier):
@@ -409,13 +390,6 @@ def _create_connections(flow, source_element):
             nipyapi.canvas.create_connection(source, dest, c.relationships)
     else:
         log.debug("Terminal node, no downstream connections found for element {}".format(source_element.name))
-
-
-def _init_flow_meta_info(flow, desc):
-    lib_version_pattern = re.compile(MATCH_LIB_VERSION)
-    lib_version = lib_version_pattern.findall(desc)
-    if lib_version:
-        flow.lib_version = lib_version[0]
 
 
 def _force_cleanup_flow(flow_pg_id):

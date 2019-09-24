@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-
 import yaml
+import json
 
 from flowlib.model import FlowLibException
 from flowlib.model.component import FlowComponent
 
-# https://github.com/yaml/pyyaml/issues/103
-class NoAliasDumper(yaml.SafeDumper):
-    def ignore_aliases(self, data):
-        return True
 
 class FlowDeployment:
     def __init__(self, name, raw_flow, flowlib_version):
@@ -69,18 +65,16 @@ class FlowDeployment:
             'components': list(map(lambda x: x.as_dict(), self.components))
         }
 
-    def save(self, path='deployment.yaml'):
-        f = open(path, 'w')
-        yaml.dump_all([self.as_dict()], f, Dumper=NoAliasDumper)
-        f.close()
+    def save(self, buf):
+        """
+        :param buf: An output buffer
+        :type buf: io.StringIO
+        """
+        buf.write(json.dumps(self.as_dict(), indent=2))
 
     @staticmethod
-    def from_yaml():
-        pass
-
-    @staticmethod
-    def from_dict():
-        pass
+    def from_dict(d):
+        raise FlowLibException("FlowDeployment.from_dict() is not implemented yet")
 
     def __repr__(self):
         return str(vars(self))
