@@ -39,7 +39,7 @@ def init_from_file(flow, _file, component_dir):
     """
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     :param _file: A File object
     :type _file: io.TextIOWrapper
     """
@@ -191,11 +191,11 @@ def replace_flow_element_vars_recursive(flow, elements, loaded_components):
     """
     Recusively apply the variable evaluation to each element in the flow
     :param flow: An unitialized Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     :param elements: The elements to deploy
-    :type elements: list(flowlib.model.FlowElement)
+    :type elements: list(flowlib.model.flow.FlowElement)
     :param loaded_components: The components that were imported during flow.init()
-    :type loaded_components: map(str:flowlib.model.FlowComponent)
+    :type loaded_components: map(str:flowlib.model.flow.FlowComponent)
     """
     for el in elements.values():
         if isinstance(el, ProcessGroup):
@@ -221,7 +221,7 @@ def _replace_vars(process_group, source_component):
     :param process_group: The process_group processors that need vars evaluated
     :type process_group: flowlib.model.ProcessGroup
     :param component: The source component that the processGroup was created from
-    :type component: flowlib.model.FlowComponent
+    :type component: flowlib.model.flow.FlowComponent
     """
     # Create a dict of vars to replace
     context = copy.deepcopy(source_component.defaults)

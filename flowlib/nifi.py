@@ -34,7 +34,7 @@ def init_from_nifi(flow, nifi_endpoint):
     """
     Initialize a Flow from from a running NiFi instance
     :param flow: An unitialized Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     :param nifi_endpoint: A NiFi api endpoint
     :type nifi_endpoint: str
     """
@@ -142,7 +142,7 @@ def _create_controllers(flow, flow_pg):
     """
     Create the controller services for the flow
     :param flow: A Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     :param flow_pg: The process group of the root flow being deployed
     :type flow_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
@@ -163,7 +163,7 @@ def _set_controllers_enabled(flow, enabled=True):
     """
     Start/Enable or Stop/Disable all controller services for a flow
     :param flow: A Flow instance
-    :type flow: flowlib.model.Flow
+    :type flow: flowlib.model.flow.Flow
     """
     for c in flow.controllers:
         controller = nipyapi.canvas.get_controller(c.id, identifier_type='id')
