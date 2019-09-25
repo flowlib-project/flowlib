@@ -28,7 +28,7 @@ public class B23FlowlibReportingTaskTest {
 
     @Before
     public void init() {
-        testRunner = TestRunners.newTestRunner(B23FlowlibReportingTask.class);
+        
     }
 
     @Test
