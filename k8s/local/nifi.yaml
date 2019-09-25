@@ -11,12 +11,10 @@ spec:
       labels:
         app: nifi
     spec:
-      imagePullSecrets:
-      - name: aws-ecr-registry
       containers:
       - name: nifi
-        image: 883886641571.dkr.ecr.us-east-1.amazonaws.com/nifi-base:1.9.2
-        imagePullPolicy: Always
+        image: b23.io/nifi-base:latest
+        imagePullPolicy: Never
         env:
         - name: NIFI_WEB_HTTP_HOST
           valueFrom:
