@@ -18,38 +18,24 @@
 
     <parent>
         <groupId>io.b23</groupId>
-        <artifactId>flowlib-metrics-nifi</artifactId>
+        <artifactId>flowlib.metrics.nifi</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>nifi-flowlib-metrics-nifi-processors</artifactId>
-    <packaging>jar</packaging>
+    <artifactId>nifi-flowlib.metrics.nifi-nar</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>nar</packaging>
+    <properties>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <source.skip>true</source.skip>
+    </properties>
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-utils</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-mock</artifactId>
-            <version>1.9.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
+            <groupId>io.b23</groupId>
+            <artifactId>nifi-flowlib.metrics.nifi-processors</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
+
 </project>
