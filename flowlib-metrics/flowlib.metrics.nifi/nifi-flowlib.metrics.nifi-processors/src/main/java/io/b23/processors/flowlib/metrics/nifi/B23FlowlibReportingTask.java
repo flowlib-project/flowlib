@@ -17,6 +17,7 @@
 package io.b23.processors.flowlib.metrics.nifi;
 
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
 import org.apache.nifi.annotation.behavior.ReadsAttributes;
@@ -33,69 +34,43 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.reporting.AbstractReportingTask;
+import org.apache.nifi.reporting.ReportingContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
-@Tags({"example"})
-@CapabilityDescription("Provide a description")
-@SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="", description="")})
-@WritesAttributes({@WritesAttribute(attribute="", description="")})
-public class B23FlowlibReportingTask extends AbstractProcessor {
-
-    public static final PropertyDescriptor MY_PROPERTY = new PropertyDescriptor
-            .Builder().name("MY_PROPERTY")
-            .displayName("My property")
-            .description("Example Property")
-            .required(true)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .build();
-
-    public static final Relationship MY_RELATIONSHIP = new Relationship.Builder()
-            .name("MY_RELATIONSHIP")
-            .description("Example relationship")
-            .build();
-
+@Tags({"flowlib"})
+@CapabilityDescription("Send flowlib metrics to dataflow metrics service")
+public class B23FlowlibReportingTask extends AbstractReportingTask {
+    
     private List<PropertyDescriptor> descriptors;
 
     private Set<Relationship> relationships;
 
-    @Override
-    protected void init(final ProcessorInitializationContext context) {
-        final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-        descriptors.add(MY_PROPERTY);
-        this.descriptors = Collections.unmodifiableList(descriptors);
+    private String db_host;
+    private String db_user;
+    private String db_password;
 
-        final Set<Relationship> relationships = new HashSet<Relationship>();
-        relationships.add(MY_RELATIONSHIP);
-        this.relationships = Collections.unmodifiableSet(relationships);
-    }
-
-    @Override
-    public Set<Relationship> getRelationships() {
-        return this.relationships;
-    }
+    protected AtomicLong lastQuery = new AtomicLong(0);
 
     @Override
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         return descriptors;
     }
 
-    @OnScheduled
-    public void onScheduled(final ProcessContext context) {
-
+    protected void onScheduled(final ConfigurationContext context) {
+        db_host = "test";
+        db_user = "test";
+        db_password = "test";
     }
 
     @Override
-    public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
-        FlowFile flowFile = session.get();
-        if ( flowFile == null ) {
-            return;
-        }
-        // TODO implement
+    public void onTrigger(ReportingContext reportingContext) {
+
     }
 }
