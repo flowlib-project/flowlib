@@ -138,7 +138,8 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
 
         final String SQL = "INSERT INTO files" +
                 "(workload_id, bucket_name, key, size, last_modified, date, ts_added) "
-                + "VALUES(?,?,?,?,?, CURRENT_DATE, CURRENT_TIMESTAMP)";
+                + "VALUES(?,?,?,?,?, CURRENT_DATE, CURRENT_TIMESTAMP) "
+                + "ON CONFLICT (bucket_name, key, last_modified) DO NOTHING";
 
         try {
             List<ProvenanceEventRecord> provenanceEvents = reportingContext
