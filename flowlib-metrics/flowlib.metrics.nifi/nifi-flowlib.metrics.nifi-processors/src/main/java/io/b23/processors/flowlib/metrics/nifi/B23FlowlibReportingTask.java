@@ -17,11 +17,15 @@
 package io.b23.processors.flowlib.metrics.nifi;
 
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.components.Validator;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.provenance.ProvenanceEventRecord;
 import org.apache.nifi.provenance.ProvenanceEventType;
 import org.apache.nifi.reporting.AbstractReportingTask;
@@ -33,39 +37,56 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.nifi.reporting.ReportingInitializationContext;
 
 @Tags({"flowlib"})
 @CapabilityDescription("Send flowlib metrics to dataflow metrics service")
 public class B23FlowlibReportingTask extends AbstractReportingTask {
 
-    private List<PropertyDescriptor> descriptors;
+    public static final Validator FLOWLIB_HOST_VALIDATOR = (String subject, String input, ValidationContext context) -> {
+        ValidationResult.Builder builder = new ValidationResult.Builder()
+                .subject(subject)
+                .input(input);
+        try {
+            // TODO: Implement validation logic
+            String response = "worked!";
 
-    private Set<Relationship> relationships;
+            if (response.length() > 0) {
+                builder.valid(true).explanation("connected to " + input + " with " + response);
+            } else {
+                builder.valid(false).explanation("Failed to connect to " + input);
+            }
+        } catch (final IllegalArgumentException e) {
+            builder.valid(false).explanation(e.getMessage());
+        }
 
-    private String db_host;
-    private String db_user;
-    private String db_password;
+        return builder.build();
+    };
+
+    public static final PropertyDescriptor FLOWLIB_DB_HOST = new PropertyDescriptor.Builder()
+            .name("Flowlib DB host")
+            .required(true)
+            .addValidator(FLOWLIB_HOST_VALIDATOR)
+            .defaultValue("http://localhost:8000")
+            .build();
 
     protected AtomicLong lastQuery = new AtomicLong(-1);
 
     @Override
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+        final List<PropertyDescriptor> descriptors = new ArrayList<>(1);
+        descriptors.add(FLOWLIB_DB_HOST);
         return descriptors;
-    }
-
-    @OnScheduled
-    protected void onScheduled(final ConfigurationContext context) {
-
-        db_host = "test";
-        db_user = "test";
-        db_password = "test";
-
     }
 
     @Override
     public void onTrigger(ReportingContext reportingContext) {
         final long timestamp = System.currentTimeMillis();
-        getLogger().info("Running B23 Flowlib Reporting Task");
+
+        final String flowlibHost = reportingContext.getProperty(FLOWLIB_DB_HOST).getValue();
+
+
+        getLogger().info("Running B23 Flowlib Reporting Task with host: " + flowlibHost);
 
         try {
             List<ProvenanceEventRecord> provenanceEvents = reportingContext
