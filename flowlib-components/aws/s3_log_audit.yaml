@@ -66,7 +66,7 @@ process_group:
   config:
     package_id: 'org.apache.nifi.processors.standard.RouteOnAttribute'
     properties:
-      Routing Strategy: 'Route to Property name',
+      Routing Strategy: 'Route to Property name'
       whitelisted: ${anyDelineatedValue("{{ ip_whitelist | join(';') }}", ";"):equals("${ip_addr:trim()}")}
     auto_terminated_relationships: ['whitelisted']
   connections:
