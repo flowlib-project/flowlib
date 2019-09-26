@@ -32,9 +32,7 @@ import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -138,6 +136,10 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
 
         getLogger().info("Running B23 Flowlib Reporting Task with host: " + dbConnectionString);
 
+        final String SQL = "INSERT INTO files" +
+                "(workload_id, bucket_name, key, size, last_modified, date, ts_added) "
+                + "VALUES(?,?,?,?,?, CURRENT_DATE, CURRENT_TIMESTAMP)";
+
         try {
             List<ProvenanceEventRecord> provenanceEvents = reportingContext
                     .getEventAccess()
@@ -149,16 +151,39 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
                     .forEach(event -> {
                         Map<String, String> flowlibMap = FetchS3Handler.HandleFetchS3Event(event);
 
-                        GsonBuilder gsonMapBuilder = new GsonBuilder();
-                        Gson gsonObject = gsonMapBuilder.create();
-                        String jsonStr = gsonObject.toJson(flowlibMap);
+                        long lastModifiedEpoch = Long.parseLong(flowlibMap.get("last_modified"));
+                        Timestamp lastModifiedTs = new Timestamp(lastModifiedEpoch);
 
-                        getLogger().info(jsonStr);
+                        PreparedStatement pstmt = null;
+                        try {
+                            pstmt = conn.prepareStatement(SQL);
+                            pstmt.setString(1, flowlibMap.get("workload_id"));
+                            pstmt.setString(2, flowlibMap.get("bucket_name"));
+                            pstmt.setString(3, flowlibMap.get("key"));
+                            pstmt.setLong(4, Long.parseLong(flowlibMap.get("size")));
+                            pstmt.setTimestamp(5, lastModifiedTs);
+                            int affectedRows = pstmt.executeUpdate();
+                            getLogger().info("********** " + affectedRows + " added");
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+
+//                        GsonBuilder gsonMapBuilder = new GsonBuilder();
+//                        Gson gsonObject = gsonMapBuilder.create();
+//                        String jsonStr = gsonObject.toJson(flowlibMap);
+//                        getLogger().info(jsonStr);
+
+
                         lastQuery.set(event.getEventId());  // Update the last query value on each event
                     });
-
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        try{
+            conn.close();
+        } catch (SQLException e) {
+            getLogger().error("Failed to close connection: " + e.getMessage());
         }
 
     }
