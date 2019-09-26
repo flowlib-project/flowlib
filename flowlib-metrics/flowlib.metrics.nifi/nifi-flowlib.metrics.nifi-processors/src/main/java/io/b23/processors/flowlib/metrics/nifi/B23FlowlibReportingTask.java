@@ -34,20 +34,18 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.provenance.ProvenanceEventRecord;
 import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Tags({"flowlib"})
 @CapabilityDescription("Send flowlib metrics to dataflow metrics service")
 public class B23FlowlibReportingTask extends AbstractReportingTask {
-    
+
     private List<PropertyDescriptor> descriptors;
 
     private Set<Relationship> relationships;
@@ -63,14 +61,43 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
         return descriptors;
     }
 
+    @OnScheduled
     protected void onScheduled(final ConfigurationContext context) {
+
         db_host = "test";
         db_user = "test";
         db_password = "test";
+
     }
 
     @Override
     public void onTrigger(ReportingContext reportingContext) {
+        final long timestamp = System.currentTimeMillis();
+        getLogger().info("Running B23 Flowlib Reporting Task");
+
+        try {
+            List<ProvenanceEventRecord> provenanceEvents = reportingContext
+                    .getEventAccess()
+                    .getProvenanceEvents(lastQuery.get(), 1000);
+
+            provenanceEvents.stream()
+                    .filter(event -> event.getComponentType().equals("FetchS3Object"))
+                    .forEach(event -> {
+
+                        getLogger().info("FOUND FETCHS3OBJECT: " + event.getComponentType());
+
+                        Map<String, String> attributes = event.getAttributes();
+
+                        attributes.entrySet().stream().forEach(entry ->{
+                            getLogger().info(entry.getKey() + ":" + entry.getValue());
+                        });
+
+                        lastQuery.set(event.getEventId());  // Update the last query value on each event
+                    });
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 }
