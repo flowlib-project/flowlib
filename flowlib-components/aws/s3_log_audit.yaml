@@ -57,9 +57,7 @@ process_group:
       Output Destination Attribute: ip_addr
   connections:
   - name: filter-whitelisted
-    relationships: ['failure']
-  - name: out
-    relationships: ['success']
+    relationships: ['original']
 
 - name: filter-whitelisted
   type: processor
