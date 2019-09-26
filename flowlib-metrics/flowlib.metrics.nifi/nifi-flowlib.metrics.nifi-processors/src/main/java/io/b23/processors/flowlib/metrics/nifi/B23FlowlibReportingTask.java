@@ -32,6 +32,9 @@ import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,11 +66,25 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
         return builder.build();
     };
 
-    public static final PropertyDescriptor FLOWLIB_DB_HOST = new PropertyDescriptor.Builder()
-            .name("Flowlib DB host")
+    public static final PropertyDescriptor FLOWLIB_DB_CONNECTION_STRING = new PropertyDescriptor.Builder()
+            .name("Flowlib DB Connection String")
             .required(true)
             .addValidator(FLOWLIB_HOST_VALIDATOR)
-            .defaultValue("http://localhost:8000")
+            .defaultValue("jdbc:postgresql://localhost:5432/monitoring")
+            .build();
+
+    public static final PropertyDescriptor FLOWLIB_DB_USER = new PropertyDescriptor.Builder()
+            .name("Flowlib DB User")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .defaultValue("postgres")
+            .build();
+
+    public static final PropertyDescriptor FLOWLIB_DB_PASSWORD = new PropertyDescriptor.Builder()
+            .name("Flowlib DB Pasword")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .defaultValue("postgres")
             .build();
 
     protected AtomicLong lastQuery = new AtomicLong(-1);
@@ -75,18 +92,51 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
     @Override
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         final List<PropertyDescriptor> descriptors = new ArrayList<>(1);
-        descriptors.add(FLOWLIB_DB_HOST);
+        descriptors.add(FLOWLIB_DB_CONNECTION_STRING);
+        descriptors.add(FLOWLIB_DB_USER);
+        descriptors.add(FLOWLIB_DB_PASSWORD);
         return descriptors;
+    }
+
+    public Connection getConnection(String connectionString, String dbUser, String dbPassword){
+
+        try {
+            Class.forName("org.postgresql.Driver");
+        }
+        catch(ClassNotFoundException ex) {
+            getLogger().error("Error: unable to load driver class!");
+        }
+
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection(connectionString, dbUser, dbPassword);
+            if (conn != null) {
+                getLogger().info("Connected to the database!");
+            } else {
+                getLogger().error("Failed to make connection!");
+            }
+
+        } catch (SQLException e) {
+            getLogger().error(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return conn;
+
     }
 
     @Override
     public void onTrigger(ReportingContext reportingContext) {
         final long timestamp = System.currentTimeMillis();
 
-        final String flowlibHost = reportingContext.getProperty(FLOWLIB_DB_HOST).getValue();
+        final String dbConnectionString = reportingContext.getProperty(FLOWLIB_DB_CONNECTION_STRING).getValue();
+        final String dbUser = reportingContext.getProperty(FLOWLIB_DB_USER).getValue();
+        final String dbPassword = reportingContext.getProperty(FLOWLIB_DB_PASSWORD).getValue();
 
+        Connection conn = getConnection(dbConnectionString, dbUser, dbPassword);
 
-        getLogger().info("Running B23 Flowlib Reporting Task with host: " + flowlibHost);
+        getLogger().info("Running B23 Flowlib Reporting Task with host: " + dbConnectionString);
 
         try {
             List<ProvenanceEventRecord> provenanceEvents = reportingContext
