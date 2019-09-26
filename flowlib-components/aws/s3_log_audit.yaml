@@ -1,0 +1,87 @@
+component_name: S3 Log IP Audit
+
+defaults:
+  prefix: '/'
+  min_object_age: '1m'
+
+required_vars:
+- bucket
+- region
+- ip_whitelist
+- sqs_endpoint
+
+required_controllers:
+  s3_credential_service: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
+  sqs_credential_service: 'org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService'
+
+process_group:
+- name: list-log-bucket
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.ListS3
+    scheduling_strategy: 'TIMER_DRIVEN'
+    scheduling_period: '5 min'
+    properties:
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      AWS Credentials Provider service: "{{ controller('s3_credential_service') }}"
+      prefix: "{{ prefix }}"
+      min-age: "{{ min_object_age }}"
+  connections:
+  - name: fetch-log
+    relationships: ['success']
+
+- name: fetch-log
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.aws.s3.FetchS3Object
+    properties:
+      Bucket: "{{ bucket }}"
+      Region: "{{ region }}"
+      Object Key: "${filename}"
+      AWS Credentials Provider service: "{{ controller('s3_credential_service') }}"
+  connections:
+  - name: fetch-log
+    relationships: ['failure']
+  - name: extract-ip-addr
+    relationships: ['success']
+
+- name: extract-ip-addr
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.ExecuteStreamCommand
+    properties:
+      Command Arguments: '-F" ";"{print $5}"'
+      Command Path: /usr/bin/awk
+      Argument Delimiter: ';'
+      Output Destination Attribute: ip_addr
+  connections:
+  - name: filter-whitelisted
+    relationships: ['failure']
+  - name: out
+    relationships: ['success']
+
+- name: filter-whitelisted
+  type: processor
+  config:
+    package_id: 'org.apache.nifi.processors.standard.RouteOnAttribute'
+    properties:
+      Routing Strategy: 'Route to Property name',
+      whitelisted: ${anyDelineatedValue("{{ ip_whitelist | join(';') }}", ";"):equals("${ip_addr:trim()}")}
+    auto_terminated_relationships: ['whitelisted']
+  connections:
+  - name: send-alert
+    relationships: ['unmatched']
+
+- name: send-alert
+  type: processor
+  config:
+    package_id: 'org.apache.nifi.processors.aws.sqs.PutSQS'
+    properties:
+      Region: "{{ region }}"
+      Queue URL: "{{ sqs_endpoint }}"
+      AWS Credentials Provider service: "{{ controller('sqs_credential_service') }}"
+    auto_terminated_relationships: ['success']
+  connections:
+  - name: send-alert
+    relationships: ['failure']
