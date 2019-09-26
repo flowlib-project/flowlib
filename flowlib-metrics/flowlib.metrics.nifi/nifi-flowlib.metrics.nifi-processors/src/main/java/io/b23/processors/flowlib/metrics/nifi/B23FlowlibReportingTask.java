@@ -18,29 +18,21 @@ package io.b23.processors.flowlib.metrics.nifi;
 
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.ConfigurationContext;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.annotation.behavior.ReadsAttribute;
-import org.apache.nifi.annotation.behavior.ReadsAttributes;
-import org.apache.nifi.annotation.behavior.WritesAttribute;
-import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
-import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.AbstractProcessor;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
-import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.provenance.ProvenanceEventRecord;
+import org.apache.nifi.provenance.ProvenanceEventType;
 import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 @Tags({"flowlib"})
 @CapabilityDescription("Send flowlib metrics to dataflow metrics service")
@@ -54,7 +46,7 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
     private String db_user;
     private String db_password;
 
-    protected AtomicLong lastQuery = new AtomicLong(0);
+    protected AtomicLong lastQuery = new AtomicLong(-1);
 
     @Override
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -78,20 +70,19 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
         try {
             List<ProvenanceEventRecord> provenanceEvents = reportingContext
                     .getEventAccess()
-                    .getProvenanceEvents(lastQuery.get(), 1000);
+                    .getProvenanceEvents(lastQuery.get() + 1, 1000);
 
             provenanceEvents.stream()
                     .filter(event -> event.getComponentType().equals("FetchS3Object"))
+                    .filter(event -> event.getEventType().equals(ProvenanceEventType.FETCH))
                     .forEach(event -> {
+                        Map<String, String> flowlibMap = FetchS3Handler.HandleFetchS3Event(event);
 
-                        getLogger().info("FOUND FETCHS3OBJECT: " + event.getComponentType());
+                        GsonBuilder gsonMapBuilder = new GsonBuilder();
+                        Gson gsonObject = gsonMapBuilder.create();
+                        String jsonStr = gsonObject.toJson(flowlibMap);
 
-                        Map<String, String> attributes = event.getAttributes();
-
-                        attributes.entrySet().stream().forEach(entry ->{
-                            getLogger().info(entry.getKey() + ":" + entry.getValue());
-                        });
-
+                        getLogger().info(jsonStr);
                         lastQuery.set(event.getEventId());  // Update the last query value on each event
                     });
 
