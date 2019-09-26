@@ -69,8 +69,9 @@ def init_from_file(flow, _file, component_dir):
 
     # Jinja template the global vars
     for k,v in flow.globals.items():
-        t = env.from_string(v)
-        flow.globals[k] = t.render()
+        if isinstance(v, str):
+            t = env.from_string(v)
+            flow.globals[k] = t.render()
 
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
