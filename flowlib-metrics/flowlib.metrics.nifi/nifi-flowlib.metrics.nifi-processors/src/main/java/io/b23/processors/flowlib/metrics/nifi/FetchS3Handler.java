@@ -17,8 +17,8 @@ public class FetchS3Handler {
 
         returnMap.put("workload_id", attributes.get("workload_id"));
         returnMap.put("bucket_name", attributes.get("s3.bucket"));
-        returnMap.put("key", attributes.get("orig_filename"));
-        returnMap.put("size", attributes.get("s3.length"));
+        returnMap.put("key_name", attributes.get("orig_filename"));
+        returnMap.put("key_size", attributes.get("s3.length"));
         returnMap.put("last_modified", attributes.get("s3.lastModified"));
 
         return returnMap;

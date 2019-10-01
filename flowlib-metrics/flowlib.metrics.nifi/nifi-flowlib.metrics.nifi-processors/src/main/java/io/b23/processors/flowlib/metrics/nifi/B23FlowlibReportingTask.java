@@ -137,7 +137,7 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
         getLogger().info("Running B23 Flowlib Reporting Task with host: " + dbConnectionString);
 
         final String SQL = "INSERT INTO files" +
-                "(workload_id, bucket_name, key, size, last_modified, date, ts_added) "
+                "(workload_id, bucket_name, key_name, key_size, last_modified, date_added, ts_added) "
                 + "VALUES(?,?,?,?,?, CURRENT_DATE, CURRENT_TIMESTAMP) "
                 + "ON CONFLICT (bucket_name, key, last_modified) DO NOTHING";
 
@@ -160,8 +160,8 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
                             pstmt = conn.prepareStatement(SQL);
                             pstmt.setString(1, flowlibMap.get("workload_id"));
                             pstmt.setString(2, flowlibMap.get("bucket_name"));
-                            pstmt.setString(3, flowlibMap.get("key"));
-                            pstmt.setLong(4, Long.parseLong(flowlibMap.get("size")));
+                            pstmt.setString(3, flowlibMap.get("key_name"));
+                            pstmt.setLong(4, Long.parseLong(flowlibMap.get("key_size")));
                             pstmt.setTimestamp(5, lastModifiedTs);
                             int affectedRows = pstmt.executeUpdate();
                             getLogger().info("********** " + affectedRows + " added");
