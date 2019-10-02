@@ -164,17 +164,10 @@ public class B23FlowlibReportingTask extends AbstractReportingTask {
                             pstmt.setLong(4, Long.parseLong(flowlibMap.get("key_size")));
                             pstmt.setTimestamp(5, lastModifiedTs);
                             int affectedRows = pstmt.executeUpdate();
-                            getLogger().info("********** " + affectedRows + " added");
                         } catch (SQLException e) {
                             e.printStackTrace();
                         }
-
-//                        GsonBuilder gsonMapBuilder = new GsonBuilder();
-//                        Gson gsonObject = gsonMapBuilder.create();
-//                        String jsonStr = gsonObject.toJson(flowlibMap);
-//                        getLogger().info(jsonStr);
-
-
+                        
                         lastQuery.set(event.getEventId());  // Update the last query value on each event
                     });
         } catch (IOException e) {
