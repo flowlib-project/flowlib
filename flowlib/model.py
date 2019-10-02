@@ -3,6 +3,7 @@ from abc import ABC
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
+from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
 
 PG_NAME_DELIMETER = '/'
 
@@ -260,6 +261,35 @@ class Controller:
 
 
 class ControllerServiceConfig(ControllerServiceDTO):
+    def __init__(self, package_id, **kwargs):
+        super().__init__(**kwargs)
+        self.package_id = package_id
+
+    def __repr__(self):
+        return str(vars(self))
+
+
+class ReportingTask:
+    def __init__(self, name, config):
+        self._id = None
+        self.name = name
+
+        if not 'properties' in config:
+            config['properties'] = dict()
+        self.config = ReportingTaskConfig(config.pop('package_id'), **config)
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        if self._id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._id = _id
+
+
+class ReportingTaskConfig(ReportingTaskDTO):
     def __init__(self, package_id, **kwargs):
         super().__init__(**kwargs)
         self.package_id = package_id
