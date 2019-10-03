@@ -8,4 +8,4 @@ You can test a flow with: `flowlib --flow-yaml ./flow.yaml --validate`
 
 In a new Terminal, deploy to the running NiFi instance with:
 
-`flowlib --force --flow-yaml ./flow.yaml --nifi-endpoint http://127.0.0.1:8080/nifi-api`
+`flowlib --force --flow-yaml ./flow.yaml`
