@@ -45,7 +45,7 @@ def new_flow_from_nifi(nifi_endpoint=None):
     return flow
 
 
-def validate_flow_yaml(config):
+def validate_flow(config):
     log.info("Validating NiFi Flow YAML...")
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
@@ -59,24 +59,24 @@ def validate_flow_yaml(config):
         sys.exit(1)
 
 
-def export_flow_yaml(config):
+def export_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Exporting NiFi flow to YAML...")
+    log.info("Exporting NiFi flow...")
     try:
         flow = new_flow_from_nifi(config.nifi_endpoint)
-        yaml.dump(flow, config.export_yaml, default_flow_style=False)
+        yaml.dump(flow, config.export, default_flow_style=False)
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)
 
 
-def deploy_flow_yaml(config):
+def deploy_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Deploying NiFi flow from YAML...")
+    log.info("Deploying NiFi flow...")
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         flowlib.nifi.deploy_flow(flow, config.nifi_endpoint, force=config.force)
