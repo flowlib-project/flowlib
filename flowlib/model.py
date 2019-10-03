@@ -259,6 +259,9 @@ class Controller:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._parent_id = _id
 
+    def __repr__(self):
+        return str(vars(self))
+
 
 class ControllerServiceConfig(ControllerServiceDTO):
     def __init__(self, package_id, **kwargs):
@@ -287,6 +290,9 @@ class ReportingTask:
         if self._id:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._id = _id
+
+    def __repr__(self):
+        return str(vars(self))
 
 
 class ReportingTaskConfig(ReportingTaskDTO):

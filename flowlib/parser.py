@@ -30,7 +30,7 @@ def _set_global_helpers(controllers=dict()):
     env.globals['controller'] = controller_lookup
 
 
-def init_controllers(controllers):
+def init_reporting_task_controllers(controllers):
     """
     :param controllers: A list of controller services that require initialization
     :type controllers: list(dict)
@@ -39,9 +39,10 @@ def init_controllers(controllers):
     # Construct and validate controllers
     controllers = list(map(lambda c: Controller(**c), controllers))
     if len(controllers) != len(set(list(map(lambda c: c.name, controllers)))):
-        raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
+        raise FlowLibException("Duplicate reporting_task_controllers are defined. Controller names must be unique.")
 
     # Inject template vars into controller properties
+    _set_global_helpers()
     for c in controllers:
         _template_properties(c)
 
@@ -61,8 +62,8 @@ def init_reporting_tasks(controllers, reporting_tasks):
     if len(reporting_tasks) != len(set(list(map(lambda t: t.name, reporting_tasks)))):
         raise FlowLibException("Duplicate reporting_tasks are defined. ReportingTask names must be unique.")
 
-    # Inject template vars into reporting task properties
-    _set_global_helpers(controllers)
+    # Inject template vars into reporting task properties, apply controller service lookups
+    _set_global_helpers(controllers={c.name: c for c in controllers})
     for t in reporting_tasks:
         _template_properties(t)
 

@@ -78,8 +78,18 @@ def deploy_reporting_tasks(nifi_endpoint, reporting_task_controllers, reporting_
     if force:
         _force_cleanup_reporting_tasks()
 
-    reporting_task_controllers = flowlib.parser.init_controllers(reporting_task_controllers)
+    # apply templating and create the reporting task controllers
+    reporting_task_controllers = flowlib.parser.init_reporting_task_controllers(reporting_task_controllers)
+    _create_reporting_task_controllers(reporting_task_controllers)
+
+    # enable the new controller services
+    controllers = nipyapi.nifi.apis.FlowApi().get_controller_services_from_controller().controller_services
+    _set_controllers_enabled(controllers, enabled=True)
+
+    # apply templating and create the reporting tasks
     reporting_tasks = flowlib.parser.init_reporting_tasks(reporting_task_controllers, reporting_tasks)
+    _create_reporting_tasks(reporting_tasks)
+    _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
 def deploy_flow(flow, nifi_endpoint, force=False):
@@ -183,6 +193,50 @@ def _create_controllers(flow, flow_pg):
         c.parent_id = flow_pg.id
 
 
+def _create_reporting_task_controllers(controllers):
+    """
+    Create the reporting task controller services for the NiFi instance
+    :param controllers: A list of ReportingTaskControllers to create
+    :type controllers: list(Controllers)
+    """
+    all_controller_types = list(map(lambda x: x.type, nipyapi.canvas.list_all_controller_types()))
+    for c in controllers:
+        if c.config.package_id not in all_controller_types:
+            raise FlowLibException("{} is not a valid NiFi Controller Service type".format(c.config.package_id))
+
+        controller = nipyapi.nifi.apis.ControllerApi().create_controller_service(
+            body=nipyapi.nifi.ControllerServiceEntity(
+                revision={'version': 0},
+                component=nipyapi.nifi.ControllerServiceDTO(
+                    type=c.config.package_id,
+                    name=c.name,
+                    properties=c.config.properties
+                )
+            )
+        )
+        c.id = controller.id
+
+
+def _create_reporting_tasks(tasks):
+    """
+    Create the ReportingTasks for the NiFi instance
+    :param tasks: A list of ReportingTasks to create
+    :type tasks: list(ReportingTask)
+    """
+    for t in tasks:
+        task = nipyapi.nifi.apis.ControllerApi().create_reporting_task(
+            body=nipyapi.nifi.ReportingTaskEntity(
+                revision={'version': 0},
+                component=nipyapi.nifi.ReportingTaskDTO(
+                    type=t.config.package_id,
+                    name=t.name,
+                    properties=t.config.properties
+                )
+            )
+        )
+        t.id = task.id
+
+
 def _set_controllers_enabled(controllers, enabled=True):
     """
     Start/Enable or Stop/Disable all controller services for a flow
@@ -192,6 +246,23 @@ def _set_controllers_enabled(controllers, enabled=True):
     for c in controllers:
         controller = nipyapi.canvas.get_controller(c.id, identifier_type='id')
         nipyapi.canvas.schedule_controller(controller, enabled)
+
+
+def _set_reporting_tasks_enabled(tasks, enabled=True):
+    """
+    Start/Enable or Stop/Disable all reporting tasks
+    :param flow: A list of reporting tasks to enable/disable
+    :type flow: list(ReportingTask)
+    """
+    state = 'RUNNING' if enabled else 'STOPPED'
+    for t in tasks:
+        task = nipyapi.nifi.apis.ReportingTasksApi().get_reporting_task(t.id)
+        nipyapi.nifi.apis.ReportingTasksApi().update_run_status(t.id,
+            body=nipyapi.nifi.ReportingTaskRunStatusEntity(
+                revision=task.revision,
+                state=state
+            )
+        )
 
 
 def _create_canvas_elements_recursive(elements, parent_pg):
@@ -427,7 +498,16 @@ def _force_cleanup_flow(flow_pg_id):
 
 
 def _force_cleanup_reporting_tasks():
+    """
+    Delete all the ReportingTasks and ReportingTaskController services on the NiFi instance
+    so that they can be re-deployed
+    """
     log.info("Deleting reporting tasks...")
+    # disable existing reporting tasks
+    reporting_tasks = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_tasks().reporting_tasks
+    _set_reporting_tasks_enabled(reporting_tasks, enabled=False)
+
+    # fetch reporting tasks again to get the most recent revision
     reporting_tasks = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_tasks().reporting_tasks
     for task in reporting_tasks:
         nipyapi.nifi.ReportingTasksApi().remove_reporting_task(
@@ -435,7 +515,13 @@ def _force_cleanup_reporting_tasks():
             version=task.revision.version,
             client_id=task.revision.client_id
         )
+
     log.info("Deleting reporting task controllers...")
+    # disable existing controllers
+    controllers = nipyapi.nifi.apis.FlowApi().get_controller_services_from_controller().controller_services
+    _set_controllers_enabled(controllers, enabled=False)
+
+    # fetch controllers again to get the most recent revision
     controllers = nipyapi.nifi.apis.FlowApi().get_controller_services_from_controller().controller_services
     for controller in controllers:
         nipyapi.nifi.apis.ControllerServicesApi().remove_controller_service(
