@@ -1,0 +1,20 @@
+nifi_endpoint: http://127.0.0.1:8080/nifi-api
+component_dir: components
+
+reporting_task_controllers:
+- name: graphite-metrics-service
+  config:
+    package_id: org.apache.nifi.metrics.reporting.reporter.service.GraphiteMetricReporterService
+    properties:
+      host: '127.0.0.1'
+      port: '8080'
+      metric name prefix: "{{ env('ASDF', 'blahblahblah') }}"
+
+reporting_tasks:
+- name: metrics-reporting-task
+  config:
+    package_id: org.apache.nifi.metrics.reporting.task.MetricsReportingTask
+    properties:
+      metric reporter service: "{{ controller('graphite-metrics-service') }}"
+    # TODO: allow process group lookup by flow name
+    # process group id: "{{ flow('flow-name') }}"

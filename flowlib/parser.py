@@ -11,7 +11,7 @@ import flowlib
 from flowlib.logger import log
 from flowlib.model import FlowLibException
 from flowlib.model.component import FlowComponent
-from flowlib.model.flow import FlowElement, Controller, Processor, ProcessGroup
+from flowlib.model.flow import FlowElement, Controller, Processor, ProcessGroup, ReportingTask
 
 env = Environment()
 
@@ -35,7 +35,47 @@ def init_from_deployment(flow, deployment):
     raise FlowLibException("This feature is not yet implemented")
 
 
-def init_from_file(flow, _file, component_dir):
+def init_controllers(controllers):
+    """
+    :param controllers: A list of controller services that require initialization
+    :type controllers: list(dict)
+    :return: list(Controller)
+    """
+    # Construct and validate controllers
+    controllers = list(map(lambda c: Controller(**c), controllers))
+    if len(controllers) != len(set(list(map(lambda c: c.name, controllers)))):
+        raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
+
+    # Inject template vars into controller properties
+    _set_global_helpers()
+    for c in controllers:
+        _template_properties(c)
+
+    return controllers
+
+
+def init_reporting_tasks(controllers, reporting_tasks):
+    """
+    :param controllers: A list of controller services
+    :type controllers: list(Controller)
+    :param reporting_tasks: A list of reporting tasks that require initialization
+    :type reporting_tasks: list(dict)
+    :return: list(ReportingTask)
+    """
+    # Construct and validate reporting tasks
+    reporting_tasks = list(map(lambda t: ReportingTask(**t), reporting_tasks))
+    if len(reporting_tasks) != len(set(list(map(lambda t: t.name, reporting_tasks)))):
+        raise FlowLibException("Duplicate reporting_tasks are defined. ReportingTask names must be unique.")
+
+    # Inject template vars into reporting task properties, apply controller service lookups
+    _set_global_helpers(controllers={c.name: c for c in controllers})
+    for t in reporting_tasks:
+        _template_properties(t)
+
+    return reporting_tasks
+
+
+def init_flow_from_file(flow, _file, component_dir):
     """
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
@@ -75,8 +115,9 @@ def init_from_file(flow, _file, component_dir):
 
     # Jinja template the global vars
     for k,v in flow.globals.items():
-        t = env.from_string(v)
-        flow.globals[k] = t.render()
+        if isinstance(v, str):
+            t = env.from_string(v)
+            flow.globals[k] = t.render()
 
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.globals)
@@ -91,14 +132,8 @@ def init_from_file(flow, _file, component_dir):
     log.info("Loading component lib: {}".format(flow.component_dir))
     _load_components(flow.component_dir, flow)
 
-    # Construct and validate controllers for each one defined in flow.yaml
-    flow.controllers = list(map(lambda c: Controller(**c), flow.controllers))
-    if len(flow.controllers) != len(set(list(map(lambda c: c.name, flow.controllers)))):
-        raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
-
-    # Inject template vars into controller properties
-    for c in flow.controllers:
-        _template_properties(c)
+    # initialize and apply templating for the controller services
+    flow.controllers = init_controllers(flow.controllers)
 
     log.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
     for elem_dict in flow.canvas:
@@ -186,6 +221,7 @@ def _init_component_recursive(pg_element, flow):
             pg_element.elements[el.name] = el
 
     component.is_used = True
+
 
 def replace_flow_element_vars_recursive(flow, elements, loaded_components):
     """
