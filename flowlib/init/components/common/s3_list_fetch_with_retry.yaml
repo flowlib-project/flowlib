@@ -1,4 +1,4 @@
-component_name: S3 List Fetch With Retry
+name: S3 List Fetch With Retry
 
 defaults:
   min_object_age: 5m

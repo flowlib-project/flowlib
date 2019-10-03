@@ -1,4 +1,4 @@
-component_name: Debug
+name: Debug
 
 process_group:
 - name: input

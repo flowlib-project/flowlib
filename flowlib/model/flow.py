@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
+from flowlib.model import FlowLibException
+
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
 from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
 
-PG_NAME_DELIMETER = '/'
 
-class FlowLibException(Exception):
-    pass
+PG_NAME_DELIMETER = '/'
 
 class Flow:
     # TODO: Add flow_source attr which is a file:///path/to/flow.yaml or https://flow.yaml or https://nifi-api ?
@@ -21,6 +21,8 @@ class Flow:
         :type flowlib_version: str
         :param version: The version of the Flow
         :type version: str
+        :param flow_src: The source that was used to initialize the Flow, a local or remote path
+        :type flow_src: str
         :param controllers: The root controllers for the root canvas
         :type controllers: dict(str:Controller)
         :param canvas: The root elements of the flow
@@ -29,13 +31,14 @@ class Flow:
         :type raw: io.TextIOWrapper
         :param component_dir: The path to the directory containing reuseable flow components
         :type component_dir: str
-        :param loaded_components: A map of components (component_ref) loaded while initializing the flow, these are re-useable components
+        :param loaded_components: A map of components (component_path) loaded while initializing the flow, these are re-useable components
         :type loaded_components: dict(str:FlowComponent)
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling flow.init()
         :type elements: dict(str:FlowElement)
         """
         self.name = None
+        self.flow_src = None
         self.flowlib_version = None
         self.version = None
         self.controllers = None
@@ -49,6 +52,9 @@ class Flow:
 
     def __repr__(self):
         return str(vars(self))
+
+    def find_component_by_path(self, path):
+        return list(filter(lambda x: x.source_file == path, self.loaded_components.values()))[0]
 
     def find_controller_by_name(self, name):
         """
@@ -71,24 +77,6 @@ class Flow:
             elements = target.elements
             target = elements.get(n)
         return target
-
-
-class FlowComponent:
-    def __init__(self, component_name, source_file, process_group, raw, defaults=dict(), required_controllers=dict(), required_vars=[]):
-        """
-        A reuseable component of a flow. Referenced by a ProcessGroup which is an instantiation of a FlowComponent
-        """
-        self.component_name = component_name
-        self.source_file = source_file
-        self.defaults = defaults
-        self.required_controllers = required_controllers
-        self.required_vars = required_vars
-        self.process_group = process_group
-        self.raw = raw
-
-    def __repr__(self):
-        return str(vars(self))
-
 
 class FlowElement(ABC):
     """
@@ -157,7 +145,7 @@ class FlowElement(ABC):
 
 
 class ProcessGroup(FlowElement):
-    def __init__(self, name, parent_path, _type, component_ref, controllers=dict(), _vars=None, connections=None):
+    def __init__(self, name, parent_path, _type, component_path, controllers=dict(), _vars=None, connections=None):
         """
         :elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling FlowElement.load()
@@ -165,10 +153,11 @@ class ProcessGroup(FlowElement):
         """
         self._id = None
         self._parent_id = None
+        self.src_component_name = None
         self.name = name
+        self.component_path = component_path
         self.parent_path = parent_path
         self._type = _type
-        self.component_ref = component_ref
         self.controllers = controllers
         self.vars = _vars
         self.connections = [Connection(**c) for c in connections] if connections else None
@@ -179,6 +168,7 @@ class Processor(FlowElement):
     def __init__(self, name, parent_path, _type, config, connections=None):
         self._id = None
         self._parent_id = None
+        self.src_component_name = None
         self.name = name
         self.parent_path = parent_path
         self._type = _type

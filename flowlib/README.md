@@ -2,23 +2,13 @@
 
 A python module and cli tool for deploying NiFi flows from YAML
 
-### TODO ###
-
-- Decouple models from canvas element evaluation, add a parser module which mutates a Flow
-- Implement flow.validate()
-  - variables replaced successfully
-  - check connections are valid
-  - warn on unconnected elements
-- Implement factory to initialize a Flow from a running NiFi instance
-- Implement flow.compare(other) for diffing flow.elements trees
-
 
 ### Concepts ###
 
 `FlowComponent` - A re-useable process group definition
 
 ```yaml
-component_name: Port Tester
+name: Port Tester
 
 process_group:
 - name: success-input
@@ -54,7 +44,7 @@ process_group:
 ```yaml
 - name: port-tester
   type: process_group
-  component_ref: common/port_test.yaml
+  component_path: common/port_test.yaml
   connections:
   - name: debug
     from_port: success-output

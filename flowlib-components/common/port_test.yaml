@@ -1,4 +1,4 @@
-component_name: Port Tester
+name: Port Tester
 
 process_group:
 - name: success-input
