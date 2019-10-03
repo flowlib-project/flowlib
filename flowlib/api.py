@@ -11,6 +11,10 @@ from flowlib.logger import log
 
 
 def init_flow_scaffold(dest):
+    """
+    :param dest: The destination directory to create a new flowlib project scaffold
+    :type dest: str
+    """
     if os.path.exists(dest):
         raise FlowLibException("Destination directory already exists {}".format(dest))
 
@@ -30,7 +34,7 @@ def new_flow_from_file(component_dir, flow_yaml):
     flow = Flow()
     if isinstance(flow_yaml, str):
         flow_yaml = open(flow_yaml)
-    flowlib.parser.init_from_file(flow, flow_yaml, component_dir)
+    flowlib.parser.init_flow_from_file(flow, flow_yaml, component_dir)
     return flow
 
 
@@ -46,7 +50,10 @@ def new_flow_from_nifi(nifi_endpoint=None):
 
 
 def validate_flow(config):
-    log.info("Validating NiFi Flow YAML...")
+    """
+    :type config: FlowLibConfig
+    """
+    log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml.name))
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         print("Flow is valid")
@@ -63,7 +70,7 @@ def export_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Exporting NiFi flow...")
+    log.info("Exporting NiFi flow deployment from {}".format(config.nifi_endpoint))
     try:
         flow = new_flow_from_nifi(config.nifi_endpoint)
         yaml.dump(flow, config.export, default_flow_style=False)
@@ -76,12 +83,27 @@ def deploy_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Deploying NiFi flow...")
+    log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
         flowlib.nifi.deploy_flow(flow, config.nifi_endpoint, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")
+        log.error(e)
+        sys.exit(1)
+
+
+def deploy_reporting_tasks(config):
+    """
+    :type config: FlowLibConfig
+    """
+    log.info("Deploying ReportingTasks to {}".format(config.nifi_endpoint))
+    try:
+        flowlib.nifi.deploy_reporting_tasks(config.nifi_endpoint, config.reporting_task_controllers,
+            config.reporting_tasks, force=config.force)
+        log.info("ReportingTask deployment completed successfully")
+    except FlowLibException as e:
+        log.error("ReportingTask deployment failed")
         log.error(e)
         sys.exit(1)

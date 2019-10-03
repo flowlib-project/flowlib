@@ -96,11 +96,6 @@ class FlowLibCLI:
             help = 'A directory containing re-useable flowlib components'
         )
 
-        self.parser.add_argument('--scaffold',
-            type = str,
-            help = 'Directory path to initialize with a new project scaffold'
-        )
-
         self.parser.add_argument('--force',
             action = 'store_true',
             help = 'Force flowlib to overwrite an existing NiFi canvas'
@@ -113,6 +108,10 @@ class FlowLibCLI:
         )
 
         self.mx_group = self.parser.add_mutually_exclusive_group()
+        self.mx_group.add_argument('--scaffold',
+            type = str,
+            help = 'Directory path to initialize with a new project scaffold'
+        )
         self.mx_group.add_argument('--flow-yaml',
             type = argparse.FileType('r'),
             help = 'YAML file defining a NiFi flow to deploy'

@@ -64,6 +64,23 @@ def init_from_nifi(flow, nifi_endpoint):
     # _init_flow_connections_recursive(flow, root)
 
 
+def deploy_reporting_tasks(nifi_endpoint, reporting_task_controllers, reporting_tasks, force=False):
+    """
+    Deploy ReportingTasks and required controller services to NiFi via the Rest api
+    :param nifi_endpoint: The NiFi api endpoint
+    :type nifi_endpoint: str
+    :param reporting_task_controllers: The controller services to deploy
+    :type reporting_task_controllers: list(flowlib.model.Controller)
+    :param reporting_tasks: The reporting tasks to depoy
+    :type reporting_tasks: list(flowlib.model.ReportingTask)
+    """
+    wait_for_nifi_api(nifi_endpoint)
+    if force:
+        _force_cleanup_reporting_tasks()
+
+    reporting_task_controllers = flowlib.parser.init_controllers(reporting_task_controllers)
+    reporting_tasks = flowlib.parser.init_reporting_tasks(reporting_task_controllers, reporting_tasks)
+
 
 def deploy_flow(flow, nifi_endpoint, force=False):
     """
@@ -113,7 +130,7 @@ def deploy_flow(flow, nifi_endpoint, force=False):
 
     _create_canvas_elements_recursive(flow.elements, flow_pg)
     _create_connections_recursive(flow, flow.elements)
-    _set_controllers_enabled(flow, enabled=True)
+    _set_controllers_enabled(flow.controllers, enabled=True)
 
     # find all deployed flows and re-organize the top level PGs
     pgs = nipyapi.nifi.ProcessGroupsApi().get_process_groups(canvas_root_id).process_groups
@@ -166,13 +183,13 @@ def _create_controllers(flow, flow_pg):
         c.parent_id = flow_pg.id
 
 
-def _set_controllers_enabled(flow, enabled=True):
+def _set_controllers_enabled(controllers, enabled=True):
     """
     Start/Enable or Stop/Disable all controller services for a flow
-    :param flow: A Flow instance
-    :type flow: flowlib.model.Flow
+    :param flow: A list of controllers to enable/disable
+    :type flow: list(Controller)
     """
-    for c in flow.controllers:
+    for c in controllers:
         controller = nipyapi.canvas.get_controller(c.id, identifier_type='id')
         nipyapi.canvas.schedule_controller(controller, enabled)
 
@@ -407,3 +424,22 @@ def _force_cleanup_flow(flow_pg_id):
     log.info("Deleting flow process group...")
     flow_pg = _get_nifi_entity_by_id('process_group', flow_pg_id)
     nipyapi.canvas.delete_process_group(flow_pg, force=True)
+
+
+def _force_cleanup_reporting_tasks():
+    log.info("Deleting reporting tasks...")
+    reporting_tasks = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_tasks().reporting_tasks
+    for task in reporting_tasks:
+        nipyapi.nifi.ReportingTasksApi().remove_reporting_task(
+            id=task.id,
+            version=task.revision.version,
+            client_id=task.revision.client_id
+        )
+    log.info("Deleting reporting task controllers...")
+    controllers = nipyapi.nifi.apis.FlowApi().get_controller_services_from_controller().controller_services
+    for controller in controllers:
+        nipyapi.nifi.apis.ControllerServicesApi().remove_controller_service(
+            id=controller.id,
+            version=controller.revision.version,
+            client_id=controller.revision.client_id
+        )

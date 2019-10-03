@@ -21,6 +21,8 @@ def main():
         flowlib.api.deploy_flow(cli.config)
     elif cli.config.export:
         flowlib.api.export_flow(cli.config)
+    elif cli.config.deploy_reporting_tasks:
+        flowlib.api.deploy_reporting_tasks(cli.config)
     else:
         cli.parser.print_usage()
 
