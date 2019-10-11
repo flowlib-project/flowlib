@@ -4,9 +4,10 @@ import os
 import yaml
 import time
 import re
-from urllib3.exceptions import MaxRetryError
 
-import nipyapi
+import nipyapi.nifi
+import nipyapi.canvas
+import nipyapi.utils
 
 from flowlib.logger import log
 from flowlib.model import FlowLibException
@@ -16,17 +17,16 @@ import flowlib.layout
 import flowlib.parser
 
 
-def wait_for_nifi_api(nifi_endpoint, retries=24, delay=5):
+def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
     log.info("Waiting for NiFi api to be ready at {}...".format(nifi_endpoint))
-    nipyapi.config.nifi_config.host = nifi_endpoint
+
     i = 0
     while i < retries:
-        try:
-            nipyapi.nifi.FlowApi().get_process_group_status('root')
+        if nipyapi.utils.is_endpoint_up(nifi_endpoint):
+            nipyapi.config.nifi_config.host = nifi_endpoint
             return
-        except MaxRetryError as e:
-            i += 1
-            time.sleep(delay)
+        time.sleep(delay)
+
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
