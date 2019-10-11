@@ -54,9 +54,9 @@ class FlowLibCLI:
             type = argparse.FileType('x'),
             help = 'Export the currently deployed NiFi flow as JSON. Prints to stdout if no filepath is specified'
         )
-        self.mx_group.add_argument('--deploy-reporting-tasks',
+        self.mx_group.add_argument('--configure-flow-controller',
             action = 'store_true',
-            help = 'Deploy reporting tasks specified in .flowlib.yml to a running NiFi instance'
+            help = 'Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'
         )
 
         if not file_config:

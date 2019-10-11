@@ -5,9 +5,7 @@ import yaml
 import time
 import re
 
-import nipyapi.nifi
-import nipyapi.canvas
-import nipyapi.utils
+import nipyapi
 
 from flowlib.logger import log
 from flowlib.model import FlowLibException
@@ -22,8 +20,8 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
 
     i = 0
     while i < retries:
-        if nipyapi.utils.is_endpoint_up(nifi_endpoint):
-            nipyapi.config.nifi_config.host = nifi_endpoint
+        if nipyapi.utils.is_endpoint_up("{}/nifi".format(nifi_endpoint)):
+            nipyapi.config.nifi_config.host = "{}/nifi-api".format(nifi_endpoint)
             return
         time.sleep(delay)
 
@@ -46,7 +44,8 @@ def init_from_nifi(flow, nifi_endpoint):
     flowlib.parser.init_from_deployment(flow, deployment)
 
 
-def deploy_reporting_tasks(nifi_endpoint, reporting_task_controllers, reporting_tasks, force=False):
+def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporting_tasks,
+    max_timer_driven_threads=None, max_event_driven_threads=None, force=False):
     """
     Deploy ReportingTasks and required controller services to NiFi via the Rest api
     :param nifi_endpoint: The NiFi api endpoint
@@ -55,10 +54,22 @@ def deploy_reporting_tasks(nifi_endpoint, reporting_task_controllers, reporting_
     :type reporting_task_controllers: list(flowlib.model.Controller)
     :param reporting_tasks: The reporting tasks to depoy
     :type reporting_tasks: list(flowlib.model.ReportingTask)
+    :param max_timer_driven_threads: The max number of concurrent timer driven processors that can be scheduled
+    :type max_timer_driven_threads: int
+    :param max_event_driven_threads: The max number of concurrent event driven processors that can be scheduled
+    :type max_event_driven_threads: int
     """
     wait_for_nifi_api(nifi_endpoint)
     if force:
         _force_cleanup_reporting_tasks()
+
+    # set max concurrent scheduling threads
+    controller_config = nipyapi.nifi.apis.controller_api.ControllerApi().get_controller_config()
+    if max_timer_driven_threads:
+        controller_config.component.max_timer_driven_thread_count = max_timer_driven_threads
+    if max_event_driven_threads:
+        controller_config.component.max_event_driven_thread_count = max_event_driven_threads
+    nipyapi.nifi.apis.controller_api.ControllerApi().update_controller_config(controller_config)
 
     # apply templating and create the reporting task controllers
     reporting_task_controllers = flowlib.parser.init_controllers(reporting_task_controllers)

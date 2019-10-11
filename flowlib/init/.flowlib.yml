@@ -1,5 +1,8 @@
-nifi_endpoint: http://127.0.0.1:8080/nifi-api
+nifi_endpoint: http://nifi-dev:8080
 component_dir: components
+
+max_event_driven_threads: 10
+max_timer_driven_threads: 6
 
 reporting_task_controllers:
 - name: graphite-metrics-service

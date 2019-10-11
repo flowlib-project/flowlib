@@ -6,7 +6,7 @@ class FlowLibConfig:
     DEFAULT_CFG = '.flowlib.yml'
     DEFAULTS = {
         'component_dir': 'components',
-        'nifi_endpoint': 'http://localhost:8080/nifi-api'
+        'nifi_endpoint': 'http://localhost:8080'
     }
 
     def __init__(self, **kwargs):
@@ -19,6 +19,8 @@ class FlowLibConfig:
         :type deploy_reporting_tasks: bool
         :type component_dir: str
         :type nifi_endpoint: str
+        :type max_timer_driven_threads: int
+        :type max_event_driven_threads: int
         :type reporting_task_controllers: list(dict)
         :type reporting_tasks: list(dict)
         """
@@ -35,6 +37,8 @@ class FlowLibConfig:
         self.nifi_endpoint = kwargs.get('nifi_endpoint', FlowLibConfig.DEFAULTS['nifi_endpoint'])
 
         # file only configs
+        self.max_timer_driven_threads = kwargs.get('max_timer_driven_threads')
+        self.max_event_driven_threads = kwargs.get('max_event_driven_threads')
         self.reporting_task_controllers = kwargs.get('reporting_task_controllers', list())
         self.reporting_tasks = kwargs.get('reporting_tasks', list())
 
