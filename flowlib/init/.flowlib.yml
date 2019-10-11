@@ -2,7 +2,7 @@ nifi_endpoint: http://nifi-dev:8080
 component_dir: components
 
 max_event_driven_threads: 10
-max_timer_driven_threads: 6
+max_timer_driven_threads: 5
 
 reporting_task_controllers:
 - name: graphite-metrics-service

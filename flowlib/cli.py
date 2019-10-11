@@ -1,10 +1,26 @@
 # -*- coding: utf-8 -*-
 import argparse
+from argparse import Namespace
+import collections
 import sys
 import yaml
 
 import flowlib
 from flowlib.model.config import FlowLibConfig
+
+
+class ValidateDescribe(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        choices = ('processor', 'controller', 'reporting-task')
+        component_type, package_id = values
+        if component_type not in choices:
+            parser.print_usage()
+            print("{}: error: argument --describe: invalid choice: '{}' (choose from {})".format(parser.prog, choice,
+                ', '.join("'{}'".format(c) for c in choices)))
+            sys.exit(1)
+
+        Describe = collections.namedtuple('Describe', 'component_type package_id')
+        setattr(args, self.dest, Describe(component_type, package_id))
 
 
 class FlowLibCLI:
@@ -58,7 +74,20 @@ class FlowLibCLI:
             action = 'store_true',
             help = 'Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'
         )
+        self.mx_group.add_argument('--list',
+            type = str,
+            choices = ['processors', 'controllers', 'reporting-tasks'],
+            help = 'List the available package ids for the specified component type'
+        )
+        self.mx_group.add_argument('--describe',
+            type = str,
+            action = ValidateDescribe,
+            metavar=('{processors,controllers,reporting-tasks}', 'PACKAGE_ID'),
+            nargs = 2,
+            help = 'Print the configurable properties for the specified component'
+        )
 
         if not file_config:
             file_config = FlowLibConfig()
-        self.config = file_config.with_flag_overrides(self.parser.parse_args())
+        self.args = self.parser.parse_args()
+        self.config = file_config.with_flag_overrides(self.args)

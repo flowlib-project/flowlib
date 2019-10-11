@@ -16,7 +16,7 @@ import flowlib.parser
 
 
 def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
-    log.info("Waiting for NiFi api to be ready at {}...".format(nifi_endpoint))
+    log.debug("Waiting for NiFi api to be ready at {}...".format(nifi_endpoint))
 
     i = 0
     while i < retries:
@@ -42,6 +42,47 @@ def init_from_nifi(flow, nifi_endpoint):
 
     deployment = FlowDeployment.from_dict(yaml.safe_load(root.component.comments))
     flowlib.parser.init_from_deployment(flow, deployment)
+
+
+def list_components(nifi_endpoint, component_type):
+    """
+    List the available components for a given type
+    :param nifi_endpoint: A NiFi api endpoint
+    :type nifi_endpoint: str
+    :type component_type: str
+    """
+    wait_for_nifi_api(nifi_endpoint)
+    if component_type == 'processors':
+        results = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types().processor_types
+    elif component_type == 'controllers':
+        results = nipyapi.nifi.apis.flow_api.FlowApi().get_controller_service_types().controller_service_types
+    elif component_type == 'reporting-tasks':
+        results = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_task_types().reporting_task_types
+    else:
+        raise FlowLibException("Invalid component_type")
+
+    print('\n'.join([t.type for t in results]))
+
+
+def describe_component(nifi_endpoint, component_type, package_id):
+    """
+    Describe available properties for a given component
+    :param nifi_endpoint: A NiFi api endpoint
+    :type nifi_endpoint: str
+    :type component_type: str
+    :type package_id: str
+    """
+    wait_for_nifi_api(nifi_endpoint)
+    if component_type == 'processor':
+        result = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types(type=package_id).processor_types
+    elif component_type == 'controller':
+        result = nipyapi.nifi.apis.flow_api.FlowApi().get_controller_service_types(type_filter=package_id).controller_service_types
+    elif component_type == 'reporting-task':
+        result = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_task_types(type=package_id).reporting_task_types
+    else:
+        raise FlowLibException("Invalid component_type")
+
+    print(result)
 
 
 def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporting_tasks,

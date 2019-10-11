@@ -16,7 +16,7 @@ class FlowLibConfig:
         :type force: bool
         :type export: bool
         :type validate: bool
-        :type deploy_reporting_tasks: bool
+        :type configure_flow_controller: bool
         :type component_dir: str
         :type nifi_endpoint: str
         :type max_timer_driven_threads: int
@@ -29,7 +29,7 @@ class FlowLibConfig:
         self.scaffold = None
         self.force = None
         self.export = None
-        self.deploy_reporting_tasks = None
+        self.configure_flow_controller = None
         self.validate = None
 
         # file configs with flag overrides

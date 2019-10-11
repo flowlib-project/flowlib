@@ -108,3 +108,34 @@ def configure_flow_controller(config):
         log.error("Flow Controller configuration failed")
         log.error(e)
         sys.exit(1)
+
+
+def list_components(config, component_type):
+    """
+    :type config: FlowLibConfig
+    :param component_type: List the available components for this type
+    :type component_type: str
+    """
+    log.debug("Listing all available {}...".format(component_type))
+    try:
+        flowlib.nifi.list_components(config.nifi_endpoint, component_type)
+    except FlowLibException as e:
+        log.error(e)
+        sys.exit(1)
+
+
+
+def describe_component(config, component_type, package_id):
+    """
+    :type config: FlowLibConfig
+    :param component_type: The type of component being described
+    :type component_type: str
+    :param package_id: The package id of the component to describe
+    :type package_id: str
+    """
+    log.debug("Describing {}: {}...".format(component_type, package_id))
+    try:
+        flowlib.nifi.describe_component(config.nifi_endpoint, component_type, package_id)
+    except FlowLibException as e:
+        log.error(e)
+        sys.exit(1)
