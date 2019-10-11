@@ -62,9 +62,9 @@ spec:
 EOF
 
 # Cleanup on ctrl-c or kill
-trap "echo Exit.. Undeploying nifi-dev; \
-  kubectl delete svc nifi-dev; \
-  kubectl delete deployments.apps nifi-dev" KILL TERM HUP INT;
+#trap "echo Exit.. Undeploying nifi-dev; \
+#  kubectl delete svc nifi-dev; \
+#  kubectl delete deployments.apps nifi-dev" KILL TERM HUP INT;
 
 echo "Waiting for local NiFi deployment..." && sleep 3
 kubectl port-forward svc/nifi-dev 8080:8080

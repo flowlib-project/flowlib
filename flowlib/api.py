@@ -95,16 +95,16 @@ def deploy_flow(config):
         sys.exit(1)
 
 
-def deploy_reporting_tasks(config):
+def configure_flow_controller(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Deploying ReportingTasks to {}".format(config.nifi_endpoint))
+    log.info("Configuring Flow Controller for {}".format(config.nifi_endpoint))
     try:
-        flowlib.nifi.deploy_reporting_tasks(config.nifi_endpoint, config.reporting_task_controllers,
-            config.reporting_tasks, force=config.force)
-        log.info("ReportingTask deployment completed successfully")
+        flowlib.nifi.configure_flow_controller(config.nifi_endpoint, config.reporting_task_controllers,
+            config.reporting_tasks, config.max_timer_driven_threads, config.max_event_driven_threads, config.force)
+        log.info("Flow Controller configuration completed successfully")
     except FlowLibException as e:
-        log.error("ReportingTask deployment failed")
+        log.error("Flow Controller configuration failed")
         log.error(e)
         sys.exit(1)
