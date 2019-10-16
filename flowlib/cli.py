@@ -15,7 +15,7 @@ class ValidateDescribe(argparse.Action):
         component_type, package_id = values
         if component_type not in choices:
             parser.print_usage()
-            print("{}: error: argument --describe: invalid choice: '{}' (choose from {})".format(parser.prog, choice,
+            print("{}: error: argument --describe: invalid choice: '{}' (choose from {})".format(parser.prog, component_type,
                 ', '.join("'{}'".format(c) for c in choices)))
             sys.exit(1)
 
@@ -48,7 +48,7 @@ class FlowLibCLI:
 
         self.parser.add_argument('--force',
             action = 'store_true',
-            help = 'Force flowlib to overwrite an existing NiFi canvas'
+            help = 'Force flowlib to overwrite an existing flow (or flow controller when used with --configure-flow-controller)'
         )
 
         # TODO: --flow-yaml should be required when validate is True
