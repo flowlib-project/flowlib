@@ -14,7 +14,9 @@ def main():
 
     cli = FlowLibCLI(config)
     if cli.args.scaffold:
-        flowlib.api.init_flow_scaffold(cli.args.scaffold)
+        flowlib.api.gen_flow_scaffold(cli.args.scaffold)
+    elif cli.args.generate_docs:
+        flowlib.api.gen_flowlib_docs(cli.config, cli.args.generate_docs)
     elif cli.args.validate:
         flowlib.api.validate_flow(cli.config)
     elif cli.args.flow_yaml:
@@ -29,6 +31,7 @@ def main():
         flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
     else:
         cli.parser.print_usage()
+
 
 if __name__ == '__main__':
     main()

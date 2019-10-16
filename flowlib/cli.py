@@ -58,6 +58,10 @@ class FlowLibCLI:
             type = str,
             help = 'Directory path to initialize with a new project scaffold'
         )
+        self.mx_group.add_argument('--generate-docs',
+            type = str,
+            help = 'Directory path to initialize with flowlib helper documentation'
+        )
         self.mx_group.add_argument('--flow-yaml',
             type = argparse.FileType('r'),
             help = 'YAML file defining a NiFi flow to deploy'

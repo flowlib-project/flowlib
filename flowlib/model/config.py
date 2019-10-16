@@ -6,13 +6,17 @@ class FlowLibConfig:
     DEFAULT_CFG = '.flowlib.yml'
     DEFAULTS = {
         'component_dir': 'components',
-        'nifi_endpoint': 'http://localhost:8080'
+        'nifi_endpoint': 'http://localhost:8080',
+        'docs_directory': 'docs/current',
+        'max_timer_driven_threads': 5,
+        'max_event_driven_threads': 10
     }
 
     def __init__(self, **kwargs):
         """
         :type flow_yaml: str
         :type scaffold: str
+        :type generate_docs: str
         :type force: bool
         :type export: bool
         :type validate: bool
@@ -27,6 +31,7 @@ class FlowLibConfig:
         # cli only flags
         self.flow_yaml = None
         self.scaffold = None
+        self.generate_docs = None
         self.force = None
         self.export = None
         self.configure_flow_controller = None
@@ -37,8 +42,9 @@ class FlowLibConfig:
         self.nifi_endpoint = kwargs.get('nifi_endpoint', FlowLibConfig.DEFAULTS['nifi_endpoint'])
 
         # file only configs
-        self.max_timer_driven_threads = kwargs.get('max_timer_driven_threads')
-        self.max_event_driven_threads = kwargs.get('max_event_driven_threads')
+        self.docs_directory = kwargs.get('docs_directory', FlowLibConfig.DEFAULTS['docs_directory'])
+        self.max_timer_driven_threads = kwargs.get('max_timer_driven_threads', FlowLibConfig.DEFAULTS['max_timer_driven_threads'])
+        self.max_event_driven_threads = kwargs.get('max_event_driven_threads', FlowLibConfig.DEFAULTS['max_event_driven_threads'])
         self.reporting_task_controllers = kwargs.get('reporting_task_controllers', list())
         self.reporting_tasks = kwargs.get('reporting_tasks', list())
 

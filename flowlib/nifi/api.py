@@ -44,47 +44,6 @@ def init_from_nifi(flow, nifi_endpoint):
     flowlib.parser.init_from_deployment(flow, deployment)
 
 
-def list_components(nifi_endpoint, component_type):
-    """
-    List the available components for a given type
-    :param nifi_endpoint: A NiFi api endpoint
-    :type nifi_endpoint: str
-    :type component_type: str
-    """
-    wait_for_nifi_api(nifi_endpoint)
-    if component_type == 'processors':
-        results = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types().processor_types
-    elif component_type == 'controllers':
-        results = nipyapi.nifi.apis.flow_api.FlowApi().get_controller_service_types().controller_service_types
-    elif component_type == 'reporting-tasks':
-        results = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_task_types().reporting_task_types
-    else:
-        raise FlowLibException("Invalid component_type")
-
-    print('\n'.join([t.type for t in results]))
-
-
-def describe_component(nifi_endpoint, component_type, package_id):
-    """
-    Describe available properties for a given component
-    :param nifi_endpoint: A NiFi api endpoint
-    :type nifi_endpoint: str
-    :type component_type: str
-    :type package_id: str
-    """
-    wait_for_nifi_api(nifi_endpoint)
-    if component_type == 'processor':
-        result = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types(type=package_id).processor_types
-    elif component_type == 'controller':
-        result = nipyapi.nifi.apis.flow_api.FlowApi().get_controller_service_types(type_filter=package_id).controller_service_types
-    elif component_type == 'reporting-task':
-        result = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_task_types(type=package_id).reporting_task_types
-    else:
-        raise FlowLibException("Invalid component_type")
-
-    print(result)
-
-
 def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporting_tasks,
     max_timer_driven_threads=None, max_event_driven_threads=None, force=False):
     """
@@ -414,7 +373,7 @@ def _create_process_group(element, parent_pg, position, deployment, is_flow_root
     return pg
 
 
-def _create_processor(element, parent_pg, position, deployment):
+def _create_processor(element, parent_pg, position, deployment=None):
     """
     Create a Processor on the NiFi canvas
     :param element: The Processor to deploy
@@ -436,15 +395,16 @@ def _create_processor(element, parent_pg, position, deployment):
         p = nipyapi.canvas.create_processor(parent_pg, _type, position, name, element.config)
 
         # If the processor is stateful, add it to the instances
-        if _type.type in flowlib.STATEFUL_PROCESSORS:
-            if element.src_component_name == 'root':
-                deployment.root_processors[element.name] = p.id
-            else:
-                deployed_component = deployment.get_component(element.src_component_name)
-                deployed_component.instances[element.parent_path + "/" + element.name] = {
-                    "group_id": parent_pg.id,
-                    "processor_id": p.id
-                }
+        if deployment:
+            if _type.type in flowlib.STATEFUL_PROCESSORS:
+                if element.src_component_name == 'root':
+                    deployment.root_processors[element.name] = p.id
+                else:
+                    deployed_component = deployment.get_component(element.src_component_name)
+                    deployed_component.instances[element.parent_path + "/" + element.name] = {
+                        "group_id": parent_pg.id,
+                        "processor_id": p.id
+                    }
 
     element.id = p.id
     element.parent_id = parent_pg.id
