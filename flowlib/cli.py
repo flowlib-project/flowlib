@@ -14,11 +14,8 @@ class ValidateDescribe(argparse.Action):
         choices = ('processor', 'controller', 'reporting-task')
         component_type, package_id = values
         if component_type not in choices:
-            parser.print_usage()
-            print("{}: error: argument --describe: invalid choice: '{}' (choose from {})".format(parser.prog, component_type,
+            parser.error("argument --describe: invalid choice: '{}' (choose from {})".format(component_type,
                 ', '.join("'{}'".format(c) for c in choices)))
-            sys.exit(1)
-
         Describe = collections.namedtuple('Describe', 'component_type package_id')
         setattr(args, self.dest, Describe(component_type, package_id))
 
@@ -51,7 +48,6 @@ class FlowLibCLI:
             help = 'Force flowlib to overwrite an existing flow (or flow controller when used with --configure-flow-controller)'
         )
 
-        # TODO: --flow-yaml should be required when validate is True
         self.parser.add_argument('--validate',
             action = 'store_true',
             help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
@@ -90,4 +86,10 @@ class FlowLibCLI:
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args()
+
+        # check that flow_yaml is provided when validate is true
+        print(self.args)
+        if self.args.validate and not self.args.flow_yaml:
+            self.parser.error("argument --flow-yaml is required when --validate is provided")
+
         self.config = file_config.with_flag_overrides(self.args)

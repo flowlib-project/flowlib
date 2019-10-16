@@ -13,19 +13,19 @@ def main():
             config = FlowLibConfig.new_from_file(f)
 
     cli = FlowLibCLI(config)
-    if hasattr(cli.args, 'scaffold') and cli.args.scaffold:
+    if cli.args.scaffold:
         flowlib.api.init_flow_scaffold(cli.args.scaffold)
-    elif hasattr(cli.args, 'validate') and cli.args.validate:
+    elif cli.args.validate:
         flowlib.api.validate_flow(cli.config)
-    elif hasattr(cli.args, 'flow_yaml') and cli.args.flow_yaml:
+    elif cli.args.flow_yaml:
         flowlib.api.deploy_flow(cli.config)
-    elif hasattr(cli.args, 'export') and cli.args.export:
+    elif cli.args.export:
         flowlib.api.export_flow(cli.config)
-    elif hasattr(cli.args, 'configure_flow_controller') and cli.args.configure_flow_controller:
+    elif cli.args.configure_flow_controller:
         flowlib.api.configure_flow_controller(cli.config)
-    elif hasattr(cli.args, 'list') and cli.args.list:
+    elif cli.args.list:
         flowlib.api.list_components(cli.config, cli.args.list)
-    elif hasattr(cli.args, 'describe') and cli.args.describe:
+    elif cli.args.describe:
         flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
     else:
         cli.parser.print_usage()

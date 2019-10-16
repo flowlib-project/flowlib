@@ -48,14 +48,9 @@ class FlowLibConfig:
         :type flags: FlowLibConfig
         """
         flags = vars(flags)
-
-        # remove any unset keys
-        for k in list(flags.keys()):
-            if not flags[k]:
-                del flags[k]
-
         for k,v in flags.items():
-            setattr(self, k, v)
+            if flags.get(k):
+                setattr(self, k, v)
 
         return self
 
