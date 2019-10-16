@@ -2,11 +2,13 @@
 import os
 import yaml
 
+import jinja2
 import nipyapi.nifi
 import nipyapi.canvas
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
+from flowlib.logger import log
 import flowlib.nifi.api
 
 
@@ -20,7 +22,7 @@ def generate_docs(config, dest):
     """
     output_dir = os.path.join(dest, 'current')
     if os.path.exists(output_dir):
-        raise FlowLibException("Destination directory already exists: {}".format(output_dir))
+        log.warn("Destination directory {} already exists. Will not update static descriptors...".format(output_dir))
 
     flowlib.nifi.api.wait_for_nifi_api(config.nifi_endpoint)
 
@@ -39,6 +41,7 @@ def generate_docs(config, dest):
     _gen_reporting_task_doc_descriptors(reporting_task_doc_dir, reporting_tasks)
     _gen_controller_service_doc_descriptors(controllers_doc_dir, controller_services, root_pg)
     _gen_processor_doc_descriptors(processors_doc_dir, processors, root_pg)
+    _gen_doc_html(output_dir)
 
 
 def _get_available_component_package_ids(nifi_endpoint, component_type):
@@ -61,53 +64,95 @@ def _get_available_component_package_ids(nifi_endpoint, component_type):
 
 
 def _gen_reporting_task_doc_descriptors(doc_dir, reporting_tasks):
-    os.makedirs(doc_dir, exist_ok=True)
-    for rt in reporting_tasks:
-        # create temp reporting task
-        task = nipyapi.nifi.ControllerApi().create_reporting_task(
-            body=nipyapi.nifi.ReportingTaskEntity(
-                revision={'version': 0},
-                component=nipyapi.nifi.ReportingTaskDTO(
-                    type=rt,
-                    name='doc-temp'
+    if os.path.exists(doc_dir):
+        log.warn("Reporting task descriptors already exist in {}, skipping...".format(doc_dir))
+    else:
+        os.makedirs(doc_dir)
+        for rt in reporting_tasks:
+            # create temp reporting task
+            task = nipyapi.nifi.ControllerApi().create_reporting_task(
+                body=nipyapi.nifi.ReportingTaskEntity(
+                    revision={'version': 0},
+                    component=nipyapi.nifi.ReportingTaskDTO(
+                        type=rt,
+                        name='doc-temp'
+                    )
                 )
             )
-        )
-        # write props to doc file
-        with open('{}.{}'.format(os.path.join(doc_dir, rt), 'yaml'), 'x') as f:
-            f.write(yaml.safe_dump({ k:v.to_dict() for k,v in task.component.descriptors.items() }))
-        # delete the temp reporting task
-        nipyapi.nifi.ReportingTasksApi().remove_reporting_task(
-            id=task.id,
-            version=task.revision.version,
-            client_id=task.revision.client_id
-        )
+            # write props to doc file
+            with open('{}.{}'.format(os.path.join(doc_dir, rt), 'yaml'), 'x') as f:
+                f.write(yaml.safe_dump({ k:v.to_dict() for k,v in task.component.descriptors.items() }))
+            # delete the temp reporting task
+            nipyapi.nifi.ReportingTasksApi().remove_reporting_task(
+                id=task.id,
+                version=task.revision.version,
+                client_id=task.revision.client_id
+            )
 
 
 def _gen_controller_service_doc_descriptors(doc_dir, controller_services, root_pg):
-    os.makedirs(doc_dir, exist_ok=True)
-    for cs in controller_services:
-        # create temp controller service in root pg
-        controller_type = nipyapi.nifi.models.DocumentedTypeDTO(type=cs)
-        controller = nipyapi.canvas.create_controller(root_pg, controller_type, name='doc-temp')
-        # write props to doc file
-        with open('{}.{}'.format(os.path.join(doc_dir, cs), 'yaml'), 'x') as f:
-            f.write(yaml.safe_dump({ k:v.to_dict() for k,v in controller.component.descriptors.items() }))
-        # delete the temp controller service
-        nipyapi.canvas.delete_controller(controller, force=True)
+     if os.path.exists(doc_dir):
+        log.warn("Controller service descriptors already exist in {}, skipping...".format(doc_dir))
+     else:
+        os.makedirs(doc_dir, exist_ok=True)
+        for cs in controller_services:
+            # create temp controller service in root pg
+            controller_type = nipyapi.nifi.models.DocumentedTypeDTO(type=cs)
+            controller = nipyapi.canvas.create_controller(root_pg, controller_type, name='doc-temp')
+            # write props to doc file
+            with open('{}.{}'.format(os.path.join(doc_dir, cs), 'yaml'), 'x') as f:
+                f.write(yaml.safe_dump({ k:v.to_dict() for k,v in controller.component.descriptors.items() }))
+            # delete the temp controller service
+            nipyapi.canvas.delete_controller(controller, force=True)
 
 
 def _gen_processor_doc_descriptors(doc_dir, processors, root_pg):
-    os.makedirs(doc_dir, exist_ok=True)
-    for p in processors:
-        # create temp processor in root pg
-        processor_type = nipyapi.nifi.models.DocumentedTypeDTO(type=p)
-        processor = nipyapi.canvas.create_processor(root_pg, processor_type, TOP_LEVEL_PG_LOCATION, name='doc-temp')
-        # write props to doc file
-        with open('{}.{}'.format(os.path.join(doc_dir, p), 'yaml'), 'x') as f:
-            f.write(yaml.safe_dump({ k:v.to_dict() for k,v in processor.component.config.descriptors.items() }))
-        # delete the temp processor
-        nipyapi.canvas.delete_processor(processor, force=True)
+    if os.path.exists(doc_dir):
+        log.warn("Processor descriptors already exist in {}, skipping...".format(doc_dir))
+    else:
+        os.makedirs(doc_dir, exist_ok=True)
+        for p in processors:
+            # create temp processor in root pg
+            processor_type = nipyapi.nifi.models.DocumentedTypeDTO(type=p)
+            processor = nipyapi.canvas.create_processor(root_pg, processor_type, TOP_LEVEL_PG_LOCATION, name='doc-temp')
+            # write props to doc file
+            with open('{}.{}'.format(os.path.join(doc_dir, p), 'yaml'), 'x') as f:
+                f.write(yaml.safe_dump({ k:v.to_dict() for k,v in processor.component.config.descriptors.items() }))
+            # delete the temp processor
+            nipyapi.canvas.delete_processor(processor, force=True)
+
+
+def _gen_doc_html(doc_dir):
+    out = os.path.join(doc_dir, 'index.html')
+    log.info("Generating html helper docs at {}".format(out))
+    component_descriptors = {
+        'flowlib_info': dict(),
+        'reporting_tasks': dict(),
+        'controller_services': dict(),
+        'processors': dict()
+    }
+    reporting_task_doc_dir = os.path.join(doc_dir, 'reporting_tasks')
+    controllers_doc_dir = os.path.join(doc_dir, 'controllers')
+    processors_doc_dir = os.path.join(doc_dir, 'processors')
+
+    # load component descriptors from static yaml
+    for rt in os.listdir(reporting_task_doc_dir):
+        with open(os.path.join(reporting_task_doc_dir, rt)) as f:
+            component_descriptors['reporting_tasks'][f.name.strip('.yaml')] = yaml.safe_load(f)
+    for cs in os.listdir(controllers_doc_dir):
+        with open(os.path.join(controllers_doc_dir, cs)) as f:
+            component_descriptors['controller_services'][f.name.strip('.yaml')] = yaml.safe_load(f)
+    for p in os.listdir(processors_doc_dir):
+        with open(os.path.join(processors_doc_dir, p)) as f:
+            component_descriptors['processors'][f.name.strip('.yaml')] = yaml.safe_load(f)
+
+    env = jinja2.Environment()
+    doc_html = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/index.html'))
+    with open(doc_html) as f:
+        template = env.from_string(f.read())
+
+    with open(out, 'w') as f:
+        f.write(template.render(**component_descriptors))
 
 
 def describe_component(nifi_endpoint, component_type, package_id):

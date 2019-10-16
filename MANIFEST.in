@@ -4,4 +4,5 @@ include flowlib/logging.conf
 
 graft flowlib/init/
 
+prune flowlib/init/docs/
 global-exclude __pycache__  *.pyc

@@ -1,0 +1,115 @@
+<html>
+
+<head>
+  <title>B23 FlowLib Docs</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection">
+</head>
+
+<body>
+  <nav class="light-blue darken-4">
+    <div class="nav-wrapper">
+      <div class="row">
+        <div class="col s12">
+          <a href="#!" class="brand-logo"><i class="material-icons">cloud</i>B23 FlowLib</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- TODO: Add B23 flowlib version generated docs header, nifi version -->
+
+  <div class="container">
+    <ul class="collapsible">
+      <li>
+        <div class="collapsible-header"><i class="material-icons">timeline</i>Reporting Tasks</div>
+        <div class="collapsible-body">
+          <ul class="collection">
+            {% for key, value in reporting_tasks.items() %}
+            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
+      <li>
+        <div class="collapsible-header"><i class="material-icons">build</i>Controller Services</div>
+        <div class="collapsible-body">
+          <ul class="collection">
+            {% for key, value in controller_services.items() %}
+            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
+      <li>
+        <div class="collapsible-header"><i class="material-icons">loop</i>Processors</div>
+        <div class="collapsible-body">
+          <ul class="collection">
+            {% for key, value in processors.items() %}
+            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+    <!-- Modals -->
+    <!-- Reporting task modals -->
+    {% for key, value in reporting_tasks.items() %}
+    <div id="{{ key }}" class="modal">
+      <div class="modal-content">
+        <h4>{{ key }}</h4>
+        <p>Reporting Task</p>
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Controller service modals -->
+    {% for key, value in controller_services.items() %}
+    <div id="{{ key }}" class="modal">
+      <div class="modal-content">
+        <h4>{{ key }}</h4>
+        <p>Controller Service</p>
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Processor modals -->
+    {% for key, value in processors.items() %}
+    <div id="{{ key }}" class="modal">
+      <div class="modal-content">
+        <h4>{{ key }}</h4>
+        <p>Processor</p>
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
+      </div>
+    </div>
+    {% endfor %}
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script type=text/javascript>
+
+      // init modal
+      document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('.modal');
+        var instances = M.Modal.init(elems, {});
+      });
+
+      // init collapsible
+      document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('.collapsible');
+        var instances = M.Collapsible.init(elems, {});
+      });
+
+  </script>
+</body>
+
+</html>
