@@ -10,7 +10,7 @@ setup(
         'flowlib': ['logging.conf', 'init/*'],
     },
     include_package_data=True,
-    install_requires=['nipyapi>=0.13.3', 'pyyaml', 'jinja2', 'numpy>=1.17.0', 'networkx>=2.3'],
+    install_requires=['nipyapi>=0.13.3', 'pyyaml', 'jinja2>=2.7', 'numpy>=1.17.0', 'networkx>=2.3'],
     author="David Kegley",
     author_email="kegs@b23.io",
     description="A library for composing and deploying NiFi flows from YAML",

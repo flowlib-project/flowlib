@@ -11,10 +11,12 @@ from flowlib.model import FlowLibException
 from flowlib.logger import log
 import flowlib.nifi.api
 
+### TODO: Write nifi and flowlib version info
 ### TODO: Suppress info logs during doc generation
-### TODO: Read static yaml to generate yaml templates
 ### TODO: Fix CLI flags for --list and --describe (use static yaml or prompt user to create it)
 ### TODO: Implement --force cli option to overwrite output
+### TODO: Finish example yaml page with copy to clipboard button
+### TODO: Add buttons for 'descriptors' and 'example' from index.html
 
 def generate_docs(config, dest):
     """
@@ -24,15 +26,14 @@ def generate_docs(config, dest):
     :param dest: The destination directory to create the flowlib documentation
     :type dest: str
     """
-    output_dir = os.path.join(dest, 'current')
-    if os.path.exists(output_dir):
-        log.warn("Destination directory {} already exists. Will not update static descriptors...".format(output_dir))
+    if os.path.exists(dest):
+        log.warn("Destination directory {} already exists. Will not update static descriptors...".format(dest))
 
     flowlib.nifi.api.wait_for_nifi_api(config.nifi_endpoint)
 
-    reporting_task_doc_dir = os.path.join(output_dir, 'reporting_tasks')
-    controllers_doc_dir = os.path.join(output_dir, 'controllers')
-    processors_doc_dir = os.path.join(output_dir, 'processors')
+    reporting_task_doc_dir = os.path.join(dest, 'reporting_tasks')
+    controllers_doc_dir = os.path.join(dest, 'controllers')
+    processors_doc_dir = os.path.join(dest, 'processors')
 
     # list the available component types using the NiFi api
     reporting_tasks = _get_available_component_package_ids(config.nifi_endpoint, 'reporting-tasks')
@@ -45,7 +46,7 @@ def generate_docs(config, dest):
     _gen_reporting_task_doc_descriptors(reporting_task_doc_dir, reporting_tasks)
     _gen_controller_service_doc_descriptors(controllers_doc_dir, controller_services, root_pg)
     _gen_processor_doc_descriptors(processors_doc_dir, processors, root_pg)
-    _gen_doc_html(output_dir)
+    _gen_doc_html(dest)
 
 
 def _get_available_component_package_ids(nifi_endpoint, component_type):
@@ -127,36 +128,74 @@ def _gen_processor_doc_descriptors(doc_dir, processors, root_pg):
 
 
 def _gen_doc_html(doc_dir):
-    out = os.path.join(doc_dir, 'index.html')
-    log.info("Generating html helper docs at {}".format(out))
-    component_descriptors = {
-        'flowlib_info': dict(),
-        'reporting_tasks': dict(),
-        'controller_services': dict(),
-        'processors': dict()
+    log.info("Generating html helper docs at {}".format(doc_dir))
+    context = {
+        'flowlib_info': {
+            'flowlib_version': flowlib.__version__,
+            'nifi_version': 'todo'
+        },
+        'reporting_tasks': [],
+        'controller_services': [],
+        'processors': []
     }
     reporting_task_doc_dir = os.path.join(doc_dir, 'reporting_tasks')
     controllers_doc_dir = os.path.join(doc_dir, 'controllers')
     processors_doc_dir = os.path.join(doc_dir, 'processors')
 
-    # load component descriptors from static yaml
-    for rt in os.listdir(reporting_task_doc_dir):
-        with open(os.path.join(reporting_task_doc_dir, rt)) as f:
-            component_descriptors['reporting_tasks'][rt.strip('.yaml')] = yaml.safe_load(f)
-    for cs in os.listdir(controllers_doc_dir):
-        with open(os.path.join(controllers_doc_dir, cs)) as f:
-            component_descriptors['controller_services'][cs.strip('.yaml')] = yaml.safe_load(f)
-    for p in os.listdir(processors_doc_dir):
-        with open(os.path.join(processors_doc_dir, p)) as f:
-            component_descriptors['processors'][p.strip('.yaml')] = yaml.safe_load(f)
-
+    # create jinja templates
     env = jinja2.Environment()
-    doc_html = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/index.html'))
-    with open(doc_html) as f:
-        template = env.from_string(f.read())
+    with open(os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/index.html')), 'r') as f:
+        index_html_template = env.from_string(f.read())
+    with open(os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/descriptors.html')), 'r') as f:
+        descriptors_html_template = env.from_string(f.read())
+    with open(os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/example.html')), 'r') as f:
+        example_html_template = env.from_string(f.read())
 
-    with open(out, 'w') as f:
-        f.write(template.render(**component_descriptors))
+    # generate reporting task docs
+    for rt in [ f for f in os.listdir(reporting_task_doc_dir) if f.endswith('.yaml') ]:
+        with open(os.path.join(reporting_task_doc_dir, rt)) as f:
+            rt = rt[:-5] # trim .yaml extension
+            descriptors = yaml.safe_load(f)
+            example = _create_example_from_descriptors(descriptors)
+            context['reporting_tasks'].append(rt)
+
+        with open(os.path.join(reporting_task_doc_dir, rt + '.descriptors.html'), 'w') as f:
+            f.write(descriptors_html_template.render(component_type='Reporting Task', key=rt, descriptors=descriptors))
+        with open(os.path.join(controllers_doc_dir, rt + '.example.html'), 'w') as f:
+            f.write(example_html_template.render(component_type='Reporting Task', key=rt, example=example))
+
+    # generate controller service docs
+    for cs in [ f for f in os.listdir(controllers_doc_dir) if f.endswith('.yaml') ]:
+        with open(os.path.join(controllers_doc_dir, cs)) as f:
+            cs = cs[:-5] # trim .yaml extension
+            descriptors = yaml.safe_load(f)
+            example = _create_example_from_descriptors(descriptors)
+            context['controller_services'].append(cs)
+
+        with open(os.path.join(controllers_doc_dir, cs + '.descriptors.html'), 'w') as f:
+            f.write(descriptors_html_template.render(component_type='Controller Service', key=cs, descriptors=descriptors))
+        with open(os.path.join(controllers_doc_dir, cs + '.example.html'), 'w') as f:
+            f.write(example_html_template.render(component_type='Controller Service', key=cs, example=example))
+
+    # generate processor docs
+    for p in [ f for f in os.listdir(processors_doc_dir) if f.endswith('.yaml') ]:
+        with open(os.path.join(processors_doc_dir, p)) as f:
+            p = p[:-5] # trim .yaml extension
+            descriptors = yaml.safe_load(f)
+            example = _create_example_from_descriptors(descriptors)
+            context['processors'].append(p)
+
+        with open(os.path.join(processors_doc_dir, p + '.descriptors.html'), 'w') as f:
+            f.write(descriptors_html_template.render(component_type='Processor', key=p, descriptors=descriptors))
+        with open(os.path.join(processors_doc_dir, p + '.example.html'), 'w') as f:
+            f.write(example_html_template.render(component_type='Processor', key=p, example=example))
+
+    with open(os.path.join(doc_dir, 'index.html'), 'w') as f:
+        f.write(index_html_template.render(**context))
+
+
+def _create_example_from_descriptors(descriptors):
+    return ''
 
 
 def describe_component(nifi_endpoint, component_type, package_id):

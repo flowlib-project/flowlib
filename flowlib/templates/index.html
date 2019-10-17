@@ -1,6 +1,8 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
+  <meta charset="utf-8"/>
   <title>B23 FlowLib</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection">
@@ -22,16 +24,14 @@
     </div>
   </nav>
 
-  <!-- TODO: Add B23 flowlib version generated docs header, nifi version -->
-
   <div id="doc-items" class="container">
-    <ul class="collapsible">
+    <ul class="collapsible expandable">
       <li>
         <div class="collapsible-header"><i class="material-icons">timeline</i>Reporting Tasks</div>
         <div class="collapsible-body">
           <div class="collection">
-            {% for key, value in reporting_tasks.items() %}
-              <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+            {% for key in reporting_tasks %}
+              <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="reporting_tasks/{{ key }}.descriptors.html">
                 <h7 class="left">{{ key }}</h7>
               </a>
             {% endfor %}
@@ -42,8 +42,8 @@
         <div class="collapsible-header"><i class="material-icons">build</i>Controller Services</div>
         <div class="collapsible-body">
           <div class="collection">
-            {% for key, value in controller_services.items() %}
-            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+            {% for key in controller_services %}
+            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="controllers/{{ key }}.descriptors.html">
               <h7 class="left">{{ key }}</h7>
             </a>
             {% endfor %}
@@ -54,8 +54,8 @@
         <div class="collapsible-header"><i class="material-icons">loop</i>Processors</div>
         <div class="collapsible-body">
           <div class="collection">
-            {% for key, value in processors.items() %}
-            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+            {% for key in processors %}
+            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="processors/{{ key }}.descriptors.html">
               <h7 class="left">{{ key }}</h7>
             </a>
             {% endfor %}
@@ -65,54 +65,8 @@
     </ul>
   </div>
 
-    <!-- Modals -->
-    <!-- Reporting task modals -->
-    {% for key, value in reporting_tasks.items() %}
-    <div id="{{ key }}" class="modal">
-      <div class="modal-content">
-        <h4>{{ key }}</h4>
-        <p>Reporting Task</p>
-      </div>
-      <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
-      </div>
-    </div>
-    {% endfor %}
-
-    <!-- Controller service modals -->
-    {% for key, value in controller_services.items() %}
-    <div id="{{ key }}" class="modal">
-      <div class="modal-content">
-        <h4>{{ key }}</h4>
-        <p>Controller Service</p>
-      </div>
-      <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
-      </div>
-    </div>
-    {% endfor %}
-
-    <!-- Processor modals -->
-    {% for key, value in processors.items() %}
-    <div id="{{ key }}" class="modal">
-      <div class="modal-content">
-        <h4>{{ key }}</h4>
-        <p>Processor</p>
-      </div>
-      <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">close</a>
-      </div>
-    </div>
-    {% endfor %}
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script type=text/javascript>
-
-    // init modal
-    document.addEventListener('DOMContentLoaded', function() {
-      var elems = document.querySelectorAll('.modal');
-      var instances = M.Modal.init(elems, {});
-    });
 
     // init collapsible
     document.addEventListener('DOMContentLoaded', function() {
@@ -122,16 +76,15 @@
 
     function filter() {
       // Declare variables
-      var input, filter, collection, items, item, i, txtValue;
-      input = document.getElementById("search");
-      filter = input.value.toUpperCase();
-      collection = document.getElementById("doc-items");
-      items = collection.getElementsByTagName("a");
+      var input = document.getElementById("search");
+      var filter = input.value.toUpperCase();
+      var collection = document.getElementById("doc-items");
+      var items = collection.getElementsByTagName("a");
 
       // Loop through all table rows, and hide those who don't match the search query
-      for (i = 0; i < items.length; i++) {
+      var item
+      for (var i = 0; i < items.length; i++) {
         item = items[i].getElementsByTagName("h7")[0];
-        console.log(item)
         if (item) {
           txtValue = item.textContent || item.innerText;
           if (txtValue.toUpperCase().indexOf(filter) > -1) {

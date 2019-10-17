@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8"/>
+  <title>B23 FlowLib</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection">
+</head>
+
+<body>
+  <nav class="light-blue darken-4">
+    <div class="nav-wrapper">
+      <div class="row">
+        <div class="col s6">
+          <a href="../index.html" class="left brand-logo"><i class="material-icons">folder_open</i>FlowLib Documentation</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <nav>
+    <div class="nav-wrapper">
+        <div class="row">
+          <div class="col s12">
+            <a href="../index.html" class="breadcrumb">home</a>
+            <a href="#!" class="breadcrumb">{{ component_type }}</a>
+            <a href="#!" class="breadcrumb">{{ key }}</a>
+          </div>
+        </div>
+    </div>
+  </nav>
+
+  <div id="{{ key }}.example" class="container">
+      <code></code>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</body>
+</html>
