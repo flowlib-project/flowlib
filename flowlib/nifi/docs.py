@@ -11,6 +11,10 @@ from flowlib.model import FlowLibException
 from flowlib.logger import log
 import flowlib.nifi.api
 
+### TODO: Suppress info logs during doc generation
+### TODO: Read static yaml to generate yaml templates
+### TODO: Fix CLI flags for --list and --describe (use static yaml or prompt user to create it)
+### TODO: Implement --force cli option to overwrite output
 
 def generate_docs(config, dest):
     """
@@ -138,13 +142,13 @@ def _gen_doc_html(doc_dir):
     # load component descriptors from static yaml
     for rt in os.listdir(reporting_task_doc_dir):
         with open(os.path.join(reporting_task_doc_dir, rt)) as f:
-            component_descriptors['reporting_tasks'][f.name.strip('.yaml')] = yaml.safe_load(f)
+            component_descriptors['reporting_tasks'][rt.strip('.yaml')] = yaml.safe_load(f)
     for cs in os.listdir(controllers_doc_dir):
         with open(os.path.join(controllers_doc_dir, cs)) as f:
-            component_descriptors['controller_services'][f.name.strip('.yaml')] = yaml.safe_load(f)
+            component_descriptors['controller_services'][cs.strip('.yaml')] = yaml.safe_load(f)
     for p in os.listdir(processors_doc_dir):
         with open(os.path.join(processors_doc_dir, p)) as f:
-            component_descriptors['processors'][f.name.strip('.yaml')] = yaml.safe_load(f)
+            component_descriptors['processors'][p.strip('.yaml')] = yaml.safe_load(f)
 
     env = jinja2.Environment()
     doc_html = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates/index.html'))

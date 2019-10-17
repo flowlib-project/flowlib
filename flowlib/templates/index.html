@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>B23 FlowLib Docs</title>
+  <title>B23 FlowLib</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection">
 </head>
@@ -10,8 +10,13 @@
   <nav class="light-blue darken-4">
     <div class="nav-wrapper">
       <div class="row">
-        <div class="col s12">
-          <a href="#!" class="brand-logo"><i class="material-icons">cloud</i>B23 FlowLib</a>
+        <div class="col s6">
+          <a href="#!" class="left brand-logo"><i class="material-icons">folder_open</i>FlowLib Documentation</a>
+        </div>
+        <div class="input-field col s6">
+          <input id="search" type="search" onkeyup="filter()">
+          <label class="label-icon" for="search"><i class="material-icons">search</i></label>
+          <i class="material-icons">close</i>
         </div>
       </div>
     </div>
@@ -19,36 +24,42 @@
 
   <!-- TODO: Add B23 flowlib version generated docs header, nifi version -->
 
-  <div class="container">
+  <div id="doc-items" class="container">
     <ul class="collapsible">
       <li>
         <div class="collapsible-header"><i class="material-icons">timeline</i>Reporting Tasks</div>
         <div class="collapsible-body">
-          <ul class="collection">
+          <div class="collection">
             {% for key, value in reporting_tasks.items() %}
-            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+              <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+                <h7 class="left">{{ key }}</h7>
+              </a>
             {% endfor %}
-          </ul>
+          </div>
         </div>
       </li>
       <li>
         <div class="collapsible-header"><i class="material-icons">build</i>Controller Services</div>
         <div class="collapsible-body">
-          <ul class="collection">
+          <div class="collection">
             {% for key, value in controller_services.items() %}
-            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+              <h7 class="left">{{ key }}</h7>
+            </a>
             {% endfor %}
-          </ul>
+          </div>
         </div>
       </li>
       <li>
         <div class="collapsible-header"><i class="material-icons">loop</i>Processors</div>
         <div class="collapsible-body">
-          <ul class="collection">
+          <div class="collection">
             {% for key, value in processors.items() %}
-            <li class="collection-item">{{ key }}<button data-target="{{ key }}" class="btn modal-trigger">details</button></li>
+            <a style="text-transform: none;" class="waves-effect waves-light collection-item btn modal-trigger" href="#{{ key }}">
+              <h7 class="left">{{ key }}</h7>
+            </a>
             {% endfor %}
-          </ul>
+          </div>
         </div>
       </li>
     </ul>
@@ -97,18 +108,40 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script type=text/javascript>
 
-      // init modal
-      document.addEventListener('DOMContentLoaded', function() {
-        var elems = document.querySelectorAll('.modal');
-        var instances = M.Modal.init(elems, {});
-      });
+    // init modal
+    document.addEventListener('DOMContentLoaded', function() {
+      var elems = document.querySelectorAll('.modal');
+      var instances = M.Modal.init(elems, {});
+    });
 
-      // init collapsible
-      document.addEventListener('DOMContentLoaded', function() {
-        var elems = document.querySelectorAll('.collapsible');
-        var instances = M.Collapsible.init(elems, {});
-      });
+    // init collapsible
+    document.addEventListener('DOMContentLoaded', function() {
+      var elems = document.querySelectorAll('.collapsible');
+      var instances = M.Collapsible.init(elems, {});
+    });
 
+    function filter() {
+      // Declare variables
+      var input, filter, collection, items, item, i, txtValue;
+      input = document.getElementById("search");
+      filter = input.value.toUpperCase();
+      collection = document.getElementById("doc-items");
+      items = collection.getElementsByTagName("a");
+
+      // Loop through all table rows, and hide those who don't match the search query
+      for (i = 0; i < items.length; i++) {
+        item = items[i].getElementsByTagName("h7")[0];
+        console.log(item)
+        if (item) {
+          txtValue = item.textContent || item.innerText;
+          if (txtValue.toUpperCase().indexOf(filter) > -1) {
+            items[i].style.display = "";
+          } else {
+            items[i].style.display = "none";
+          }
+        }
+      }
+    }
   </script>
 </body>
 
