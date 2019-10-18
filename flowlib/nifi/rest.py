@@ -5,14 +5,20 @@ import yaml
 import time
 import re
 
-import nipyapi
+import nipyapi.canvas
+import nipyapi.nifi
+import nipyapi.utils
 
+import flowlib.layout
+import flowlib.parser
 from flowlib.logger import log
 from flowlib.model import FlowLibException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
-import flowlib.layout
-import flowlib.parser
+
+
+def get_nifi_rest_api_info():
+    return nipyapi.nifi.apis.FlowApi().get_about_info()
 
 
 def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):

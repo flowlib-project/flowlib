@@ -9,7 +9,7 @@ import nipyapi.canvas
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
 from flowlib.logger import log
-import flowlib.nifi.api
+import flowlib.nifi.rest
 
 ### TODO: Write nifi and flowlib version info
 ### TODO: Suppress info logs during doc generation
@@ -29,7 +29,7 @@ def generate_docs(config, dest):
     if os.path.exists(dest):
         log.warn("Destination directory {} already exists. Will not update static descriptors...".format(dest))
 
-    flowlib.nifi.api.wait_for_nifi_api(config.nifi_endpoint)
+    flowlib.nifi.rest.wait_for_nifi_api(config.nifi_endpoint)
 
     reporting_task_doc_dir = os.path.join(dest, 'reporting_tasks')
     controllers_doc_dir = os.path.join(dest, 'controllers')
@@ -131,8 +131,8 @@ def _gen_doc_html(doc_dir):
     log.info("Generating html helper docs at {}".format(doc_dir))
     context = {
         'flowlib_info': {
-            'flowlib_version': flowlib.__version__,
-            'nifi_version': 'todo'
+            'version': flowlib.__version__,
+            'nifi_version': flowlib.nifi.rest.get_nifi_rest_api_info().about
         },
         'reporting_tasks': [],
         'controller_services': [],
@@ -160,9 +160,11 @@ def _gen_doc_html(doc_dir):
             context['reporting_tasks'].append(rt)
 
         with open(os.path.join(reporting_task_doc_dir, rt + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Reporting Task', key=rt, descriptors=descriptors))
+            f.write(descriptors_html_template.render(component_type='Reporting Task',
+                key=rt, descriptors=descriptors, flowlib_info=context['flowlib_info']))
         with open(os.path.join(controllers_doc_dir, rt + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Reporting Task', key=rt, example=example))
+            f.write(example_html_template.render(component_type='Reporting Task',
+                key=rt, example=example, flowlib_info=context['flowlib_info']))
 
     # generate controller service docs
     for cs in [ f for f in os.listdir(controllers_doc_dir) if f.endswith('.yaml') ]:
@@ -173,9 +175,11 @@ def _gen_doc_html(doc_dir):
             context['controller_services'].append(cs)
 
         with open(os.path.join(controllers_doc_dir, cs + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Controller Service', key=cs, descriptors=descriptors))
+            f.write(descriptors_html_template.render(component_type='Controller Service',
+                key=cs, descriptors=descriptors, flowlib_info=context['flowlib_info']))
         with open(os.path.join(controllers_doc_dir, cs + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Controller Service', key=cs, example=example))
+            f.write(example_html_template.render(component_type='Controller Service',
+                key=cs, example=example, flowlib_info=context['flowlib_info']))
 
     # generate processor docs
     for p in [ f for f in os.listdir(processors_doc_dir) if f.endswith('.yaml') ]:
@@ -186,9 +190,11 @@ def _gen_doc_html(doc_dir):
             context['processors'].append(p)
 
         with open(os.path.join(processors_doc_dir, p + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Processor', key=p, descriptors=descriptors))
+            f.write(descriptors_html_template.render(component_type='Processor',
+                key=p, descriptors=descriptors, flowlib_info=context['flowlib_info']))
         with open(os.path.join(processors_doc_dir, p + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Processor', key=p, example=example))
+            f.write(example_html_template.render(component_type='Processor',
+                key=p, example=example, flowlib_info=context['flowlib_info']))
 
     with open(os.path.join(doc_dir, 'index.html'), 'w') as f:
         f.write(index_html_template.render(**context))

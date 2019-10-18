@@ -6,7 +6,7 @@ import yaml
 
 
 import flowlib.parser
-import flowlib.nifi.api
+import flowlib.nifi.rest
 import flowlib.nifi.docs
 from flowlib.model import FlowLibException
 from flowlib.model.flow import Flow
@@ -65,7 +65,7 @@ def new_flow_from_nifi(nifi_endpoint=None):
     :raises: FlowLibException
     """
     flow = Flow()
-    flowlib.nifi.api.init_from_nifi(flow, nifi_endpoint)
+    flowlib.nifi.rest.init_from_nifi(flow, nifi_endpoint)
     return flow
 
 
@@ -106,7 +106,7 @@ def deploy_flow(config):
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
-        flowlib.nifi.api.deploy_flow(flow, config.nifi_endpoint, force=config.force)
+        flowlib.nifi.rest.deploy_flow(flow, config.nifi_endpoint, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")
@@ -120,7 +120,7 @@ def configure_flow_controller(config):
     """
     log.info("Configuring Flow Controller for {}".format(config.nifi_endpoint))
     try:
-        flowlib.nifi.api.configure_flow_controller(config.nifi_endpoint, config.reporting_task_controllers,
+        flowlib.nifi.rest.configure_flow_controller(config.nifi_endpoint, config.reporting_task_controllers,
             config.reporting_tasks, config.max_timer_driven_threads, config.max_event_driven_threads, config.force)
         log.info("Flow Controller configuration completed successfully")
     except FlowLibException as e:
@@ -137,7 +137,7 @@ def list_components(config, component_type):
     """
     log.debug("Listing all available {}...".format(component_type))
     try:
-        flowlib.nifi.api.list_components(config.nifi_endpoint, component_type)
+        flowlib.nifi.rest.list_components(config.nifi_endpoint, component_type)
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)

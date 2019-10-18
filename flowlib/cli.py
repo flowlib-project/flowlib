@@ -92,7 +92,6 @@ class FlowLibCLI:
         self.args = self.parser.parse_args()
 
         # check that flow_yaml is provided when validate is true
-        print(self.args)
         if self.args.validate and not self.args.flow_yaml:
             self.parser.error("argument --flow-yaml is required when --validate is provided")
 
