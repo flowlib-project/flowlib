@@ -13,18 +13,25 @@ def main():
             config = FlowLibConfig.new_from_file(f)
 
     cli = FlowLibCLI(config)
-    if cli.config.scaffold:
-        flowlib.api.init_flow_scaffold(cli.config.scaffold)
-    elif cli.config.validate:
+    if cli.args.scaffold:
+        flowlib.api.gen_flow_scaffold(cli.args.scaffold)
+    elif cli.args.generate_docs:
+        flowlib.api.gen_flowlib_docs(cli.config, cli.args.generate_docs)
+    elif cli.args.validate:
         flowlib.api.validate_flow(cli.config)
-    elif cli.config.flow_yaml:
+    elif cli.args.flow_yaml:
         flowlib.api.deploy_flow(cli.config)
-    elif cli.config.export:
+    elif cli.args.export:
         flowlib.api.export_flow(cli.config)
-    elif cli.config.configure_flow_controller:
+    elif cli.args.configure_flow_controller:
         flowlib.api.configure_flow_controller(cli.config)
+    elif cli.args.list:
+        flowlib.api.list_components(cli.config, cli.args.list)
+    elif cli.args.describe:
+        flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
     else:
         cli.parser.print_usage()
+
 
 if __name__ == '__main__':
     main()

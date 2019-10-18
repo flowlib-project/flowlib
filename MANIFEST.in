@@ -3,5 +3,7 @@ include README.md
 include flowlib/logging.conf
 
 graft flowlib/init/
+graft flowlib/templates/
 
+prune flowlib/init/docs/
 global-exclude __pycache__  *.pyc
