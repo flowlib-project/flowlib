@@ -36,7 +36,7 @@ def gen_flowlib_docs(config, dest):
     """
     log.info("Generating Flowlib documentation for {} at {}".format(config.nifi_endpoint, dest))
     try:
-        flowlib.nifi.docs.generate_docs(config, dest)
+        flowlib.nifi.docs.generate_docs(config, dest, config.force)
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)
