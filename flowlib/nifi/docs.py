@@ -32,9 +32,9 @@ def generate_docs(config, dest, force=False):
     processors_doc_dir = os.path.join(dest, 'processors')
 
     # list the available component types using the NiFi api
-    reporting_tasks = _get_available_component_package_ids(config.nifi_endpoint, 'reporting-tasks')
-    controller_services = _get_available_component_package_ids(config.nifi_endpoint, 'controllers')
-    processors = _get_available_component_package_ids(config.nifi_endpoint, 'processors')
+    reporting_tasks = _get_available_component_package_ids('reporting-tasks')
+    controller_services = _get_available_component_package_ids('controllers')
+    processors = _get_available_component_package_ids('processors')
 
     # get the component document descriptors from the NiFi api
     root_id = nipyapi.canvas.get_root_pg_id()
