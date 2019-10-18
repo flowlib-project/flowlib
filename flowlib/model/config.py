@@ -18,7 +18,7 @@ class FlowLibConfig:
         :type scaffold: str
         :type generate_docs: str
         :type force: bool
-        :type export: bool
+        :type export: str
         :type validate: bool
         :type configure_flow_controller: bool
         :type component_dir: str

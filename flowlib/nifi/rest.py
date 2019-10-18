@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import os
+import json
 import yaml
 import time
 import re
@@ -34,20 +35,25 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
-def init_from_nifi(flow, nifi_endpoint):
+def get_deployed_flow(nifi_endpoint, flow_name):
     """
-    Initialize a Flow from from a running NiFi instance
-    :param flow: An unitialized Flow instance
-    :type flow: flowlib.model.flow.Flow
+    Get the currently deployed flow and its components
+      (including processor state) from a running NiFi instance
     :param nifi_endpoint: A NiFi api endpoint
     :type nifi_endpoint: str
+    :param flow_name: The name of the flow PG to get
+    :type flow_name: str
+    :returns: flowlib.model.deployment.FlowDeployment
     """
     wait_for_nifi_api(nifi_endpoint)
-    root_id = nipyapi.canvas.get_root_pg_id()
-    root = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
+    flow_pg = nipyapi.canvas.get_process_group(flow_name)
 
-    deployment = FlowDeployment.from_dict(yaml.safe_load(root.component.comments))
-    flowlib.parser.init_from_deployment(flow, deployment)
+    if not flow_pg:
+        raise FlowLibException("No data flow named {} is deployed".format(flow_name))
+    if isinstance(flow_pg, list):
+        raise FlowLibException("There are multiple data flows named {}".format(flow_name))
+
+    return FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
 
 
 def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporting_tasks,
@@ -102,7 +108,7 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     # create a new FlowDeployment and add all the loaded_components to it
     deployment = FlowDeployment(flow.name, flow.raw, flowlib.__version__)
     for component in flow.loaded_components.values():
-        deployment.add(DeployedComponent(component.name, component.raw))
+        deployment.add_component(DeployedComponent(component.name, component.raw))
 
     canvas_root_id = nipyapi.canvas.get_root_pg_id()
     canvas_root_pg = nipyapi.canvas.get_process_group(canvas_root_id, identifier_type='id')
@@ -157,15 +163,9 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     # get the deployed flow PG
     flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
 
-    # write deployment yaml to buffer
+    # write deployment to buffer
     s = io.StringIO()
     deployment.save(s)
-
-    # save to local file
-    deployment_out = os.path.join(os.path.dirname(flow.flow_src), '.deployment.json')
-    with open(deployment_out, 'w') as f:
-        s.seek(0)
-        f.write(s.read())
 
     # save in NiFi instance PG comments
     s.seek(0)
