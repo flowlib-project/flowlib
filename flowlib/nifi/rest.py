@@ -157,15 +157,9 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     # get the deployed flow PG
     flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
 
-    # write deployment yaml to buffer
+    # write deployment to buffer
     s = io.StringIO()
     deployment.save(s)
-
-    # save to local file
-    deployment_out = os.path.join(os.path.dirname(flow.flow_src), '.deployment.json')
-    with open(deployment_out, 'w') as f:
-        s.seek(0)
-        f.write(s.read())
 
     # save in NiFi instance PG comments
     s.seek(0)
