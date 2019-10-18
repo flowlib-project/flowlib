@@ -7,7 +7,7 @@ class FlowLibConfig:
     DEFAULTS = {
         'component_dir': 'components',
         'nifi_endpoint': 'http://localhost:8080',
-        'docs_directory': 'docs/current',
+        'docs_directory': 'docs',
         'max_timer_driven_threads': 5,
         'max_event_driven_threads': 10
     }

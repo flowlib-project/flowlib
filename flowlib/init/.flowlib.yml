@@ -1,6 +1,6 @@
 nifi_endpoint: http://nifi-dev:8080
 component_dir: components
-# documentation_dir: docs/current
+# documentation_dir: docs
 
 # max_event_driven_threads: 10
 # max_timer_driven_threads: 5

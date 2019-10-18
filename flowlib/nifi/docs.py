@@ -13,7 +13,6 @@ from flowlib.logger import log
 import flowlib.nifi.rest
 
 ### TODO: Fix CLI flags for --list and --describe (use static yaml or prompt user to create it)
-### TODO: Add buttons for 'descriptors' and 'example' from index.html
 
 def generate_docs(config, dest, force=False):
     """
@@ -28,7 +27,7 @@ def generate_docs(config, dest, force=False):
 
     flowlib.nifi.rest.wait_for_nifi_api(config.nifi_endpoint)
 
-    reporting_task_doc_dir = os.path.join(dest, 'reporting_tasks')
+    reporting_task_doc_dir = os.path.join(dest, 'reporting-tasks')
     controllers_doc_dir = os.path.join(dest, 'controllers')
     processors_doc_dir = os.path.join(dest, 'processors')
 
@@ -41,7 +40,7 @@ def generate_docs(config, dest, force=False):
     root_id = nipyapi.canvas.get_root_pg_id()
     root_pg = nipyapi.canvas.get_process_group(root_id, identifier_type='id')
 
-    mode='x' # skip creating files that already exist
+    mode='x' # skip files that already exist
     if force: # otherwise set mode to 'w' and overwrite all descriptors
         mode='w'
 
@@ -51,11 +50,9 @@ def generate_docs(config, dest, force=False):
     _gen_doc_html(dest)
 
 
-def _get_available_component_package_ids(nifi_endpoint, component_type):
+def _get_available_component_package_ids(component_type):
     """
-    List the available component package ids using the provided NiFi endpoint
-    :param nifi_endpoint: A NiFi api endpoint
-    :type nifi_endpoint: str
+    List the available component package ids from an existing NiFi instance
     :type component_type: str
     """
     if component_type == 'processors':
@@ -95,7 +92,6 @@ def _gen_reporting_task_doc_descriptors(doc_dir, reporting_tasks, mode='x'):
                 f.write(yaml.safe_dump({ k:v.to_dict() for k,v in task.component.descriptors.items() }))
         except FileExistsError:
             log.warn("Reporting task descriptors already exist for {}, skipping...".format(rt))
-
 
 
 def _gen_controller_service_doc_descriptors(doc_dir, controller_services, root_pg, mode='x'):
@@ -141,7 +137,7 @@ def _gen_doc_html(doc_dir):
         'controller_services': [],
         'processors': []
     }
-    reporting_task_doc_dir = os.path.join(doc_dir, 'reporting_tasks')
+    reporting_task_doc_dir = os.path.join(doc_dir, 'reporting-tasks')
     controllers_doc_dir = os.path.join(doc_dir, 'controllers')
     processors_doc_dir = os.path.join(doc_dir, 'processors')
 
@@ -222,17 +218,24 @@ def _create_example_yaml_from_descriptors(component_type, package_id, descriptor
 
     return yaml.safe_dump([component], default_flow_style=False, sort_keys=False)
 
-def describe_component(nifi_endpoint, component_type, package_id):
+
+def list_components(doc_dir, component_type):
+    doc_dir = os.path.join(doc_dir, component_type)
+    if not os.path.exists(doc_dir) or not os.path.isdir(doc_dir):
+        log.error("Run 'flowlib --generate-docs {}' to use this command".format(doc_dir))
+        raise FlowLibException("Docs directory {} does not exist".format(doc_dir))
+
+    print('\n'.join([ c[:-5] for c in os.listdir(doc_dir) if c.endswith('.yaml') ]))
+
+
+
+
+def describe_component(component_type, package_id):
     """
     Describe available properties for a given component
-    :param nifi_endpoint: A NiFi api endpoint
-    :type nifi_endpoint: str
     :type component_type: str
     :type package_id: str
     """
-    # TODO:
-
-    # wait_for_nifi_api(nifi_endpoint)
     # if component_type == 'processor':
     #     config = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types(type=package_id).processor_types
     # elif component_type == 'controller':

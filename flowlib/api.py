@@ -137,7 +137,7 @@ def list_components(config, component_type):
     """
     log.debug("Listing all available {}...".format(component_type))
     try:
-        flowlib.nifi.rest.list_components(config.nifi_endpoint, component_type)
+        flowlib.nifi.docs.list_components(config.docs_directory, component_type)
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)
