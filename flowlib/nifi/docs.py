@@ -5,6 +5,7 @@ import yaml
 import jinja2
 import nipyapi.nifi
 import nipyapi.canvas
+from tabulate import tabulate
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
@@ -12,7 +13,6 @@ from flowlib.model.flow import Processor, Controller, ReportingTask
 from flowlib.logger import log
 import flowlib.nifi.rest
 
-### TODO: Fix CLI flags for --list and --describe (use static yaml or prompt user to create it)
 
 def generate_docs(config, dest, force=False):
     """
@@ -220,6 +220,11 @@ def _create_example_yaml_from_descriptors(component_type, package_id, descriptor
 
 
 def list_components(doc_dir, component_type):
+    """
+    List the available components for a given component_type
+    :param component_type: One of [processors, controllers, reporting-tasks]
+    :type component_type: str
+    """
     doc_dir = os.path.join(doc_dir, component_type)
     if not os.path.exists(doc_dir) or not os.path.isdir(doc_dir):
         log.error("Run 'flowlib --generate-docs {}' to use this command".format(doc_dir))
@@ -228,21 +233,34 @@ def list_components(doc_dir, component_type):
     print('\n'.join([ c[:-5] for c in os.listdir(doc_dir) if c.endswith('.yaml') ]))
 
 
-
-
-def describe_component(component_type, package_id):
+def describe_component(doc_dir, component_type, package_id):
     """
     Describe available properties for a given component
+    :param component_type: One of [processor, controller, reporting-task]
     :type component_type: str
     :type package_id: str
     """
-    # if component_type == 'processor':
-    #     config = nipyapi.nifi.apis.flow_api.FlowApi().get_processor_types(type=package_id).processor_types
-    # elif component_type == 'controller':
-    #     config = nipyapi.nifi.apis.flow_api.FlowApi().get_controller_service_types(type_filter=package_id).controller_service_types
-    # elif component_type == 'reporting-task':
-    #     config = nipyapi.nifi.apis.flow_api.FlowApi().get_reporting_task_types(type=package_id).reporting_task_types
-    # else:
-    #     raise FlowLibException("Invalid component_type")
+    component_dir = os.path.join(doc_dir, "{}s".format(component_type))
+    desc = os.path.join(component_dir, "{}.yaml".format(package_id))
+    if not os.path.exists(desc) or not os.path.isfile(desc):
+        log.error("Run 'flowlib --generate-docs {}' to use this command".format(doc_dir))
+        raise FlowLibException("Component descriptor {} does not exist".format(desc))
 
-    # print(yaml.dump(config))
+    with open(desc, 'r') as f:
+        descriptor = yaml.safe_load(f)
+
+    headers = ['Name', 'Default', 'Allowable Values', 'Required', 'Sensitive', 'Supports EL', 'Description']
+    items = list()
+    for d in descriptor.values():
+        name = d.get('name')
+        default = d.get('default_value', '')
+        values = d.get('allowable_values') or list()
+        allowable_values = ','.join(list(map(lambda v: v['allowable_value']['value'], values)))
+        required = d.get('required')
+        sensitive = d.get('sensitive')
+        supports_el = d.get('supports_el')
+        description = d.get('description')
+        field = [name, default, allowable_values, required, sensitive, supports_el, description]
+        items.append(field)
+
+    print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))

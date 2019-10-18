@@ -153,7 +153,7 @@ def describe_component(config, component_type, package_id):
     """
     log.debug("Describing {}: {}...".format(component_type, package_id))
     try:
-        flowlib.nifi.docs.describe_component(config.nifi_endpoint, component_type, package_id)
+        flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)
