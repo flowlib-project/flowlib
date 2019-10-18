@@ -8,11 +8,11 @@ import nipyapi.canvas
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
+from flowlib.model.flow import Processor, Controller, ReportingTask
 from flowlib.logger import log
 import flowlib.nifi.rest
 
 ### TODO: Fix CLI flags for --list and --describe (use static yaml or prompt user to create it)
-### TODO: Finish example yaml page with copy to clipboard button
 ### TODO: Add buttons for 'descriptors' and 'example' from index.html
 
 def generate_docs(config, dest, force=False):
@@ -159,7 +159,7 @@ def _gen_doc_html(doc_dir):
         with open(os.path.join(reporting_task_doc_dir, rt)) as f:
             rt = rt[:-5] # trim .yaml extension
             descriptors = yaml.safe_load(f)
-            example = _create_example_from_descriptors(descriptors)
+            example = _create_example_yaml_from_descriptors('reporting_task', rt, descriptors)
             context['reporting_tasks'].append(rt)
 
         with open(os.path.join(reporting_task_doc_dir, rt + '.descriptors.html'), 'w') as f:
@@ -174,7 +174,7 @@ def _gen_doc_html(doc_dir):
         with open(os.path.join(controllers_doc_dir, cs)) as f:
             cs = cs[:-5] # trim .yaml extension
             descriptors = yaml.safe_load(f)
-            example = _create_example_from_descriptors(descriptors)
+            example = _create_example_yaml_from_descriptors('controller_service', cs, descriptors)
             context['controller_services'].append(cs)
 
         with open(os.path.join(controllers_doc_dir, cs + '.descriptors.html'), 'w') as f:
@@ -189,7 +189,7 @@ def _gen_doc_html(doc_dir):
         with open(os.path.join(processors_doc_dir, p)) as f:
             p = p[:-5] # trim .yaml extension
             descriptors = yaml.safe_load(f)
-            example = _create_example_from_descriptors(descriptors)
+            example = _create_example_yaml_from_descriptors('processor', p, descriptors)
             context['processors'].append(p)
 
         with open(os.path.join(processors_doc_dir, p + '.descriptors.html'), 'w') as f:
@@ -203,18 +203,24 @@ def _gen_doc_html(doc_dir):
         f.write(index_html_template.render(**context))
 
 
-def _create_example_from_descriptors(descriptors):
-    return """---
-someYaml:
-  otherKey: []
-  abc: xyz
-  three: 4
-  yo: |
-    lkajsdlfkjasdlfkjasdlfjk
+def _create_example_yaml_from_descriptors(component_type, package_id, descriptors):
+    component = dict()
+    if component_type == 'processor':
+        component['name'] = 'Sample Processor'
+        component['type'] = 'processor'
+    elif component_type == 'controller_service':
+        component['name'] = 'Sample Controller Service'
+    elif component_type == 'reporting_task':
+        component['name'] = 'Sample Reporting Task'
 
+    component['config'] = dict()
+    component['config']['package_id'] = package_id
+    component['config']['properties'] = dict()
+    for desc in descriptors.values():
+        if desc['required']:
+            component['config']['properties'][desc['name']] = desc.get('default_value')
 
-    """
-
+    return yaml.safe_dump([component], default_flow_style=False, sort_keys=False)
 
 def describe_component(nifi_endpoint, component_type, package_id):
     """
