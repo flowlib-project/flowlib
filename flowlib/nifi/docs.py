@@ -163,11 +163,11 @@ def _gen_doc_html(doc_dir):
             context['reporting_tasks'].append(rt)
 
         with open(os.path.join(reporting_task_doc_dir, rt + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Reporting Task',
-                key=rt, descriptors=descriptors, flowlib_info=context['flowlib_info']))
-        with open(os.path.join(controllers_doc_dir, rt + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Reporting Task',
-                key=rt, example=example, flowlib_info=context['flowlib_info']))
+            f.write(descriptors_html_template.render(key=rt, descriptors=descriptors,
+                flowlib_info=context['flowlib_info']))
+        with open(os.path.join(reporting_task_doc_dir, rt + '.example.html'), 'w') as f:
+            f.write(example_html_template.render(key=rt, example=example,
+                flowlib_info=context['flowlib_info']))
 
     # generate controller service docs
     for cs in [ f for f in os.listdir(controllers_doc_dir) if f.endswith('.yaml') ]:
@@ -178,11 +178,11 @@ def _gen_doc_html(doc_dir):
             context['controller_services'].append(cs)
 
         with open(os.path.join(controllers_doc_dir, cs + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Controller Service',
-                key=cs, descriptors=descriptors, flowlib_info=context['flowlib_info']))
+            f.write(descriptors_html_template.render(key=cs, descriptors=descriptors,
+                flowlib_info=context['flowlib_info']))
         with open(os.path.join(controllers_doc_dir, cs + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Controller Service',
-                key=cs, example=example, flowlib_info=context['flowlib_info']))
+            f.write(example_html_template.render(key=cs, example=example,
+                flowlib_info=context['flowlib_info']))
 
     # generate processor docs
     for p in [ f for f in os.listdir(processors_doc_dir) if f.endswith('.yaml') ]:
@@ -193,18 +193,27 @@ def _gen_doc_html(doc_dir):
             context['processors'].append(p)
 
         with open(os.path.join(processors_doc_dir, p + '.descriptors.html'), 'w') as f:
-            f.write(descriptors_html_template.render(component_type='Processor',
-                key=p, descriptors=descriptors, flowlib_info=context['flowlib_info']))
+            f.write(descriptors_html_template.render(key=p, descriptors=descriptors,
+                flowlib_info=context['flowlib_info']))
         with open(os.path.join(processors_doc_dir, p + '.example.html'), 'w') as f:
-            f.write(example_html_template.render(component_type='Processor',
-                key=p, example=example, flowlib_info=context['flowlib_info']))
+            f.write(example_html_template.render(key=p, example=example,
+                flowlib_info=context['flowlib_info']))
 
     with open(os.path.join(doc_dir, 'index.html'), 'w') as f:
         f.write(index_html_template.render(**context))
 
 
 def _create_example_from_descriptors(descriptors):
-    return ''
+    return """---
+someYaml:
+  otherKey: []
+  abc: xyz
+  three: 4
+  yo: |
+    lkajsdlfkjasdlfkjasdlfjk
+
+
+    """
 
 
 def describe_component(nifi_endpoint, component_type, package_id):
