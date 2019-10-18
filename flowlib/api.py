@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
+import io
 import os
 import sys
 import shutil
 import yaml
-
 
 import flowlib.parser
 import flowlib.nifi.rest
@@ -58,17 +58,6 @@ def new_flow_from_file(component_dir, flow_yaml):
     return flow
 
 
-def new_flow_from_nifi(nifi_endpoint=None):
-    """
-    :param nifi_endpoint: The endpoint of a running NiFi instance
-    :type nifi_endpoint: str
-    :raises: FlowLibException
-    """
-    flow = Flow()
-    flowlib.nifi.rest.init_from_nifi(flow, nifi_endpoint)
-    return flow
-
-
 def validate_flow(config):
     """
     :type config: FlowLibConfig
@@ -90,10 +79,13 @@ def export_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Exporting NiFi flow deployment from {}".format(config.nifi_endpoint))
+    log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
-        flow = new_flow_from_nifi(config.nifi_endpoint)
-        yaml.dump(flow, config.export, default_flow_style=False)
+        deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
+        s = io.StringIO()
+        deployment.save(s)
+        s.seek(0)
+        print(s.read())
     except FlowLibException as e:
         log.error(e)
         sys.exit(1)

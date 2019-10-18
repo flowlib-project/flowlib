@@ -67,8 +67,8 @@ class FlowLibCLI:
             help = 'YAML file defining a NiFi flow to deploy'
         )
         self.mx_group.add_argument('--export',
-            type = argparse.FileType('x'),
-            help = 'Export the currently deployed NiFi flow as JSON. Prints to stdout if no filepath is specified'
+            type = str,
+            help = 'Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
         )
         self.mx_group.add_argument('--configure-flow-controller',
             action = 'store_true',
@@ -82,7 +82,7 @@ class FlowLibCLI:
         self.mx_group.add_argument('--describe',
             type = str,
             action = ValidateDescribe,
-            metavar=('{processors,controllers,reporting-tasks}', 'PACKAGE_ID'),
+            metavar=('{processor,controller,reporting-task}', 'PACKAGE_ID'),
             nargs = 2,
             help = 'Print the configurable properties for the specified component'
         )

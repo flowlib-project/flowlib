@@ -31,10 +31,6 @@ def _set_global_helpers(controllers=dict()):
     env.globals['controller'] = controller_lookup
 
 
-def init_from_deployment(flow, deployment):
-    raise FlowLibException("This feature is not yet implemented")
-
-
 def init_controllers(controllers):
     """
     :param controllers: A list of controller services that require initialization
