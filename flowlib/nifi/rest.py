@@ -46,14 +46,31 @@ def get_deployed_flow(nifi_endpoint, flow_name):
     :returns: flowlib.model.deployment.FlowDeployment
     """
     wait_for_nifi_api(nifi_endpoint)
-    flow_pg = nipyapi.canvas.get_process_group(flow_name)
+    flow_pg = nipyapi.canvas.get_process_group(flow_name, identifier_type='name')
 
     if not flow_pg:
-        raise FlowLibException("No data flow named {} is deployed".format(flow_name))
+        raise FlowLibException("No flow named {} is deployed".format(flow_name))
     if isinstance(flow_pg, list):
-        raise FlowLibException("There are multiple data flows named {}".format(flow_name))
+        if len([pg for pg in flow_pg if pg.name == flow_name]) > 1:
+            raise FlowLibException("Found multiple ProcessGroups named {}".format(flow_name))
+        else:
+            flow_pg = flow_pg[0]
 
-    return FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
+    queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
+    if queued > 0:
+        log.warn("There are active flowfiles queued for this flow. Exporting a flow with queued flowfiles may lead to dropped flowfiles")
+
+    deployment = FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
+    for c in deployment.components:
+        for k,v in c.stateful_processors.items():
+            proc_id = v['processor_id']
+            state = nipyapi.nifi.apis.ProcessorsApi().get_state(proc_id).component_state.cluster_state
+            if state and state.total_entry_count > 0:
+                c.stateful_processors[k]['state'] = state.to_dict()
+            else:
+                log.info("Processor was specified as persisting state but no cluster state was found for {}, will not export state".format(proc_id))
+
+    return deployment
 
 
 def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporting_tasks,
@@ -117,11 +134,18 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
     # check if the flow being deployed already exists
     original_flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
     if isinstance(original_flow_pg, list):
-        raise FlowLibException("Found multiple ProcessGroups named {}".format(flow.name))
+        if len([pg for pg in original_flow_pg if pg.component.name == flow.name]) > 1:
+            raise FlowLibException("Found multiple ProcessGroups named {}".format(flow.name))
+        else:
+            original_flow_pg = original_flow_pg[0]
 
+    flow_pg = None
     try:
+        if original_flow_pg and not force:
+             raise FlowLibException("A flow with that name already exists, use the --force option to overwrite it")
+
         # create a PG for the new flow
-        flow_pg_element = ProcessGroup("{} (deploying)".format(flow.name), None, "process_group", None)
+        flow_pg_element = ProcessGroup("(deploying) {}".format(flow.name), None, "process_group", None)
         flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, deployment, is_flow_root=True)
 
         # reset fps
@@ -139,15 +163,16 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
         _create_connections_recursive(flow, flow.elements)
         _set_controllers_enabled(flow.controllers, enabled=True)
 
+        if original_flow_pg and force:
+            _remove_flow(original_flow_pg.id, force=force)
+
     except:
         # rename new flow to failed and re-raise the exception
         if flow_pg:
-            _rename_process_group("{} (deployment failed)".format(flow.name), flow_pg.id)
+            _rename_process_group("(failed) {}".format(flow.name), flow_pg.id)
         raise
 
     # we finished creating the new flow without errors so replace the old one
-    if original_flow_pg:
-        _remove_flow(original_flow_pg.id, force=force)
     _rename_process_group(flow.name, flow_pg.id)
 
     # find all deployed flows and re-organize the top level PGs
@@ -160,8 +185,8 @@ def deploy_flow(flow, nifi_endpoint, deployment_state=None, force=False):
         log.info("Setting position for {} to {}".format(pg.component.name, pg.position))
         nipyapi.nifi.apis.ProcessGroupsApi().update_process_group(pg.id, pg)
 
-    # get the deployed flow PG
-    flow_pg = nipyapi.canvas.get_process_group(flow.name, identifier_type='name')
+    # re-fetch the deployed flow PG
+    flow_pg = nipyapi.canvas.get_process_group(flow_pg.id, identifier_type='id')
 
     # write deployment to buffer
     s = io.StringIO()
@@ -379,7 +404,7 @@ def _create_process_group(element, parent_pg, position, deployment, is_flow_root
     return pg
 
 
-def _create_processor(element, parent_pg, position, deployment=None):
+def _create_processor(element, parent_pg, position, deployment):
     """
     Create a Processor on the NiFi canvas
     :param element: The Processor to deploy
@@ -400,17 +425,16 @@ def _create_processor(element, parent_pg, position, deployment=None):
         _type = nipyapi.nifi.models.DocumentedTypeDTO(type=element.config.package_id)
         p = nipyapi.canvas.create_processor(parent_pg, _type, position, name, element.config)
 
-        # If the processor is stateful, add it to the instances
-        if deployment:
-            if _type.type in flowlib.STATEFUL_PROCESSORS:
-                if element.src_component_name == 'root':
-                    deployment.root_processors[element.name] = p.id
-                else:
-                    deployed_component = deployment.get_component(element.src_component_name)
-                    deployed_component.instances[element.parent_path + "/" + element.name] = {
-                        "group_id": parent_pg.id,
-                        "processor_id": p.id
-                    }
+        # If the processor is stateful with cluster scope, add it to the component's stateful_processors
+        if p.component.persists_state:
+            if element.src_component_name == 'root':
+                deployment.root_processors[element.name] = p.id
+            else:
+                deployed_component = deployment.get_component(element.src_component_name)
+                deployed_component.stateful_processors[element.parent_path + "/" + element.name] = {
+                    "group_id": parent_pg.id,
+                    "processor_id": p.id
+                }
 
     element.id = p.id
     element.parent_id = parent_pg.id
@@ -531,6 +555,11 @@ def _remove_flow(flow_pg_id, force=False):
     :param flow_pg_id: The id of the Flow's ProcessGroup
     :type flow_pg_id: str
     """
+    # TODO: Warn on running processors or queued flowfiles ??
+
+    log.info("Stopping processors...")
+    nipyapi.canvas.schedule_process_group(flow_pg_id, False)
+
     log.info("Deleting flow connections...")
     connections = nipyapi.canvas.list_all_connections(pg_id=flow_pg_id, descendants=True)
     for c in connections:
