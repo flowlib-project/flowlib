@@ -89,18 +89,17 @@ class FlowDeployment:
 
 
 class DeployedComponent:
-    def __init__(self, name, raw_component, instances=dict()):
+    def __init__(self, name, raw_component, stateful_processors=None):
         """
         :param name: A unique name for the component
         :type name: str
         :param raw_component: The yaml src of this loaded component
         :type raw_component: io.TextIOWrapper or dict
-        :param instances: The deployed instances of this component
-        :type instances: dict({element_path: {"group_id": pg_id, "processor_id": proc_id}})
+        :type stateful_processors: dict({element_path: {"group_id": pg_id, "processor_id": proc_id}})
         """
         self.name = name
         self.raw_component = raw_component
-        self.instances = instances
+        self.stateful_processors = stateful_processors or dict()
 
     def as_dict(self):
         d = dict()
@@ -111,7 +110,7 @@ class DeployedComponent:
             self.raw_component.seek(0)
             d['raw_component'] = yaml.safe_load(self.raw_component)
 
-        d['instances'] = self.instances
+        d['stateful_processors'] = self.stateful_processors
         return d
 
     def __repr__(self):
