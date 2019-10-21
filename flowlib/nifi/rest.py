@@ -56,12 +56,9 @@ def get_deployed_flow(nifi_endpoint, flow_name):
         else:
             flow_pg = flow_pg[0]
 
-    # START TODO #
-    flowfiles_queued = False
-    flow_is_running = False
-    if flow_is_running or flowfiles_queued:
-        log.warn("TODO: Warn on possible dropped files or duplicates")
-    # END TODO #
+    queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
+    if queued > 0:
+        log.warn("There are active flowfiles queued for this flow. Exporting a flow with queued flowfiles may lead to dropped flowfiles")
 
     deployment = FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
     for c in deployment.components:
