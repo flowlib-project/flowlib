@@ -40,6 +40,20 @@ spec:
         image: b23.io/nifi-dev:latest
         imagePullPolicy: Never
         env:
+        - name: NIFI_EMBEDDED_ZK_START
+          value: "true"
+        - name: NIFI_ELECTION_MAX_WAIT
+          value: "10 sec"
+        - name: NIFI_ELECTION_MAX_CANDIDATES
+          value: "1"
+        - name: NIFI_CLUSTER_IS_NODE
+          value: "true"
+        - name: NIFI_CLUSTER_NODE_PROTOCOL_PORT
+          value: "11443"
+        - name: NIFI_CLUSTER_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: NIFI_WEB_HTTP_HOST
           valueFrom:
             fieldRef:

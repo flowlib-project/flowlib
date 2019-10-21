@@ -30,7 +30,7 @@ prop_replace 'nifi.remote.input.secure'         'false'
 "${scripts_dir}/toolkit.sh"
 prop_replace 'baseUrl' "http://${NIFI_WEB_HTTP_HOST:-$HOSTNAME}:${NIFI_WEB_HTTP_PORT:-8080}" ${nifi_toolkit_props_file}
 
-prop_replace 'nifi.variable.registry.properties'    "${NIFI_VARIABLE_REGISTRY_PROPERTIES:-}"
+prop_replace 'nifi.variable.registry.properties'            "${NIFI_VARIABLE_REGISTRY_PROPERTIES:-}"
 prop_replace 'nifi.cluster.is.node'                         "${NIFI_CLUSTER_IS_NODE:-false}"
 prop_replace 'nifi.cluster.node.address'                    "${NIFI_CLUSTER_ADDRESS:-$HOSTNAME}"
 prop_replace 'nifi.cluster.node.protocol.port'              "${NIFI_CLUSTER_NODE_PROTOCOL_PORT:-}"
@@ -49,6 +49,27 @@ prop_replace 'nifi.flow.configuration.file'                 "${FLOW_XML_PATH:-'.
 # https://bugzilla.redhat.com/show_bug.cgi?id=1461477
 printf "\nnifi.web.http.network.interface.lo=lo" >> "${nifi_props_file}"
 printf "\nnifi.web.http.network.interface.eth0=eth0" >> "${nifi_props_file}"
+
+# B23: Setup local zookeeper.properties if using embedded zookeeper
+prop_replace 'nifi.state.management.embedded.zookeeper.start'   "${NIFI_EMBEDDED_ZK_START:-false}"
+if [ "${NIFI_EMBEDDED_ZK_START}" = "true" ]; then
+    echo 'NIFI_EMBEDDED_ZK_START is true, using embedded zookeeper.'
+    NIFI_ZK_CONNECT_STRING="localhost:2181"
+    prop_replace 'nifi.zookeeper.connect.string'                "${NIFI_ZK_CONNECT_STRING:-}"
+    mkdir -p "${NIFI_HOME}/state/zookeeper"
+    echo 1 > "${NIFI_HOME}/state/zookeeper/myid"
+    cat > "${NIFI_HOME}/conf/zookeeper.properties" <<EOF
+clientPort=2181
+initLimit=10
+autopurge.purgeInterval=24
+syncLimit=5
+tickTime=2000
+dataDir=./state/zookeeper
+autopurge.snapRetainCount=30
+
+server.1=localhost:2888:3888
+EOF
+fi
 
 . "${scripts_dir}/update_cluster_state_management.sh"
 
