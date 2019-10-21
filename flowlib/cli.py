@@ -35,7 +35,12 @@ class FlowLibCLI:
 
         self.parser.add_argument('--nifi-endpoint',
             type = str,
-            help = 'A NiFi server endpoint'
+            help = 'A NiFi server endpoint (proto://host:port)'
+        )
+
+        self.parser.add_argument('--zookeeper-connection',
+            type = str,
+            help = 'A Zookeeper client connection string (ex. host:port,host:port)'
         )
 
         self.parser.add_argument('--component-dir',
