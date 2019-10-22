@@ -24,6 +24,20 @@ controllers:
       Secret Key: "{{ env('AWS_SECRET_KEY', '5IxX7WQL9RHDX3jofwQZyB/gK1NFGWx8I0cbbq92') }}"
 
 canvas:
+# - name: test-test-test
+#   type: processor
+#   config:
+#     package_id: org.apache.nifi.processors.aws.s3.ListS3
+#     scheduling_strategy: 'TIMER_DRIVEN'
+#     scheduling_period: '10 sec'
+#     auto_terminated_relationships: ['success']
+#     properties:
+#       Bucket: "{{ bucket }}"
+#       Region: "{{ region }}"
+#       AWS Credentials Provider service: "{{ controller('aws-s3-credentials') }}"
+#       prefix: "/"
+#       min-age: "5 min"
+
 - name: list-fetch
   type: process_group
   component_path: common/s3_list_fetch_with_retry.yaml

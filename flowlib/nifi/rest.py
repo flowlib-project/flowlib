@@ -11,6 +11,7 @@ import nipyapi
 import flowlib.layout
 import flowlib.parser
 from flowlib.logger import log
+from flowlib.nifi.state import ZookeeperClient
 from flowlib.model import FlowLibException, FlowNotFoundException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
@@ -33,7 +34,7 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
-def get_deployed_flow(nifi_endpoint, flow_name) -> FlowDeployment:
+def get_deployed_flow(nifi_endpoint, flow_name):
     """
     Get the currently deployed flow and its components
       (including processor state) from a running NiFi instance
@@ -445,15 +446,30 @@ def _create_processor(element, parent_pg, position, current_deployment, previous
         p = nipyapi.canvas.create_processor(parent_pg, _type, position, name, element.config)
 
         # If the processor is marked as stateful, add it to the deployment's stateful_processors
+        # and migrate the NiFi state if a previous_deployment is provided
         if p.component.persists_state:
+            state = None
             if element.src_component_name == 'root':
                 current_deployment.stateful_processors[element.name] = {'processor_id': p.id}
+                if previous_deployment:
+                    state = previous_deployment.stateful_processors[element.name].get('state')
             else:
+                component_path = element.parent_path + "/" + element.name
                 deployed_component = current_deployment.get_component(element.src_component_name)
-                deployed_component.stateful_processors[element.parent_path + "/" + element.name] = {
+                deployed_component.stateful_processors[component_path] = {
                     "group_id": parent_pg.id,
                     "processor_id": p.id
                 }
+                if previous_deployment:
+                    previous_component = previous_deployment.get_component(element.src_component_name)
+                    state = previous_component.stateful_processors[component_path].get('state')
+
+            if state:
+                log.info("Migrating processor state: {}".format(name))
+                # client = ZookeeperClient(config.zookeeper_connection)
+                # client.set_processor_state(p.id, state)
+            else:
+                log.info("Processor {} is marked as stateful but no previous state was found, nothing to migrate...")
 
     element.id = p.id
     element.parent_id = parent_pg.id
