@@ -1,6 +1,9 @@
 nifi_endpoint: http://nifi-dev:8080
-zookeeper_connection: nifi-dev:2181
 component_dir: components
+
+zookeeper_connection: nifi-dev:2181
+# zookeeper_root_node: /nifi
+# zookeeper_acl: open
 
 # documentation_dir: docs
 

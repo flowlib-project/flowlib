@@ -16,9 +16,14 @@ metadata:
     app: nifi-dev
 spec:
   ports:
-    - protocol: TCP
+    - name: nifi
+      protocol: TCP
       targetPort: 8080
       port: 8080
+    - name: zookeeper
+      protocol: TCP
+      targetPort: 2181
+      port: 2181
   selector:
     app: nifi-dev
 ---

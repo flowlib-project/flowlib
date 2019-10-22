@@ -40,7 +40,17 @@ class FlowLibCLI:
 
         self.parser.add_argument('--zookeeper-connection',
             type = str,
-            help = 'A Zookeeper client connection string (ex. host:port,host:port)'
+            help = 'A Zookeeper client connection string (host:port)'
+        )
+
+        self.parser.add_argument('--zookeeper-root-node',
+            type = str,
+            help = 'The root node in zookeeper to use when storing state'
+        )
+
+        self.parser.add_argument('--zookeeper-acl',
+            choices = ['open', 'creator'],
+            help = 'The ACL to set for newly created zookeeper nodes if migrating state'
         )
 
         self.parser.add_argument('--component-dir',

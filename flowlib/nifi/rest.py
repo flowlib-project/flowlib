@@ -58,7 +58,7 @@ def get_deployed_flow(nifi_endpoint, flow_name):
 
     queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
     if queued > 0:
-        log.warn("There are active flowfiles queued for this flow. Exporting a flow with queued flowfiles may lead to dropped flowfiles")
+        log.warn("There are active flowfiles queued for this flow. Exporting a flow with items enqueued may lead to dropped flowfiles")
 
     deployment = FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
     for c in deployment.components:
