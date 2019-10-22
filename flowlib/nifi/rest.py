@@ -66,7 +66,7 @@ def get_deployed_flow(nifi_endpoint, flow_name) -> FlowDeployment:
         proc_id = v['processor_id']
         state = nipyapi.nifi.apis.ProcessorsApi().get_state(proc_id).component_state.cluster_state
         if state and state.total_entry_count > 0:
-            deployment.stateful_processors[k]['state'] = state.to_dict()
+            deployment.stateful_processors[k]['state'] = { entry.key:entry.value for entry in state.state }
         else:
             log.info("Processor was specified as persisting state but no cluster state was found for {}, will not export state".format(proc_id))
 
@@ -76,7 +76,7 @@ def get_deployed_flow(nifi_endpoint, flow_name) -> FlowDeployment:
             proc_id = v['processor_id']
             state = nipyapi.nifi.apis.ProcessorsApi().get_state(proc_id).component_state.cluster_state
             if state and state.total_entry_count > 0:
-                c.stateful_processors[k]['state'] = state.to_dict()
+                c.stateful_processors[k]['state'] = { entry.key:entry.value for entry in state.state }
             else:
                 log.info("Processor was specified as persisting state but no cluster state was found for {}, will not export state".format(proc_id))
 
@@ -444,7 +444,7 @@ def _create_processor(element, parent_pg, position, current_deployment, previous
         _type = nipyapi.nifi.models.DocumentedTypeDTO(type=element.config.package_id)
         p = nipyapi.canvas.create_processor(parent_pg, _type, position, name, element.config)
 
-        # If the processor is marked as stateful, add it to the component's stateful_processors
+        # If the processor is marked as stateful, add it to the deployment's stateful_processors
         if p.component.persists_state:
             if element.src_component_name == 'root':
                 current_deployment.stateful_processors[element.name] = {'processor_id': p.id}
