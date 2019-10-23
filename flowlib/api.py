@@ -98,7 +98,7 @@ def deploy_flow(config):
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
         flow = new_flow_from_file(config.component_dir, config.flow_yaml)
-        flowlib.nifi.rest.deploy_flow(flow, config.nifi_endpoint, force=config.force)
+        flowlib.nifi.rest.deploy_flow(flow, config, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")

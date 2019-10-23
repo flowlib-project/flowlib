@@ -50,10 +50,11 @@ def get_deployed_flow(nifi_endpoint, flow_name):
     if not flow_pg:
         raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
     if isinstance(flow_pg, list):
-        if len([pg for pg in flow_pg if pg.name == flow_name]) > 1:
+        pgs = [pg for pg in flow_pg if pg.component.name == flow_name]
+        if len(pgs) > 1:
             raise FlowLibException("Found multiple ProcessGroups named {}".format(flow_name))
         else:
-            flow_pg = flow_pg[0]
+            flow_pg = pgs[0]
 
     queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
     if queued > 0:
@@ -125,17 +126,17 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
-def deploy_flow(flow, nifi_endpoint, force=False):
+def deploy_flow(flow, config, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
     :param flow: A Flow instance
     :type flow: flowlib.model.flow.Flow
+    :param config: A valid FlowLibConfig object
+    :type config: FlowLibConfig
     """
-    wait_for_nifi_api(nifi_endpoint)
-
     previous = None
     try:
-        previous = get_deployed_flow(nifi_endpoint, flow.name)
+        previous = get_deployed_flow(config.nifi_endpoint, flow.name)
     except FlowNotFoundException:
         pass
 
@@ -151,6 +152,7 @@ def deploy_flow(flow, nifi_endpoint, force=False):
     # check if the flow being deployed was deployed previously
     previous_flow_pg = None
     if previous:
+        log.info("Found previously deployed flow: {}".format(previous.root_group_id))
         previous_flow_pg = nipyapi.canvas.get_process_group(previous.root_group_id, identifier_type='id')
 
     flow_pg = None
@@ -173,7 +175,7 @@ def deploy_flow(flow, nifi_endpoint, force=False):
         # because the controller() jinja helper needs to lookup controller IDs for injecting into the processor's properties
         flowlib.parser.replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
 
-        _create_canvas_elements_recursive(flow.elements, flow_pg, deployment, previous)
+        _create_canvas_elements_recursive(flow.elements, flow_pg, config, deployment, previous)
         _create_connections_recursive(flow, flow.elements)
         _set_controllers_enabled(flow.controllers, enabled=True)
 
@@ -339,13 +341,15 @@ def _set_reporting_tasks_enabled(tasks, enabled=True):
         )
 
 
-def _create_canvas_elements_recursive(elements, parent_pg, current_deployment, previous_deployment=None):
+def _create_canvas_elements_recursive(elements, parent_pg, config, current_deployment, previous_deployment=None):
     """
     Recursively creates the actual NiFi elements (process_groups, processors, inputs, outputs) on the canvas
     :param elements: The elements to deploy
     :type elements: list(model.FlowElement)
     :param parent_pg: The process group in which to create the processors
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    :param config: A valid FlowLibConfig object
+    :type config: FlowLibConfig
     :param current_deployment: The current flow deployment
     :type current_deployment: flowlib.model.deployment.FlowDeployment
     :param previous_deployment: The previous flow deployment
@@ -359,9 +363,9 @@ def _create_canvas_elements_recursive(elements, parent_pg, current_deployment, p
         position = positions[el.name]
         if isinstance(el, ProcessGroup):
             pg = _create_process_group(el, parent_pg, position, current_deployment)
-            _create_canvas_elements_recursive(el.elements, pg, current_deployment, previous_deployment)
+            _create_canvas_elements_recursive(el.elements, pg, config, current_deployment, previous_deployment)
         elif isinstance(el, Processor):
-            _create_processor(el, parent_pg, position, current_deployment, previous_deployment)
+            _create_processor(el, parent_pg, position, config, current_deployment, previous_deployment)
         elif isinstance(el, InputPort):
             _create_input_port(el, parent_pg, position)
         elif isinstance(el, OutputPort):
@@ -422,13 +426,15 @@ def _create_process_group(element, parent_pg, position, current_deployment, is_f
     return pg
 
 
-def _create_processor(element, parent_pg, position, current_deployment, previous_deployment=None):
+def _create_processor(element, parent_pg, position, config, current_deployment, previous_deployment=None):
     """
     Create a Processor on the NiFi canvas
     :param element: The Processor to deploy
     :type element: model.Processor
     :param parent_pg: The process group in which to create the new processor
     :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    :param config: A valid FlowLibConfig object
+    :type config: FlowLibConfig
     :param current_deployment: The current flow deployment
     :type current_deployment: flowlib.model.deployment.FlowDeployment
     :param previous_deployment: The previous flow deployment
@@ -452,7 +458,7 @@ def _create_processor(element, parent_pg, position, current_deployment, previous
             if element.src_component_name == 'root':
                 current_deployment.stateful_processors[element.name] = {'processor_id': p.id}
                 if previous_deployment:
-                    state = previous_deployment.stateful_processors[element.name].get('state')
+                    state = previous_deployment.stateful_processors.get(element.name, {}).get('state')
             else:
                 component_path = element.parent_path + "/" + element.name
                 deployed_component = current_deployment.get_component(element.src_component_name)
@@ -462,14 +468,14 @@ def _create_processor(element, parent_pg, position, current_deployment, previous
                 }
                 if previous_deployment:
                     previous_component = previous_deployment.get_component(element.src_component_name)
-                    state = previous_component.stateful_processors[component_path].get('state')
+                    state = previous_component.stateful_processors.get(component_path, {}).get('state')
 
             if state:
-                log.info("Migrating processor state: {}".format(name))
-                # client = ZookeeperClient(config.zookeeper_connection)
-                # client.set_processor_state(p.id, state)
+                log.info("Migrating processor state: {}".format(element.name))
+                client = ZookeeperClient(config.zookeeper_connection, config.zookeeper_root_node, config.zookeeper_acl)
+                client.set_processor_state(p.id, state)
             else:
-                log.info("Processor {} is marked as stateful but no previous state was found, nothing to migrate...")
+                log.info("Processor {} is marked as stateful but no previous state was found, nothing to migrate...".format(element.name))
 
     element.id = p.id
     element.parent_id = parent_pg.id
