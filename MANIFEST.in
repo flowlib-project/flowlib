@@ -1,16 +1,10 @@
-include CHANGELOG.txt
-include README.md
 include flowlib/logging.conf
+include setup.py
 
 graft flowlib/init/
 graft flowlib/templates/
 
-exclude Dockerfile
-exclude .gitignore
-exclude MANIFEST.in
-exclude README.md
-exclude release.sh
-exclude requirements-dev.txt
+exclude *
 
 prune flowlib-components/
 prune flowlib/init/docs/
