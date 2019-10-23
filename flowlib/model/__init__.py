@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
 
-class FlowLibException(Exception):
+class FlowlibBaseException(Exception):
+    pass
+
+class FlowLibException(FlowlibBaseException):
+    pass
+
+class FlowNotFoundException(FlowlibBaseException):
     pass

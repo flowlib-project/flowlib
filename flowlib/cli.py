@@ -35,7 +35,22 @@ class FlowLibCLI:
 
         self.parser.add_argument('--nifi-endpoint',
             type = str,
-            help = 'A NiFi server endpoint'
+            help = 'A NiFi server endpoint (proto://host:port)'
+        )
+
+        self.parser.add_argument('--zookeeper-connection',
+            type = str,
+            help = 'A Zookeeper client connection string (host:port)'
+        )
+
+        self.parser.add_argument('--zookeeper-root-node',
+            type = str,
+            help = 'The root node in zookeeper to use when storing state'
+        )
+
+        self.parser.add_argument('--zookeeper-acl',
+            choices = ['open', 'creator'],
+            help = 'The ACL to set for newly created zookeeper nodes if migrating state'
         )
 
         self.parser.add_argument('--component-dir',

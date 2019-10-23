@@ -7,6 +7,8 @@ class FlowLibConfig:
     DEFAULTS = {
         'component_dir': 'components',
         'nifi_endpoint': 'http://localhost:8080',
+        'zookeeper_root_node': '/nifi',
+        'zookeeper_acl': 'open',
         'docs_directory': 'docs',
         'max_timer_driven_threads': 5,
         'max_event_driven_threads': 10
@@ -23,6 +25,9 @@ class FlowLibConfig:
         :type configure_flow_controller: bool
         :type component_dir: str
         :type nifi_endpoint: str
+        :type zookeeper_connection: str
+        :type zookeeper_root_node: str
+        :type zookeeper_acl: str
         :type max_timer_driven_threads: int
         :type max_event_driven_threads: int
         :type reporting_task_controllers: list(dict)
@@ -40,6 +45,9 @@ class FlowLibConfig:
         # file configs with flag overrides
         self.component_dir = kwargs.get('component_dir', FlowLibConfig.DEFAULTS['component_dir'])
         self.nifi_endpoint = kwargs.get('nifi_endpoint', FlowLibConfig.DEFAULTS['nifi_endpoint'])
+        self.zookeeper_connection = kwargs.get('zookeeper_connection')
+        self.zookeeper_root_node = kwargs.get('zookeeper_root_node', FlowLibConfig.DEFAULTS['zookeeper_root_node'])
+        self.zookeeper_acl = kwargs.get('zookeeper_acl', FlowLibConfig.DEFAULTS['zookeeper_acl'])
 
         # file only configs
         self.docs_directory = kwargs.get('docs_directory', FlowLibConfig.DEFAULTS['docs_directory'])

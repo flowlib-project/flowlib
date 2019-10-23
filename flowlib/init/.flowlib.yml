@@ -1,10 +1,14 @@
 nifi_endpoint: http://nifi-dev:8080
+zookeeper_connection: nifi-dev:2181
+
 component_dir: components
 # documentation_dir: docs
 
+# zookeeper_root_node: /nifi
+# zookeeper_acl: open
+
 # max_event_driven_threads: 10
 # max_timer_driven_threads: 5
-
 
 reporting_task_controllers:
 - name: graphite-metrics-service

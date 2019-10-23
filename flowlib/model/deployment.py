@@ -7,7 +7,7 @@ from flowlib.model.component import FlowComponent
 
 
 class FlowDeployment:
-    def __init__(self, name, raw_flow, flowlib_version, root_group_id=None, root_processors=dict()):
+    def __init__(self, name, raw_flow, flowlib_version, root_group_id=None, stateful_processors=None):
         """
         :param name: The name of the flow being deployed
         :type name: str
@@ -17,15 +17,15 @@ class FlowDeployment:
         :type flowlib_version: str
         :param root_group_id: The NiFi uuid of the flow's process group
         :type root_group_id: str
-        :param root_processors: Any processors that are defined at the root of the flow
+        :param stateful_processors: Any stateful processors that are defined at the root of the flow
           (e.g. not contained in a component)
-        :type root_processors: dict
+        :type stateful_processors: dict({name: {"processor_id": proc_id}})
         """
         self.name = name
         self.raw_flow = raw_flow
         self.flowlib_version = flowlib_version
         self.root_group_id = root_group_id
-        self.root_processors = root_processors
+        self.stateful_processors = stateful_processors or dict()
         self._components = list()
 
     @property
@@ -65,7 +65,7 @@ class FlowDeployment:
             self.raw_flow.seek(0)
             d['raw_flow'] = yaml.safe_load(self.raw_flow)
         d['root_group_id'] = self.root_group_id
-        d['root_processors'] = self.root_processors
+        d['stateful_processors'] = self.stateful_processors
         d['components'] = list(map(lambda x: x.as_dict(), self.components))
         return d
 
