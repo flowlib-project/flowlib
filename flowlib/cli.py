@@ -35,7 +35,7 @@ class ValidateValidate(argparse._StoreTrueAction):
 
 
 class FlowLibCLI:
-    def __init__(self, file_config=None):
+    def __init__(self, args=None, file_config=None):
         """
         Parse provided CLI flags with optional FlowLibConfig defaults
         """
@@ -120,5 +120,5 @@ class FlowLibCLI:
 
         if not file_config:
             file_config = FlowLibConfig()
-        self.args = self.parser.parse_args()
+        self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()
         self.config = file_config.with_flag_overrides(self.args)

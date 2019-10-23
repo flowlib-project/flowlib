@@ -35,20 +35,18 @@ class TestFlowLibConfig(unittest.TestCase):
 
     def test_with_flag_overrides(self):
         config = FlowLibConfig()
-        cli = FlowLibCLI(config)
-
         nifi_endpoint_override = 'https://whatever.com:8020'
         zookeeper_connection_override = 'fake-zookeeper.com:1111'
         component_dir_override = 'some_other_component_dir'
         documentation_dir_override = 'some_docs'
 
-        args = cli.parser.parse_args([
+        args = [
             '--nifi-endpoint', nifi_endpoint_override,
             '--zookeeper-connection', zookeeper_connection_override,
             '--component-dir', component_dir_override,
             '--generate-docs', documentation_dir_override
-        ])
-        config.with_flag_overrides(args)
+        ]
+        cli = FlowLibCLI(args=args, file_config=config)
         self.assertEqual(config.nifi_endpoint, nifi_endpoint_override)
         self.assertEqual(config.zookeeper_connection, zookeeper_connection_override)
         self.assertEqual(config.component_dir, component_dir_override)
