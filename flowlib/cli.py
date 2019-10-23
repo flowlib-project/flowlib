@@ -78,7 +78,7 @@ class FlowLibCLI:
             help = 'Directory path to initialize with flowlib helper documentation'
         )
         self.mx_group.add_argument('--flow-yaml',
-            type = argparse.FileType('r'),
+            type = str,
             help = 'YAML file defining a NiFi flow to deploy'
         )
         self.mx_group.add_argument('--export',
