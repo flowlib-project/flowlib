@@ -80,6 +80,7 @@ def init_flow_from_file(flow, _file, component_dir):
     :type _file: io.TextIOWrapper
     """
     def _validate_name(name):
+        # TODO move this to model init and use only = [a-zA-Z0-9\-\_]+
         image_regex = '^[a-z0-9]+(?:[._-]{1,2}[a-z0-9]+)*$'
         pattern = re.compile(image_regex)
         if not pattern.match(name):

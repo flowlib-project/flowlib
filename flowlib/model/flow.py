@@ -64,7 +64,6 @@ class Flow:
         """
         return list(filter(lambda c: c.name == name, self.controllers))[0]
 
-    # TODO: Unit test this
     def get_parent_element(self, element):
         """
         A helper method for looking up parent elements from a breadcrumb path

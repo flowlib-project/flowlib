@@ -44,7 +44,7 @@ def gen_flowlib_docs(config, dest):
 
 def new_flow_from_file(component_dir, flow_yaml):
     """
-    Construct a new flow from a file or a running NiFi instance
+    Construct a new flow from a yaml file
     :param flow_yaml: The flow defined as a yaml file
     :type flow_yaml: Either a file path or a file object
     :param component_dir: The directory of re-useable flow components
