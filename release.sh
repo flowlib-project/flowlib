@@ -12,7 +12,8 @@ else
   REL="${1}"
 fi
 
-### TODO: run tests ###
+# Run unit tests
+python -m unittest
 
 # Tag release
 git tag -a v${REL} -m "B23 FlowLib: $(date)"
