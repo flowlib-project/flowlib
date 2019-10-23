@@ -23,14 +23,15 @@ class ValidateDescribe(argparse.Action):
         setattr(args, self.dest, Describe(component_type, package_id))
 
 
-class ValidateValidate(argparse.Action):
+class ValidateValidate(argparse._StoreTrueAction):
     """
     Validate --validate flag
     """
     def __call__(self, parser, args, values, option_string=None):
+        setattr(args, self.dest, True)
         if not args.flow_yaml:
             parser.error("argument --validate: --flow-yaml is required when --validate is true")
-        setattr(args, self.dest, True)
+
 
 
 class FlowLibCLI:
@@ -78,7 +79,8 @@ class FlowLibCLI:
 
         self.parser.add_argument('--validate',
             action = ValidateValidate,
-            nargs=0,
+            # nargs=0,
+            # default=False,
             help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
         )
 
