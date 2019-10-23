@@ -10,6 +10,9 @@ from flowlib.model.config import FlowLibConfig
 
 
 class ValidateDescribe(argparse.Action):
+    """
+    Validate --describe arguments
+    """
     def __call__(self, parser, args, values, option_string=None):
         choices = ('processor', 'controller', 'reporting-task')
         component_type, package_id = values
@@ -18,6 +21,16 @@ class ValidateDescribe(argparse.Action):
                 ', '.join("'{}'".format(c) for c in choices)))
         Describe = collections.namedtuple('Describe', 'component_type package_id')
         setattr(args, self.dest, Describe(component_type, package_id))
+
+
+class ValidateValidate(argparse.Action):
+    """
+    Validate --validate flag
+    """
+    def __call__(self, parser, args, values, option_string=None):
+        if not args.flow_yaml:
+            parser.error("argument --validate: --flow-yaml is required when --validate is true")
+        setattr(args, self.dest, True)
 
 
 class FlowLibCLI:
@@ -64,7 +77,8 @@ class FlowLibCLI:
         )
 
         self.parser.add_argument('--validate',
-            action = 'store_true',
+            action = ValidateValidate,
+            nargs=0,
             help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
         )
 
@@ -105,9 +119,4 @@ class FlowLibCLI:
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args()
-
-        # check that flow_yaml is provided when validate is true
-        if self.args.validate and not self.args.flow_yaml:
-            self.parser.error("argument --flow-yaml is required when --validate is provided")
-
         self.config = file_config.with_flag_overrides(self.args)
