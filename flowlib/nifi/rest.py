@@ -29,8 +29,8 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
         if nipyapi.utils.is_endpoint_up("{}/nifi".format(nifi_endpoint)):
             nipyapi.config.nifi_config.host = "{}/nifi-api".format(nifi_endpoint)
             return
+        i += 1
         time.sleep(delay)
-
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
