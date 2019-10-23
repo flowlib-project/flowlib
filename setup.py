@@ -5,7 +5,7 @@ setup(
     name="b23-flowlib",
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
-    packages=find_packages(exclude=['tests*']),
+    packages=find_packages(exclude=['test*']),
     package_data={
         'flowlib': ['logging.conf', 'init/*'],
     },

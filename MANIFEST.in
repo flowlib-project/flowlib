@@ -5,5 +5,17 @@ include flowlib/logging.conf
 graft flowlib/init/
 graft flowlib/templates/
 
+exclude Dockerfile
+exclude .gitignore
+exclude MANIFEST.in
+exclude README.md
+exclude release.sh
+exclude requirements-dev.txt
+
+prune flowlib-components/
 prune flowlib/init/docs/
-global-exclude __pycache__  *.pyc
+prune k8s/
+prune nifi-docker/
+prune flowlib-metrics
+
+global-exclude __pycache__ *.pyc .DS_Store
