@@ -4,9 +4,8 @@ import unittest
 
 from flowlib.cli import FlowLibCLI
 
-from . import utils
 
-class TestConf(unittest.TestCase):
+class TestFlowLibCLI(unittest.TestCase):
 
     def test_defaults(self):
         cli = FlowLibCLI()
@@ -40,7 +39,8 @@ class TestConf(unittest.TestCase):
         self.assertEqual(cli.parser.parse_args(['--force']).force, force)
 
         validate = True
-        self.assertEqual(cli.parser.parse_args(['--validate']).validate, validate)
+        # fails because --flow-yaml is not provided
+        self.assertRaises(SystemExit, cli.parser.parse_args, ['--validate'])
 
         generate_docs = 'doc_dir'
         self.assertEqual(cli.parser.parse_args(['--generate-docs', generate_docs]).generate_docs, generate_docs)
