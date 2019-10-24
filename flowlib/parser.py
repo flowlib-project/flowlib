@@ -15,7 +15,10 @@ from flowlib.model.flow import FlowElement, Controller, Processor, ProcessGroup,
 
 env = Environment()
 
-def _set_global_helpers(controllers=dict()):
+def _set_global_helpers(controllers=None):
+
+    if not controllers:
+        controllers = dict()
 
     def env_lookup(key, default=None):
         value = os.getenv(key, default)
@@ -71,105 +74,72 @@ def init_reporting_tasks(controllers, reporting_tasks):
     return reporting_tasks
 
 
-def init_flow_from_file(flow, _file, component_dir):
+def init_flow(flow, component_dir):
     """
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
     :type flow: flowlib.model.flow.Flow
-    :param _file: A File object
-    :type _file: io.TextIOWrapper
+    :param component_dir: The directory of components to use for initializing process groups
+    :type component_dir: str
     """
-    def _validate_name(name):
-        # TODO move this to model init and use only = [a-zA-Z0-9\-\_]+
-        image_regex = '^[a-z0-9]+(?:[._-]{1,2}[a-z0-9]+)*$'
-        pattern = re.compile(image_regex)
-        if not pattern.match(name):
-            raise FlowLibException("The Flow name must match the regular expression: '{}'".format(image_regex))
-        return name
-
-    def _validate_version(version):
-        tag_regex = '^[\w][\w.-]{0,127}$'
-        pattern = re.compile(tag_regex)
-        if not pattern.match(version):
-            raise FlowLibException("The Flow version must match the regular expression: '{}'".format(tag_regex))
-        return version
-
-    raw = yaml.safe_load(_file)
-    flow.flow_src = os.path.abspath(_file.name)
-    flow.raw = _file
-    flow.flowlib_version = flowlib.__version__
-    flow.name = _validate_name(raw.get('name'))
-    flow.version = _validate_version(str(raw.get('version')))
-    flow.controllers = raw.get('controllers', list())
-    flow.canvas = raw.get('canvas')
-    flow.comments = raw.get('comments', '')
-    flow.globals = raw.get('globals', dict())
-
     # Set controllers as empty dict for now so that the env helper is available for templating controller properties
     _set_global_helpers()
-    if 'env' in flow.globals or 'controller' in flow.globals:
+    if 'env' in flow.global_vars or 'controller' in flow.global_vars:
         log.warning("'env' and 'controller' are reserved words and should not be set inside of globals, these values will be overwritten.")
 
     # Jinja template the global vars
-    for k,v in flow.globals.items():
+    for k,v in flow.global_vars.items():
         if isinstance(v, str):
             t = env.from_string(v)
-            flow.globals[k] = t.render()
+            flow.global_vars[k] = t.render()
 
     # Set jinja globals for templating process_group.vars and processor.properties later
-    env.globals.update(**flow.globals)
+    env.globals.update(**flow.global_vars)
 
-    # If --component-dir is specified, use that.
-    # Otherwise use the components/ directory relative to flow.yaml
-    if component_dir:
-        flow.component_dir = os.path.abspath(component_dir)
-    else:
-        flow.component_dir = os.path.abspath(os.path.join(os.path.dirname(_file.name), 'components'))
-
-    log.info("Loading component lib: {}".format(flow.component_dir))
-    _load_components(flow.component_dir, flow)
+    log.info("Loading component lib: {}".format(component_dir))
+    _load_components(flow, component_dir)
 
     # initialize and apply templating for the controller services
     flow.controllers = init_controllers(flow.controllers)
 
-    log.info("Initializing root Flow {} from file {}".format(flow.name, _file.name))
+    log.info("Initializing root Flow {}".format(flow.name))
     for elem_dict in flow.canvas:
-        elem_dict['parent_path'] = flow.name
+        elem_dict['_parent_path'] = flow.name
         el = FlowElement.from_dict(elem_dict)
         el.src_component_name = 'root'
 
         if isinstance(el, ProcessGroup):
             _init_component_recursive(el, flow)
 
-        if flow.elements.get(el.name):
+        if flow._elements.get(el.name):
             raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
         else:
-            flow.elements[el.name] = el
+            flow._elements[el.name] = el
 
     # Filter loaded_components that are not used in this flow
-    for k,v in flow.loaded_components.items():
+    for k,v in flow._loaded_components.items():
         if not v.is_used:
-            del flow.loaded_components[k]
+            del flow._loaded_components[k]
 
 
-def _load_components(component_dir, flow):
+def _load_components(flow, component_dir):
     for root, subdirs, files in os.walk(component_dir):
         for _file in files:
             if _file.endswith('.yaml') or _file.endswith('.yml'):
                 log.info("Loading component: {}".format(_file))
 
                 # Init the component from file
-                f = open(os.path.join(root, _file))
-                raw_component = yaml.safe_load(f)
+                with open(os.path.join(root, _file), 'r') as f:
+                    raw_component = yaml.safe_load(f)
+
                 raw_component['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
-                raw_component['raw'] = f
                 loaded_component = FlowComponent(**raw_component)
 
                 # save the component so it can be instantiated later
-                if flow.loaded_components.get(loaded_component.name):
+                if flow._loaded_components.get(loaded_component.name):
                     raise FlowLibException("A component named '{}' is already defined".format(loaded_component.name))
                 else:
-                    flow.loaded_components[loaded_component.name] = loaded_component
+                    flow._loaded_components[loaded_component.name] = loaded_component
 
 
 def _init_component_recursive(pg_element, flow):
@@ -202,7 +172,7 @@ def _init_component_recursive(pg_element, flow):
 
     # Call FlowElement.from_dict() on each element in the process_group
     for elem_dict in component.process_group:
-        elem_dict['parent_path'] = "{}/{}".format(pg_element.parent_path, pg_element.name)
+        elem_dict['_parent_path'] = "{}/{}".format(pg_element._parent_path, pg_element.name)
         el = FlowElement.from_dict(elem_dict)
         el.src_component_name = component.name
 
@@ -212,10 +182,10 @@ def _init_component_recursive(pg_element, flow):
             else:
                 _init_component_recursive(el, flow)
 
-        if pg_element.elements.get(el.name):
+        if pg_element._elements.get(el.name):
             raise FlowLibException("Found duplicate elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
         else:
-            pg_element.elements[el.name] = el
+            pg_element._elements[el.name] = el
 
     component.is_used = True
 
@@ -234,7 +204,7 @@ def replace_flow_element_vars_recursive(flow, elements, loaded_components):
         if isinstance(el, ProcessGroup):
             source_component = flow.find_component_by_path(el.component_path)
             _replace_vars(el, source_component)
-            replace_flow_element_vars_recursive(flow, el.elements, loaded_components)
+            replace_flow_element_vars_recursive(flow, el._elements, loaded_components)
 
         # This should be called for top-level processors of the flow only
         # which would have access to the global context and nothing else
@@ -267,7 +237,7 @@ def _replace_vars(process_group, source_component):
     _set_global_helpers(process_group.controllers)
 
     # Apply var replacements for each value of processor.config.properties
-    for el in process_group.elements.values():
+    for el in process_group._elements.values():
         if isinstance(el, Processor):
             _template_properties(el, context)
 

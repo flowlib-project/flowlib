@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import os
+import re
 import sys
 import shutil
 import yaml
@@ -42,19 +43,36 @@ def gen_flowlib_docs(config, dest):
         sys.exit(1)
 
 
-def new_flow_from_file(component_dir, flow_yaml):
+def new_flow_from_file(flow_yaml, component_dir=None):
     """
     Construct a new flow from a yaml file
     :param flow_yaml: The flow defined as a yaml file
-    :type flow_yaml: Either a file path or a file object
+    :type flow_yaml: io.TextIOWrapper
     :param component_dir: The directory of re-useable flow components
     :type component_dir: str
     :raises: FlowLibException
     """
-    flow = Flow()
-    if isinstance(flow_yaml, str):
-        flow_yaml = open(flow_yaml)
-    flowlib.parser.init_flow_from_file(flow, flow_yaml, component_dir)
+    def _validate_name(name):
+        image_regex = '^[a-zA-Z0-9-_]+$'
+        pattern = re.compile(image_regex)
+        if not pattern.match(name):
+            raise FlowLibException("The Flow name must match the regular expression: '{}'".format(image_regex))
+        return name
+
+    raw = yaml.safe_load(flow_yaml)
+
+    # If --component-dir is specified, use that.
+    # Otherwise use the components/ directory relative to flow.yaml
+    if component_dir:
+        component_dir = os.path.abspath(component_dir)
+    else:
+        component_dir = os.path.abspath(os.path.join(os.path.dirname(flow_yaml.name), 'components'))
+
+    flow = Flow(**raw)
+    _validate_name(flow.name)
+    flow.flowlib_version = flowlib.__version__
+
+    flowlib.parser.init_flow(flow, component_dir)
     return flow
 
 
@@ -64,7 +82,9 @@ def validate_flow(config):
     """
     log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml.name))
     try:
-        flow = new_flow_from_file(config.component_dir, config.flow_yaml)
+        with open(config.flow_yaml, 'r') as f:
+            flow = new_flow_from_file(f, config.component_dir)
+
         print("Flow is valid")
         print("Flow Name: {}".format(flow.name), file=sys.stdout)
         print("Flow Version: {}".format(flow.version), file=sys.stdout)
@@ -97,7 +117,9 @@ def deploy_flow(config):
     """
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
-        flow = new_flow_from_file(config.component_dir, config.flow_yaml)
+        with open(config.flow_yaml, 'r') as f:
+            flow = new_flow_from_file(f, config.component_dir)
+
         flowlib.nifi.rest.deploy_flow(flow, config, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
