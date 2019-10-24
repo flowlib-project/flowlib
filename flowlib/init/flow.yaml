@@ -11,7 +11,7 @@ comments: |
   process the PDFs, and then write the parsed results back to the same S3 bucket
   in the output directory
 
-globals:
+global_vars:
   bucket: 'kegs-b23-dataflow-demos'
   region: 'us-east-1'
 
