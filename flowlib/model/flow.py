@@ -11,40 +11,56 @@ from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
 PG_NAME_DELIMETER = '/'
 
 class Flow:
-    def __init__(self, name, canvas, flowlib_version=None, version=None, controllers=None, comments=None, global_vars=None):
+    def __init__(self, raw, name=None, canvas=None, flowlib_version=None, version=None, controller_services=None, comments=None, global_vars=None, components=None):
         """
+        :param raw: The raw dictionary value of the Flow converted from yaml
+        :type raw: dict
         :param name: The name of the Flow
         :type name: str
         :param canvas: The root elements of the flow
-        :type canvas: list(FlowElement)
+        :type canvas: list(dict)
         :param flowlib_version: The version of the flowlib module
         :type flowlib_version: str
         :param version: The version of the Flow
         :type version: str
-        :param controllers: The root controllers for the root canvas
-        :type controllers: dict(str:Controller)
+        :param controller_services: The controller_services to create for the Flow
+        :type controller_services: list(dict)
         :param comments: Flow comments
         :type comments: str
         :param global_vars: Global variables for jinja var injection in NiFi component properties
         :type global_vars: dict(str:Any)
-        :attr _loaded_components: A map of components (component_path) loaded while initializing the flow, these are re-useable components
+        :param _loaded_components: A map of components (component_path) loaded while initializing the flow, these are re-useable components
         :type _loaded_components: dict(str:FlowComponent)
         :attr _elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
           Initialized by calling flow.init()
         :type _elements: dict(str:FlowElement)
+        :attr _controllers: Whether this flow has been been initialized (elements and components loaded)
+        :type _controllers: list(ControllerService)
+        :attr _initialized: Whether this flow has been been initialized (elements and components loaded)
+        :type _initialized: bool
         """
+        self.raw = raw
         self.name = name
         self.canvas = canvas
         self.flowlib_version = flowlib_version
         self.version = version
-        self.controllers = controllers
+        self.controller_services = controller_services
         self.comments = comments
         self.global_vars = global_vars or dict()
+        self._initialized = False
+        self._controllers = None
         self._loaded_components = dict()
         self._elements = dict()
 
-    def __repr__(self):
-        return str(vars(self))
+    @property
+    def components(self):
+        return self._loaded_components
+
+    @components.setter
+    def components(self, components):
+        if self._loaded_components:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._loaded_components = components
 
     def find_component_by_path(self, path):
         """
@@ -52,8 +68,8 @@ class Flow:
         :param name: The name of the controller
         :type name: str
         """
-        if self._loaded_components:
-            filtered = list(filter(lambda x: x.source_file == path, self._loaded_components.values()))
+        if self.components:
+            filtered = list(filter(lambda x: x.source_file == path, self.components.values()))
             if len(filtered) > 1:
                 raise FlowLibException("Found multiple loaded components named {}".format(name))
             if len(filtered) == 1:
@@ -66,8 +82,8 @@ class Flow:
         :param name: The name of the controller
         :type name: str
         """
-        if self.controllers:
-            filtered = list(filter(lambda c: c.name == name, self.controllers))
+        if self._controllers:
+            filtered = list(filter(lambda c: c.name == name, self._controllers))
             if len(filtered) > 1:
                 raise FlowLibException("Found multiple controllers named {}".format(name))
             if len(filtered) == 1:
@@ -86,6 +102,9 @@ class Flow:
             elements = target._elements
             target = elements.get(n)
         return target
+
+    def __repr__(self):
+        return str(vars(self))
 
 class FlowElement(ABC):
     """
@@ -161,6 +180,16 @@ class FlowElement(ABC):
         self._parent_id = _id
 
     @property
+    def parent_path(self):
+        return self._parent_path
+
+    @parent_path.setter
+    def parent_path(self, path):
+        if self._parent_path:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._parent_path = path
+
+    @property
     def type(self):
         return self._type
 
@@ -234,7 +263,7 @@ class Connection:
         return str(vars(self))
 
 
-class Controller:
+class ControllerService:
     def __init__(self, name, config):
         self._id = None
         self._parent_id = None
