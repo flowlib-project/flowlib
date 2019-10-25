@@ -20,9 +20,9 @@ class TestDeployment(unittest.TestCase):
         self.assertIsInstance(deployment.get_component('Process PDFs'), DeployedComponent)
 
     def test_add_get_component(self):
-        flow = flowlib_test_utils.load_init_flow()
+        flow = flowlib_test_utils.load_test_flow()
         deployment = FlowDeployment(flow.raw)
-        component = flowlib_test_utils.load_init_component('common/s3_write_with_retry.yaml')
+        component = flowlib_test_utils.load_test_component('common/s3_write_with_retry.yaml')
         deployment.add_component(DeployedComponent(component.raw))
 
         self.assertTrue(len(deployment.components) == 1)
