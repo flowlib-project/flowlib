@@ -65,13 +65,13 @@ class Flow:
     def find_component_by_path(self, path):
         """
         A helper method for looking up a component from a breadcrumb path
-        :param name: The name of the controller
+        :param path: The relative path of the component in component_dir
         :type name: str
         """
         if self.components:
             filtered = list(filter(lambda x: x.source_file == path, self.components.values()))
             if len(filtered) > 1:
-                raise FlowLibException("Found multiple loaded components named {}".format(name))
+                raise FlowLibException("Found multiple loaded components with source_file {}".format(path))
             if len(filtered) == 1:
                 return filtered[0]
         return None
@@ -143,7 +143,7 @@ class FlowElement(ABC):
         if not name or len(name) < 1:
             raise FlowLibException("Element names may not be empty. Found invalid element with parent path: {}".format(elem_dict.get('parent_path')))
         if PG_NAME_DELIMETER in name:
-            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, Flow.PG_DELIMETER))
+            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, PG_NAME_DELIMETER))
 
         elem_dict['_type'] = elem_dict.pop('type')
         if elem_dict['_type'] == 'process_group':
