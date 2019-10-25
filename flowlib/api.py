@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import io
 import os
 import re
@@ -68,7 +69,7 @@ def new_flow_from_file(flow_yaml, component_dir=None):
     else:
         component_dir = os.path.abspath(os.path.join(os.path.dirname(flow_yaml.name), 'components'))
 
-    flow = Flow(**raw)
+    flow = Flow(copy.deepcopy(raw), **raw)
     _validate_name(flow.name)
     flow.flowlib_version = flowlib.__version__
 

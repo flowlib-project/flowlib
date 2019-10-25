@@ -11,7 +11,7 @@ import flowlib
 from flowlib.logger import log
 from flowlib.model import FlowLibException
 from flowlib.model.component import FlowComponent
-from flowlib.model.flow import FlowElement, Controller, Processor, ProcessGroup, ReportingTask
+from flowlib.model.flow import FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
 
 env = Environment()
 
@@ -41,7 +41,7 @@ def init_controllers(controllers):
     :return: list(Controller)
     """
     # Construct and validate controllers
-    controllers = list(map(lambda c: Controller(**c), controllers))
+    controllers = list(map(lambda c: ControllerService(**c), controllers))
     if len(controllers) != len(set(list(map(lambda c: c.name, controllers)))):
         raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
 
@@ -100,7 +100,7 @@ def init_flow(flow, component_dir):
     _load_components(flow, component_dir)
 
     # initialize and apply templating for the controller services
-    flow.controllers = init_controllers(flow.controllers)
+    flow._controllers = init_controllers(flow.controller_services)
 
     log.info("Initializing root Flow {}".format(flow.name))
     for elem_dict in flow.canvas:
@@ -117,9 +117,12 @@ def init_flow(flow, component_dir):
             flow._elements[el.name] = el
 
     # Filter loaded_components that are not used in this flow
-    for k,v in flow._loaded_components.items():
-        if not v.is_used:
-            del flow._loaded_components[k]
+    for c in flow.components.values():
+        if not c.is_used:
+            flow.components.remove(c)
+            # flow.remove_component(c.name)
+
+    flow._initialized = True
 
 
 def _load_components(flow, component_dir):
@@ -133,7 +136,7 @@ def _load_components(flow, component_dir):
                     raw_component = yaml.safe_load(f)
 
                 raw_component['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
-                loaded_component = FlowComponent(**raw_component)
+                loaded_component = FlowComponent(copy.deepcopy(raw_component), **raw_component)
 
                 # save the component so it can be instantiated later
                 if flow._loaded_components.get(loaded_component.name):
@@ -210,7 +213,7 @@ def replace_flow_element_vars_recursive(flow, elements, loaded_components):
         # which would have access to the global context and nothing else
         elif isinstance(el, Processor):
             # Top level processors may need to reference controller services, so set them explictly before templating
-            _set_global_helpers({ c.name: c for c in flow.controllers })
+            _set_global_helpers({ c.name: c for c in flow._controllers })
             _template_properties(el)
 
 

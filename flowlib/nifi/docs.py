@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
-from flowlib.model.flow import Processor, Controller, ReportingTask
+from flowlib.model.flow import Processor, ControllerService, ReportingTask
 from flowlib.logger import log
 import flowlib.nifi.rest
 
