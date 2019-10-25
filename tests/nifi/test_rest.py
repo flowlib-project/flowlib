@@ -11,7 +11,7 @@ class TestFlowLibRest(unittest.TestCase):
         try:
             wait_for_nifi_api('http://127.0.0.1:8080', retries=2, delay=3)
         except FlowLibException:
-            raise unittest.SkipTest("NiFi Rest endpoint is not available, will not test flowlib.nifi.rest")
+            raise unittest.SkipTest("NiFi Rest endpoint is not available, will not run TestFlowLibRest suite")
 
     def test_wait_for_nifi_api(self):
         print('running') # todo

@@ -3,7 +3,7 @@ import unittest
 
 from flowlib.nifi.state import MAX_STATE_SIZE, ENCODING_VERSION, _serialize, _deserialize
 
-class TestFlowLibState(unittest.TestCase):
+class TestZookeeperSerDe(unittest.TestCase):
 
     def test_encode_decode(self):
         state = {

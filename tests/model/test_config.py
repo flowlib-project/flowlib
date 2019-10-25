@@ -2,9 +2,10 @@
 import os
 import unittest
 
-import flowlib
 from flowlib.model.config import FlowLibConfig
 from flowlib.cli import FlowLibCLI
+
+from .. import flowlib_test_utils
 
 
 class TestFlowLibConfig(unittest.TestCase):
@@ -15,10 +16,7 @@ class TestFlowLibConfig(unittest.TestCase):
             self.assertEqual(FlowLibConfig.DEFAULTS[k], getattr(config, k))
 
     def test_new_from_file(self):
-        init_dir = os.path.abspath(os.path.join(os.path.dirname(flowlib.__file__), 'init'))
-        with open(os.path.join(init_dir, '.flowlib.yml')) as f:
-            config = FlowLibConfig.new_from_file(f)
-
+        config = flowlib_test_utils.load_init_config()
         self.assertIsNotNone(config)
         self.assertEqual(config.nifi_endpoint, 'http://nifi-dev:8080')
         self.assertEqual(config.zookeeper_connection, 'nifi-dev:2181')
