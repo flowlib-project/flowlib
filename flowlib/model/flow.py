@@ -44,8 +44,8 @@ class Flow:
         self.canvas = canvas
         self.flowlib_version = flowlib_version
         self.version = version
-        self.controller_services = controller_services
         self.comments = comments
+        self.controller_services = controller_services or list()
         self.global_vars = global_vars or dict()
         self._initialized = False
         self._controllers = None

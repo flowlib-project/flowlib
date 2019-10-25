@@ -74,7 +74,7 @@ def init_reporting_tasks(controllers, reporting_tasks):
     return reporting_tasks
 
 
-def init_flow(flow, component_dir):
+def init_flow(flow, component_dir=None):
     """
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
@@ -96,8 +96,9 @@ def init_flow(flow, component_dir):
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.global_vars)
 
-    log.info("Loading component lib: {}".format(component_dir))
-    _load_components(flow, component_dir)
+    if component_dir:
+        log.info("Loading component lib: {}".format(component_dir))
+        _load_components(flow, component_dir)
 
     # initialize and apply templating for the controller services
     flow._controllers = init_controllers(flow.controller_services)
