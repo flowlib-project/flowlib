@@ -1,0 +1,34 @@
+name: Test Component
+
+defaults:
+  default_var1: "default-value1"
+  default_var2: "default-value2"
+
+required_vars:
+- required_var
+
+required_controllers:
+  test_controller: 'io.b23.test_controller_service'
+
+process_group:
+- name: input
+  type: input_port
+  connections:
+  - name: debug
+
+- name: debug
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.DebugFlow
+    properties:
+      prop1: "constant-value"
+      prop2: "{{ global_var }}"
+      prop3: "{{ default_var1 }}"
+      prop4: "{{ default_var2 }}"
+      controller-lookup: "{{ controller('test_controller') }}"
+  connections:
+  - name: output
+    relationships: ['success']
+
+- name: output
+  type: output_port

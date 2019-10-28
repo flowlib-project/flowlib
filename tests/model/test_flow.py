@@ -17,14 +17,14 @@ class TestFlow(unittest.TestCase):
 
     def test_find_component_by_path(self):
         flow = flowlib_test_utils.load_test_flow()
-        real = 'common/s3_list_fetch_with_retry.yaml'
+        real = 'component.yaml'
         notreal = 'not-real/abc.yaml'
         self.assertIsInstance(flow.find_component_by_path(real), FlowComponent)
         self.assertIsNone(flow.find_component_by_path(notreal))
 
-        duplicate = flowlib_test_utils.load_test_component('common/s3_list_fetch_with_retry.yaml')
+        duplicate = flowlib_test_utils.load_test_component('component.yaml')
         flow._loaded_components['duplicate'] = duplicate
-        self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'common/s3_list_fetch_with_retry.yaml')
+        self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'component.yaml')
 
 
     def find_controller_by_name(self):

@@ -9,17 +9,17 @@ from flowlib.model.config import FlowLibConfig
 from flowlib.model.flow import Flow
 from flowlib.model.component import FlowComponent
 
-INIT_DIR = os.path.abspath(os.path.join(os.path.dirname(flowlib.__file__), 'init'))
+RESOURCES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources'))
 
 def load_test_config():
-    with open(os.path.join(INIT_DIR, '.flowlib.yml')) as f:
+    with open(os.path.join(RESOURCES_DIR, '.flowlib.yml')) as f:
         config = FlowLibConfig.new_from_file(f)
 
     return config
 
 
 def load_test_component(path):
-    component_dir = os.path.join(INIT_DIR, 'components')
+    component_dir = os.path.join(RESOURCES_DIR, 'components')
     with open(os.path.join(component_dir, path), 'r') as f:
         raw = yaml.safe_load(f)
 
@@ -28,8 +28,8 @@ def load_test_component(path):
 
 
 def load_test_flow(init=True):
-    flow_yaml = os.path.join(INIT_DIR, 'flow.yaml')
-    component_dir = os.path.join(INIT_DIR, 'components')
+    flow_yaml = os.path.join(RESOURCES_DIR, 'flow.yaml')
+    component_dir = os.path.join(RESOURCES_DIR, 'components')
     with open(flow_yaml, 'r') as f:
         raw = yaml.safe_load(f)
 
@@ -38,37 +38,3 @@ def load_test_flow(init=True):
         init_flow(flow, component_dir)
 
     return flow
-
-
-def load_simple_flow(init=True):
-    raw = {
-        'name': 'simple-test-flow',
-        'global_vars': {
-            'abc': 'xyz'
-        },
-        'controller_services': [{
-            'name': 'asdf',
-            'config': {
-                'package_id': 'org.apache.nifi.avro.AvroReader',
-                'properties': {
-                    'schema-name': '{{ abc }}'
-                }
-            }
-        }],
-        'canvas': [{
-            'name': 'debug',
-            'type': 'processor',
-            'config': {
-                'package_id': 'org.apache.nifi.processors.standard.DebugFlow',
-                'properties': {
-                    'property': "{{ abc }}",
-                    'controller': "{{ controller('asdf') }}"
-                }
-            }
-        }]
-    }
-    simple_flow = Flow(copy.deepcopy(raw), **raw)
-    if init:
-        init_flow(simple_flow)
-
-    return simple_flow

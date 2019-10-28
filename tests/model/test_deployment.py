@@ -22,11 +22,11 @@ class TestDeployment(unittest.TestCase):
     def test_add_get_component(self):
         flow = flowlib_test_utils.load_test_flow()
         deployment = FlowDeployment(flow.raw)
-        component = flowlib_test_utils.load_test_component('common/s3_write_with_retry.yaml')
+        component = flowlib_test_utils.load_test_component('component.yaml')
         deployment.add_component(DeployedComponent(component.raw))
 
         self.assertTrue(len(deployment.components) == 1)
-        deployed_component = deployment.get_component('S3 Write With Retry')
+        deployed_component = deployment.get_component('Test Component')
         self.assertIsInstance(deployed_component, DeployedComponent)
         self.assertEqual(component.raw, deployed_component.component)
         self.assertRaisesRegex(FlowLibException, "^A component named\s.*\salready exists$", deployment.add_component, DeployedComponent(component.raw))
