@@ -12,9 +12,8 @@ else
   REL="${1}"
 fi
 
-# Run tests
-# TODO: Start nifi on 127.0.0.1:8080 for itests
-python -m unittest discover -v
+# Run all tests
+. test.sh
 
 # Tag release
 git tag -a v${REL} -m "B23 FlowLib: $(date)"
