@@ -41,7 +41,7 @@ def gen_flowlib_docs(config, dest):
         flowlib.nifi.docs.generate_docs(config, dest, config.force)
     except FlowLibException as e:
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def new_flow_from_file(flow_yaml, component_dir=None):
@@ -85,7 +85,7 @@ def validate_flow(config):
         # but dont actually try to connect to the NiFi API
     except FlowLibException as e:
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def export_flow(config):
@@ -101,7 +101,7 @@ def export_flow(config):
         print(s.read())
     except FlowLibException as e:
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def deploy_flow(config):
@@ -118,7 +118,7 @@ def deploy_flow(config):
     except FlowLibException as e:
         log.error("Flow deployment failed")
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def configure_flow_controller(config):
@@ -133,7 +133,7 @@ def configure_flow_controller(config):
     except FlowLibException as e:
         log.error("Flow Controller configuration failed")
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def list_components(config, component_type):
@@ -147,7 +147,7 @@ def list_components(config, component_type):
         flowlib.nifi.docs.list_components(config.docs_directory, component_type)
     except FlowLibException as e:
         log.error(e)
-        sys.exit(1)
+        raise
 
 
 def describe_component(config, component_type, package_id):
@@ -163,4 +163,4 @@ def describe_component(config, component_type, package_id):
         flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
     except FlowLibException as e:
         log.error(e)
-        sys.exit(1)
+        raise
