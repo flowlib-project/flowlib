@@ -64,7 +64,7 @@ class Flow:
 
     def find_component_by_path(self, path):
         """
-        A helper method for looking up a component from a breadcrumb path
+        A helper method for looking up a component by its relative path in component_dir
         :param path: The relative path of the component in component_dir
         :type name: str
         """

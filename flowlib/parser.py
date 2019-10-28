@@ -160,7 +160,7 @@ def _init_component_recursive(pg_element, flow):
     # Validate all required controllers are provided
     for k,v in component.required_controllers.items():
         if not k in pg_element.controllers:
-            raise FlowLibException("Missing required_controller. {} is not provided but is required by {}".format(k, component.source_file))
+            raise FlowLibException("Missing required_controllers. {} is not provided but is required by {}".format(k, component.source_file))
 
         controller = flow.find_controller_by_name(pg_element.controllers[k])
         if v != controller.config.package_id:
