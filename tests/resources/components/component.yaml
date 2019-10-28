@@ -1,4 +1,4 @@
-name: Test Component
+name: test-component
 
 defaults:
   default_var1: "default-value1"

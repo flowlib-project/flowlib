@@ -48,6 +48,7 @@ def init_controllers(controllers):
     # Inject template vars into controller properties
     _set_global_helpers()
     for c in controllers:
+        _validate_name(c.name)
         _template_properties(c)
 
     return controllers
@@ -69,6 +70,7 @@ def init_reporting_tasks(controllers, reporting_tasks):
     # Inject template vars into reporting task properties, apply controller service lookups
     _set_global_helpers(controllers={c.name: c for c in controllers})
     for t in reporting_tasks:
+        _validate_name(t.name)
         _template_properties(t)
 
     return reporting_tasks
@@ -82,6 +84,8 @@ def init_flow(flow, component_dir=None):
     :param component_dir: The directory of components to use for initializing process groups
     :type component_dir: str
     """
+    _validate_name(flow.name)
+
     # Set controllers as empty dict for now so that the env helper is available for templating controller properties
     _set_global_helpers()
     if 'env' in flow.global_vars or 'controller' in flow.global_vars:
@@ -107,6 +111,7 @@ def init_flow(flow, component_dir=None):
     for elem_dict in flow.canvas:
         elem_dict['_parent_path'] = flow.name
         el = FlowElement.from_dict(elem_dict)
+        _validate_name(el.name)
         el.src_component_name = 'root'
 
         if isinstance(el, ProcessGroup):
@@ -121,7 +126,6 @@ def init_flow(flow, component_dir=None):
     for c in flow.components.values():
         if not c.is_used:
             flow.components.remove(c)
-            # flow.remove_component(c.name)
 
     flow._initialized = True
 
@@ -138,6 +142,7 @@ def _load_components(flow, component_dir):
 
                 raw_component['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
                 loaded_component = FlowComponent(copy.deepcopy(raw_component), **raw_component)
+                _validate_name(loaded_component.name)
 
                 # save the component so it can be instantiated later
                 if flow._loaded_components.get(loaded_component.name):
@@ -178,6 +183,7 @@ def _init_component_recursive(pg_element, flow):
     for elem_dict in component.process_group:
         elem_dict['_parent_path'] = "{}/{}".format(pg_element._parent_path, pg_element.name)
         el = FlowElement.from_dict(elem_dict)
+        _validate_name(el.name)
         el.src_component_name = component.name
 
         if isinstance(el, ProcessGroup):
@@ -250,3 +256,11 @@ def _template_properties(el, context=dict()):
     for k,v in el.config.properties.items():
         t = env.from_string(v)
         el.config.properties[k] = t.render(**context)
+
+
+def _validate_name(name):
+    name_regex = '^[a-zA-Z0-9-_]+$'
+    pattern = re.compile(name_regex)
+    if not pattern.match(name):
+        raise FlowLibException("Invalid name. '{}' must match the regular expression: '{}'".format(name, name_regex))
+    return name

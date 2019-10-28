@@ -26,7 +26,7 @@ class TestDeployment(unittest.TestCase):
         deployment.add_component(DeployedComponent(component.raw))
 
         self.assertTrue(len(deployment.components) == 1)
-        deployed_component = deployment.get_component('Test Component')
+        deployed_component = deployment.get_component('test-component')
         self.assertIsInstance(deployed_component, DeployedComponent)
         self.assertEqual(component.raw, deployed_component.component)
         self.assertRaisesRegex(FlowLibException, "^A component named\s.*\salready exists$", deployment.add_component, DeployedComponent(component.raw))

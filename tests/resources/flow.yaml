@@ -15,7 +15,7 @@ controller_services:
       with_default: "{{ env('WITH_DEFAULT', 'default value set') }}"
 
 canvas:
-- name: test-component
+- name: test-process-group
   type: process_group
   component_path: component.yaml
   controllers:

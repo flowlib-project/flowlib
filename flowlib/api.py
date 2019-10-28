@@ -53,13 +53,6 @@ def new_flow_from_file(flow_yaml, component_dir=None):
     :type component_dir: str
     :raises: FlowLibException
     """
-    def _validate_name(name):
-        image_regex = '^[a-zA-Z0-9-_]+$'
-        pattern = re.compile(image_regex)
-        if not pattern.match(name):
-            raise FlowLibException("The Flow name must match the regular expression: '{}'".format(image_regex))
-        return name
-
     raw = yaml.safe_load(flow_yaml)
 
     # If --component-dir is specified, use that.
@@ -70,7 +63,6 @@ def new_flow_from_file(flow_yaml, component_dir=None):
         component_dir = os.path.abspath(os.path.join(os.path.dirname(flow_yaml.name), 'components'))
 
     flow = Flow(copy.deepcopy(raw), **raw)
-    _validate_name(flow.name)
     flow.flowlib_version = flowlib.__version__
 
     flowlib.parser.init_flow(flow, component_dir)
