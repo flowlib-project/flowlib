@@ -23,9 +23,15 @@ pip install -e ./
 
 ### Release ###
 
-```shell
-RELEASE=0.1.0
-git tag -a v$RELEASE -m "B23 FlowLib release: v$RELEASE"
+For a major/minor release, pass the version as an argument to the release script
+
+```bash
+./release.sh 1.0.0
+```
+
+for a patch release, do not pass any arguments
+
+```bash
 ./release.sh
 ```
 

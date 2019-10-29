@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
-from flowlib.model.flow import Processor, Controller, ReportingTask
+from flowlib.model.flow import Processor, ControllerService, ReportingTask
 from flowlib.logger import log
 import flowlib.nifi.rest
 
@@ -225,8 +225,11 @@ def list_components(doc_dir, component_type):
     :param component_type: One of [processors, controllers, reporting-tasks]
     :type component_type: str
     """
-    doc_dir = os.path.join(doc_dir, component_type)
-    if not os.path.exists(doc_dir) or not os.path.isdir(doc_dir):
+    if component_type not in ['processors', 'controllers', 'reporting-tasks']:
+        raise FlowLibException("Invalid component type: {}. Must be one of ('processors', 'controllers', 'reporting-tasks')".format(component_type))
+
+    component_dir = os.path.join(doc_dir, component_type)
+    if not os.path.exists(component_dir) or not os.path.isdir(component_dir):
         log.error("Run 'flowlib --generate-docs {}' to use this command".format(doc_dir))
         raise FlowLibException("Docs directory {} does not exist".format(doc_dir))
 
@@ -240,6 +243,9 @@ def describe_component(doc_dir, component_type, package_id):
     :type component_type: str
     :type package_id: str
     """
+    if component_type not in ['processor', 'controller', 'reporting-task']:
+        raise FlowLibException("Invalid component type: {}. Must be one of ('processor', 'controller', 'reporting-task')".format(component_type))
+
     component_dir = os.path.join(doc_dir, "{}s".format(component_type))
     desc = os.path.join(component_dir, "{}.yaml".format(package_id))
     if not os.path.exists(desc) or not os.path.isfile(desc):

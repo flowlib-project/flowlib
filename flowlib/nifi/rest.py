@@ -29,8 +29,8 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
         if nipyapi.utils.is_endpoint_up("{}/nifi".format(nifi_endpoint)):
             nipyapi.config.nifi_config.host = "{}/nifi-api".format(nifi_endpoint)
             return
+        i += 1
         time.sleep(delay)
-
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
@@ -47,21 +47,28 @@ def get_deployed_flow(nifi_endpoint, flow_name):
     wait_for_nifi_api(nifi_endpoint)
     flow_pg = nipyapi.canvas.get_process_group(flow_name, identifier_type='name')
 
-    if not flow_pg:
-        raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
     if isinstance(flow_pg, list):
         pgs = [pg for pg in flow_pg if pg.component.name == flow_name]
         if len(pgs) > 1:
             raise FlowLibException("Found multiple ProcessGroups named {}".format(flow_name))
+        elif len(pgs) == 0:
+            raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
         else:
             flow_pg = pgs[0]
+
+    if not flow_pg or flow_pg.component.name != flow_name:
+        raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
 
     queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
     if queued > 0:
         log.warn("There are active flowfiles queued for this flow. Exporting or redeploying a flow with items enqueued may lead to dropped flowfiles")
 
     # load the deployment from the root PG comments
-    deployment = FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
+    try:
+        deployment = FlowDeployment.from_dict(json.loads(flow_pg.component.comments))
+    except Exception as e:
+        log.error(e)
+        raise FlowLibException("Failed to serialize the previously deployed Flow")
 
     # set state for flow canvas level stateful processors
     for k,v in deployment.stateful_processors.items():
@@ -129,7 +136,7 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
 def deploy_flow(flow, config, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
-    :param flow: A Flow instance
+    :param flow: An initialized Flow instance
     :type flow: flowlib.model.flow.Flow
     :param config: A valid FlowLibConfig object
     :type config: FlowLibConfig
@@ -140,10 +147,13 @@ def deploy_flow(flow, config, force=False):
     except FlowNotFoundException:
         pass
 
-    # create a new FlowDeployment and add all the loaded_components to it
-    deployment = FlowDeployment(flow.name, flow.raw, flowlib.__version__)
-    for component in flow.loaded_components.values():
-        deployment.add_component(DeployedComponent(component.name, component.raw))
+    if not flow._initialized:
+        raise FlowLibException("Flow has not yet been initialized. Call parser.init_flow(flow) first")
+
+    # create a new FlowDeployment
+    deployment = FlowDeployment(flow.raw)
+    for component in flow._loaded_components.values():
+        deployment.add_component(DeployedComponent(component.raw))
 
     canvas_root_id = nipyapi.canvas.get_root_pg_id()
     canvas_root_pg = nipyapi.canvas.get_process_group(canvas_root_id, identifier_type='id')
@@ -161,23 +171,17 @@ def deploy_flow(flow, config, force=False):
              raise FlowLibException("A flow with that name already exists, use the --force option to overwrite it")
 
         # create a PG for the new flow
-        flow_pg_element = ProcessGroup("(deploying) {}".format(flow.name), None, "process_group", None)
+        flow_pg_element = ProcessGroup(name="(deploying) {}".format(flow.name), _type="process_group", _parent_path=flow.name)
         flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, deployment, is_flow_root=True)
-
-        # reset fps
-        flow.raw.seek(0)
-        for c in flow.loaded_components.values():
-            if c.raw:
-                c.raw.seek(0)
 
         _create_controllers(flow, flow_pg)
         # we have to wait until the controllers exist in NiFi before applying jinja templating
         # because the controller() jinja helper needs to lookup controller IDs for injecting into the processor's properties
-        flowlib.parser.replace_flow_element_vars_recursive(flow, flow.elements, flow.loaded_components)
+        flowlib.parser.replace_flow_element_vars_recursive(flow, flow._elements, flow.components)
 
-        _create_canvas_elements_recursive(flow.elements, flow_pg, config, deployment, previous)
-        _create_connections_recursive(flow, flow.elements)
-        _set_controllers_enabled(flow.controllers, enabled=True)
+        _create_canvas_elements_recursive(flow._elements, flow_pg, config, deployment, previous)
+        _create_connections_recursive(flow, flow._elements)
+        _set_controllers_enabled(flow._controllers, enabled=True)
 
         if previous_flow_pg and force:
             _remove_flow(previous_flow_pg.id, force=force)
@@ -257,7 +261,7 @@ def _create_controllers(flow, flow_pg):
     :type flow_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
     """
     all_controller_types = list(map(lambda x: x.type, nipyapi.canvas.list_all_controller_types()))
-    for c in flow.controllers:
+    for c in flow._controllers:
         if c.config.package_id not in all_controller_types:
             raise FlowLibException("{} is not a valid NiFi Controller Service type".format(c.config.package_id))
 
@@ -363,7 +367,7 @@ def _create_canvas_elements_recursive(elements, parent_pg, config, current_deplo
         position = positions[el.name]
         if isinstance(el, ProcessGroup):
             pg = _create_process_group(el, parent_pg, position, current_deployment)
-            _create_canvas_elements_recursive(el.elements, pg, config, current_deployment, previous_deployment)
+            _create_canvas_elements_recursive(el._elements, pg, config, current_deployment, previous_deployment)
         elif isinstance(el, Processor):
             _create_processor(el, parent_pg, position, config, current_deployment, previous_deployment)
         elif isinstance(el, InputPort):
@@ -384,7 +388,7 @@ def _create_connections_recursive(flow, elements):
     """
     for el in elements.values():
         if isinstance(el, ProcessGroup):
-            _create_connections_recursive(flow, el.elements)
+            _create_connections_recursive(flow, el._elements)
         elif el.type in ['processor', 'input_port', 'output_port']:
             _create_connections(flow, el)
         else:
@@ -559,11 +563,11 @@ def _create_connections(flow, source_element):
         for c in connections:
             # Find the NiFi Entity ID of the source element
             if isinstance(source_element, Processor) or isinstance(source_element, InputPort):
-                elements = parent.elements
+                elements = parent._elements
                 source = _get_nifi_entity_by_id(source_element.type, source_element.id)
             elif isinstance(source_element, OutputPort):
                 # if source is an output port then we need to to search the next parent's elements for the downstream element
-                elements = flow.get_parent_element(parent).elements
+                elements = flow.get_parent_element(parent)._elements
                 source = _get_nifi_entity_by_id(source_element.type, source_element.id)
             else:
                 raise FlowLibException("""
@@ -578,7 +582,7 @@ def _create_connections(flow, source_element):
             if isinstance(dest_element, Processor) or isinstance(dest_element, OutputPort):
                 dest = _get_nifi_entity_by_id(dest_element.type, dest_element.id)
             elif isinstance(dest_element, ProcessGroup):
-                d = [v for k,v in dest_element.elements.items() if isinstance(v, InputPort) and k == c.to_port][0]
+                d = [v for k,v in dest_element._elements.items() if isinstance(v, InputPort) and k == c.to_port][0]
                 dest = _get_nifi_entity_by_id(d.type, d.id)
             else:
                 raise FlowLibException("""Connections cannot be defined for downstream elements of type 'input_port'.

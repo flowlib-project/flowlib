@@ -12,7 +12,7 @@ def main():
         with open(flowlib_cfg) as f:
             config = FlowLibConfig.new_from_file(f)
 
-    cli = FlowLibCLI(config)
+    cli = FlowLibCLI(file_config=config)
     if cli.args.scaffold:
         flowlib.api.gen_flow_scaffold(cli.args.scaffold)
     elif cli.args.generate_docs:

@@ -1,0 +1,37 @@
+name: test-flow
+version: 1.0
+
+comments: Test data flow
+
+global_vars:
+  global_var: 'global-value'
+
+controller_services:
+- name: test-controller-service
+  config:
+    package_id: 'io.b23.test_controller_service'
+    properties:
+      no_default: "{{ env('NO_DEFAULT') }}"
+      with_default: "{{ env('WITH_DEFAULT', 'default value set') }}"
+
+canvas:
+- name: test-process-group
+  type: process_group
+  component_path: component.yaml
+  controllers:
+    test_controller: test-controller-service
+  vars:
+    required_var: "{{ global_var }}"
+    default_var2: "override"
+
+  connections:
+  - name: debug
+    from_port: output
+
+- name: debug
+  type: processor
+  config:
+    package_id: org.apache.nifi.processors.standard.DebugFlow
+    properties:
+      prop1: "constant-value"
+      prop2: "{{ global_var }}"

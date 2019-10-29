@@ -12,7 +12,8 @@ else
   REL="${1}"
 fi
 
-### TODO: run tests ###
+# Run all tests
+. test.sh
 
 # Tag release
 git tag -a v${REL} -m "B23 FlowLib: $(date)"

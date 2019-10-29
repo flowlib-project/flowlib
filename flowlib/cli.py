@@ -10,6 +10,9 @@ from flowlib.model.config import FlowLibConfig
 
 
 class ValidateDescribe(argparse.Action):
+    """
+    Validate --describe arguments
+    """
     def __call__(self, parser, args, values, option_string=None):
         choices = ('processor', 'controller', 'reporting-task')
         component_type, package_id = values
@@ -20,8 +23,19 @@ class ValidateDescribe(argparse.Action):
         setattr(args, self.dest, Describe(component_type, package_id))
 
 
+class ValidateValidate(argparse._StoreTrueAction):
+    """
+    Validate --validate flag
+    """
+    def __call__(self, parser, args, values, option_string=None):
+        setattr(args, self.dest, True)
+        if not args.flow_yaml:
+            parser.error("argument --validate: --flow-yaml is required when --validate is true")
+
+
+
 class FlowLibCLI:
-    def __init__(self, file_config=None):
+    def __init__(self, args=None, file_config=None):
         """
         Parse provided CLI flags with optional FlowLibConfig defaults
         """
@@ -64,7 +78,9 @@ class FlowLibCLI:
         )
 
         self.parser.add_argument('--validate',
-            action = 'store_true',
+            action = ValidateValidate,
+            # nargs=0,
+            # default=False,
             help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
         )
 
@@ -78,7 +94,7 @@ class FlowLibCLI:
             help = 'Directory path to initialize with flowlib helper documentation'
         )
         self.mx_group.add_argument('--flow-yaml',
-            type = argparse.FileType('r'),
+            type = str,
             help = 'YAML file defining a NiFi flow to deploy'
         )
         self.mx_group.add_argument('--export',
@@ -104,10 +120,5 @@ class FlowLibCLI:
 
         if not file_config:
             file_config = FlowLibConfig()
-        self.args = self.parser.parse_args()
-
-        # check that flow_yaml is provided when validate is true
-        if self.args.validate and not self.args.flow_yaml:
-            self.parser.error("argument --flow-yaml is required when --validate is provided")
-
+        self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()
         self.config = file_config.with_flag_overrides(self.args)

@@ -1,4 +1,4 @@
-name: Process PDFs
+name: process-pdfs
 
 process_group:
 - name: input
