@@ -5,12 +5,16 @@ import tempfile
 import unittest
 from unittest import TestSuite, TestResult, TestLoader
 
+import nipyapi
+from nipyapi.nifi.models import ProcessorEntity, ProcessGroupEntity
+
 import flowlib.api
+from flowlib.nifi.state import ZookeeperClient
 from flowlib.nifi.rest import wait_for_nifi_api
 from flowlib.model.config import FlowLibConfig
 from flowlib.model import FlowLibException
 
-from flowlib_test_utils import RESOURCES_DIR
+from tests.flowlib_test_utils import RESOURCES_DIR
 
 
 class ITestFlowLib(unittest.TestCase):
@@ -38,6 +42,8 @@ class ITestFlowLib(unittest.TestCase):
             config = FlowLibConfig.new_from_file(f)
         config.nifi_endpoint = self.__class__.endpoint
         flowlib.api.configure_flow_controller(config)
+        self.assertTrue(len(nipyapi.nifi.apis.FlowApi().get_controller_services_from_controller().controller_services) == 1)
+        self.assertTrue(len(nipyapi.nifi.apis.FlowApi().get_reporting_tasks().reporting_tasks) == 1)
 
     def test_deploy_flow(self):
         with open(os.path.join(self.__class__.tmp_dir.name, 'dataflow', '.flowlib.yml'), 'r') as f:
@@ -46,15 +52,26 @@ class ITestFlowLib(unittest.TestCase):
         config.zookeeper_connection = '127.0.0.1:2181'
         config.flow_yaml = os.path.join(self.__class__.tmp_dir.name, 'dataflow', 'flow.yaml')
         flowlib.api.deploy_flow(config)
+        self.assertIsInstance(nipyapi.canvas.get_process_group('pdf-processor-demo-flow'), ProcessGroupEntity)
 
     def test_redeploy_flow(self):
         with open(os.path.join(self.__class__.tmp_dir.name, 'dataflow', '.flowlib.yml'), 'r') as f:
             config = FlowLibConfig.new_from_file(f)
         config.nifi_endpoint = self.__class__.endpoint
         config.zookeeper_connection = '127.0.0.1:2181'
-        config.force = True
         config.flow_yaml = os.path.join(self.__class__.tmp_dir.name, 'dataflow', 'flow.yaml')
+
+        listS3 = nipyapi.canvas.get_processor('list-s3')
+        self.assertIsInstance(listS3, ProcessorEntity)
+        state = {'asdf': 'This is state'}
+        zk = ZookeeperClient(config.zookeeper_connection)
+        zk.set_processor_state(listS3.id, state)
+
+        config.force = True
         flowlib.api.deploy_flow(config)
+        listS3 = nipyapi.canvas.get_processor('list-s3')
+        self.assertIsInstance(listS3, ProcessorEntity)
+        self.assertEqual(state, zk.get_processor_state(listS3.id))
 
     def test_gen_flowlib_docs(self):
         with open(os.path.join(self.__class__.tmp_dir.name, 'dataflow', '.flowlib.yml'), 'r') as f:

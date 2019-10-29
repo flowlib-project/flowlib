@@ -1,6 +1,3 @@
-# integration tests
-tests/init
-
 # vscode
 .vscode
 
