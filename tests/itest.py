@@ -96,16 +96,11 @@ class ITestFlowLib(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
-    # addTest in the order that they should run
 
-    # TODO: Better assertions for these tests
+    # addTest in the order that they should run
     suite.addTest(ITestFlowLib('test_configure_flow_controller'))
     suite.addTest(ITestFlowLib('test_deploy_flow'))
     suite.addTest(ITestFlowLib('test_redeploy_flow'))
-    # TODO: Set the zookeeper state for the lists3 processor
-    # and confirm that state is migrated after the re-deploy
-
-    # TODO: Fix these tests but leave them commented
     # suite.addTest(ITestFlowLib('test_gen_flowlib_docs'))
     # suite.addTest(ITestFlowLib('test_list_components'))
     # suite.addTest(ITestFlowLib('test_describe_component'))
