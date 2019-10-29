@@ -123,9 +123,9 @@ def init_flow(flow, component_dir=None):
             flow._elements[el.name] = el
 
     # Filter loaded_components that are not used in this flow
-    for c in flow.components.values():
-        if not c.is_used:
-            flow.components.remove(c)
+    for k in [k for k in flow.components.keys()]:
+        if not flow.components[k]._is_used:
+            del flow.components[k]
 
     flow._initialized = True
 
@@ -197,7 +197,7 @@ def _init_component_recursive(pg_element, flow):
         else:
             pg_element._elements[el.name] = el
 
-    component.is_used = True
+    component._is_used = True
 
 
 def replace_flow_element_vars_recursive(flow, elements, loaded_components):
