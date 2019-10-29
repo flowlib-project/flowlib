@@ -56,6 +56,9 @@ canvas:
   - name: write-to-s3
     relationships: ['success']
     to_port: input
+  # - name: remote-group
+  #   relationships: ['success']
+  #   to_port: remote-input
 
 - name: write-to-s3
   type: process_group
@@ -66,3 +69,8 @@ canvas:
     bucket: "{{ bucket }}"
     region: "{{ region }}"
     destination_attribute: file_dest
+
+# - name: remote-group
+#   type: remote_process_group
+#   config:
+#     target_uri: http://127.0.0.1:8080/nifi-api
