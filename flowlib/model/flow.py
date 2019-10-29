@@ -6,6 +6,7 @@ from flowlib.model import FlowLibException
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
 from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
+from nipyapi.nifi.models.remote_process_group_dto import RemoteProcessGroupDTO
 
 
 PG_NAME_DELIMETER = '/'
@@ -150,6 +151,8 @@ class FlowElement(ABC):
             if elem_dict.get('vars'):
                 elem_dict['_vars'] = elem_dict.pop('vars')
             return ProcessGroup(**elem_dict)
+        elif elem_dict['_type'] == 'remote_process_group':
+            return RemoteProcessGroup(**elem_dict)
         elif elem_dict['_type'] == 'processor':
             return Processor(**elem_dict)
         elif elem_dict['_type'] == 'input_port':
@@ -157,7 +160,7 @@ class FlowElement(ABC):
         elif elem_dict['_type'] == 'output_port':
             return OutputPort(**elem_dict)
         else:
-            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'input_port', 'output_port']")
+            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'remote_process_group', 'input_port', 'output_port']")
 
     @property
     def id(self):
@@ -195,6 +198,17 @@ class FlowElement(ABC):
 
     def __repr__(self):
         return str(vars(self))
+
+
+class RemoteProcessGroup(FlowElement):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.config = RemoteProcessGroupConfig(**kwargs['config'])
+
+
+class RemoteProcessGroupConfig(RemoteProcessGroupDTO):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 class ProcessGroup(FlowElement):

@@ -12,6 +12,7 @@ class FlowComponent:
         self.defaults = defaults or dict()
         self.required_controllers = required_controllers or dict()
         self.required_vars = required_vars or list()
+        self._is_used = False
 
     def __repr__(self):
         return str(vars(self))
