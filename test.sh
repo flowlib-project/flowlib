@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -exuo pipefail
 
-if [[ -z "${REL}" ]]; then
-  REL="latest"
-fi
-
+REL="${REL-latest}"
 trap "{ docker ps -qaf Name=flowlib-${REL}-integration-test | xargs docker rm -f; }" EXIT
 
 # start nifi container
