@@ -3,7 +3,8 @@ import unittest
 
 import flowlib
 from flowlib.model import FlowLibException
-from flowlib.model.flow import PG_NAME_DELIMETER, Flow, FlowElement, ControllerService, ProcessGroup, Processor, InputPort, OutputPort
+from flowlib.model.flow import (PG_NAME_DELIMETER, Flow, FlowElement,
+    ControllerService, RemoteProcessGroup, ProcessGroup, Processor, InputPort, OutputPort)
 from flowlib.model.component import FlowComponent
 
 from tests import utils
@@ -13,7 +14,6 @@ class TestFlow(unittest.TestCase):
 
     def test_load_flow(self):
         utils.load_test_flow(init=False)
-
 
     def test_find_component_by_path(self):
         flow = utils.load_test_flow()
@@ -26,7 +26,6 @@ class TestFlow(unittest.TestCase):
         flow._loaded_components['duplicate'] = duplicate
         self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'component.yaml')
 
-
     def find_controller_by_name(self):
         flow = utils.load_test_flow()
 
@@ -36,7 +35,6 @@ class TestFlow(unittest.TestCase):
         flow._controllers.append(controller)
         self.assertRaisesRegex(FlowLibException, '^Found multiple controllers named.*', flow.find_controller_by_name, 'aws-s3-credentials')
         self.assertIsNone(flow.find_controller_by_name('not-real'), ControllerService)
-
 
     def test_get_parent_element(self):
         flow = utils.load_test_flow()
@@ -55,7 +53,6 @@ class TestFlow(unittest.TestCase):
                 # assert that the parent of each element is the correct group
                 self.assertEqual(g, flow.get_parent_element(e))
 
-
     def test_flow_element_from_dict(self):
         no_name = {
             'name': '',
@@ -71,7 +68,7 @@ class TestFlow(unittest.TestCase):
             'name': 'test',
             'type': 'invalid-type'
         }
-        self.assertRaisesRegex(FlowLibException, "^Element 'type' field must be one of \['processor', 'process_group', 'input_port', 'output_port'\]$", FlowElement.from_dict, invalid_type)
+        self.assertRaisesRegex(FlowLibException, "^Element 'type' field must be one of .*", FlowElement.from_dict, invalid_type)
         missing_package_id = {
             'name': 'test-processor',
             'type': 'processor',
@@ -101,3 +98,9 @@ class TestFlow(unittest.TestCase):
             'type': 'output_port'
         }
         self.assertIsInstance(FlowElement.from_dict(output_port), OutputPort)
+        output_port = {
+            'name': 'test-remote-group',
+            'type': 'remote_process_group',
+            'config': {}
+        }
+        self.assertIsInstance(FlowElement.from_dict(output_port), RemoteProcessGroup)
