@@ -77,12 +77,6 @@ def validate_flow(config):
     try:
         with open(config.flow_yaml, 'r') as f:
             flow = new_flow_from_file(f, config.component_dir)
-
-        print("Flow is valid")
-        print("Flow Name: {}".format(flow.name), file=sys.stdout)
-        print("Flow Version: {}".format(flow.version), file=sys.stdout)
-        # todo: validate connections, init nifi processor DTOs, etc..
-        # but dont actually try to connect to the NiFi API
     except FlowLibException as e:
         log.error(e)
         raise
@@ -91,14 +85,14 @@ def validate_flow(config):
 def export_flow(config):
     """
     :type config: FlowLibConfig
+    :return: io.TextIOWrapper
     """
     log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
         deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
         s = io.StringIO()
         deployment.save(s)
-        s.seek(0)
-        print(s.read())
+        return s
     except FlowLibException as e:
         log.error(e)
         raise
