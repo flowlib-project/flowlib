@@ -31,7 +31,7 @@ See [deployment.json](./deployment.json) for a full example. This was generated 
 
 See the [FlowDeployment](../flowlib/model/deployment.py) model for the equivelant python class definition
 
-```json
+```js
 {
     "flow": {},                 // The raw flow.yaml definition stored as a json object.
 
