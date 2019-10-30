@@ -497,7 +497,8 @@ def _create_processor(element, parent_pg, position, config, current_deployment, 
                 }
                 if previous_deployment:
                     previous_component = previous_deployment.get_component(element.src_component_name)
-                    state = previous_component.stateful_processors.get(component_path, {}).get('state')
+                    if previous_component:
+                        state = previous_component.stateful_processors.get(component_path, {}).get('state')
 
             if state:
                 log.info("Migrating processor state: {}".format(element.name))
