@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
+from tabulate import tabulate
+
 import flowlib.api
 from flowlib.cli import FlowLibCLI, FlowLibConfig
 
@@ -22,13 +24,30 @@ def main():
     elif cli.args.flow_yaml:
         flowlib.api.deploy_flow(cli.config)
     elif cli.args.export:
-        flowlib.api.export_flow(cli.config)
+        s = flowlib.api.export_flow(cli.config)
+        s.seek(0)
+        print(s.read())
     elif cli.args.configure_flow_controller:
         flowlib.api.configure_flow_controller(cli.config)
     elif cli.args.list:
-        flowlib.api.list_components(cli.config, cli.args.list)
+        components = flowlib.api.list_components(cli.config, cli.args.list)
+        print('\n'.join(components))
     elif cli.args.describe:
-        flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
+        descriptor = flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
+        headers = ['Name', 'Default', 'Allowable Values', 'Required', 'Sensitive', 'Supports EL', 'Description']
+        items = list()
+        for d in descriptor.values():
+            name = d.get('name')
+            default = d.get('default_value', '')
+            values = d.get('allowable_values') or list()
+            allowable_values = ','.join(list(map(lambda v: v['allowable_value']['value'], values)))
+            required = d.get('required')
+            sensitive = d.get('sensitive')
+            supports_el = d.get('supports_el')
+            description = d.get('description')
+            field = [name, default, allowable_values, required, sensitive, supports_el, description]
+            items.append(field)
+        print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
     else:
         cli.parser.print_usage()
 

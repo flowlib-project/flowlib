@@ -77,12 +77,6 @@ def validate_flow(config):
     try:
         with open(config.flow_yaml, 'r') as f:
             flow = new_flow_from_file(f, config.component_dir)
-
-        print("Flow is valid")
-        print("Flow Name: {}".format(flow.name), file=sys.stdout)
-        print("Flow Version: {}".format(flow.version), file=sys.stdout)
-        # todo: validate connections, init nifi processor DTOs, etc..
-        # but dont actually try to connect to the NiFi API
     except FlowLibException as e:
         log.error(e)
         raise
@@ -91,14 +85,14 @@ def validate_flow(config):
 def export_flow(config):
     """
     :type config: FlowLibConfig
+    :return: io.TextIOWrapper
     """
     log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
         deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
         s = io.StringIO()
         deployment.save(s)
-        s.seek(0)
-        print(s.read())
+        return s
     except FlowLibException as e:
         log.error(e)
         raise
@@ -141,10 +135,11 @@ def list_components(config, component_type):
     :type config: FlowLibConfig
     :param component_type: List the available components for this type
     :type component_type: str
+    :return: list(str)
     """
     log.debug("Listing all available {}...".format(component_type))
     try:
-        flowlib.nifi.docs.list_components(config.docs_directory, component_type)
+        return flowlib.nifi.docs.list_components(config.docs_directory, component_type)
     except FlowLibException as e:
         log.error(e)
         raise
@@ -157,10 +152,11 @@ def describe_component(config, component_type, package_id):
     :type component_type: str
     :param package_id: The package id of the component to describe
     :type package_id: str
+    :return: dict(str:dict(PropertyDescriptorDTO))
     """
     log.debug("Describing {}: {}...".format(component_type, package_id))
     try:
-        flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
+        return flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
     except FlowLibException as e:
         log.error(e)
         raise
