@@ -233,7 +233,7 @@ def list_components(doc_dir, component_type):
         log.error("Run 'flowlib --generate-docs {}' to use this command".format(doc_dir))
         raise FlowLibException("Docs directory {} does not exist".format(doc_dir))
 
-    print('\n'.join([ c[:-5] for c in os.listdir(doc_dir) if c.endswith('.yaml') ]))
+    print('\n'.join([ c[:-5] for c in os.listdir(component_dir) if c.endswith('.yaml') ]))
 
 
 def describe_component(doc_dir, component_type, package_id):
