@@ -11,6 +11,7 @@ from flowlib.model.component import FlowComponent
 
 RESOURCES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources'))
 
+
 def load_test_config():
     with open(os.path.join(RESOURCES_DIR, '.flowlib.yml')) as f:
         config = FlowLibConfig.new_from_file(f)

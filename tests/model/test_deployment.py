@@ -6,7 +6,7 @@ import unittest
 from flowlib.model import FlowLibException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 
-from .. import flowlib_test_utils
+from tests import utils
 
 class TestDeployment(unittest.TestCase):
 
@@ -20,9 +20,9 @@ class TestDeployment(unittest.TestCase):
         self.assertIsInstance(deployment.get_component('Process PDFs'), DeployedComponent)
 
     def test_add_get_component(self):
-        flow = flowlib_test_utils.load_test_flow()
+        flow = utils.load_test_flow()
         deployment = FlowDeployment(flow.raw)
-        component = flowlib_test_utils.load_test_component('component.yaml')
+        component = utils.load_test_component('component.yaml')
         deployment.add_component(DeployedComponent(component.raw))
 
         self.assertTrue(len(deployment.components) == 1)

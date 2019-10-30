@@ -5,13 +5,13 @@ import unittest
 from flowlib.model import FlowLibException
 from flowlib.parser import init_flow, replace_flow_element_vars_recursive
 
-from . import flowlib_test_utils
+from tests import utils
 
 class TestParser(unittest.TestCase):
 
     def test_init_flow(self):
-        component_dir = os.path.join(flowlib_test_utils.RESOURCES_DIR, 'components')
-        flow = flowlib_test_utils.load_test_flow(init=False)
+        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
+        flow = utils.load_test_flow(init=False)
         init_flow(flow, component_dir)
 
         self.assertIsInstance(flow.raw, dict)
@@ -22,8 +22,8 @@ class TestParser(unittest.TestCase):
 
 
     def test_required_controller(self):
-        component_dir = os.path.join(flowlib_test_utils.RESOURCES_DIR, 'components')
-        flow = flowlib_test_utils.load_test_flow(init=False)
+        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
+        flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['controllers'] = dict()
@@ -31,8 +31,8 @@ class TestParser(unittest.TestCase):
 
 
     def test_required_var(self):
-        component_dir = os.path.join(flowlib_test_utils.RESOURCES_DIR, 'components')
-        flow = flowlib_test_utils.load_test_flow(init=False)
+        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
+        flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['vars'] = dict()
@@ -44,7 +44,7 @@ class TestParser(unittest.TestCase):
         os.environ.clear()
         os.environ['NO_DEFAULT'] = 'env value set'
 
-        flow = flowlib_test_utils.load_test_flow()
+        flow = utils.load_test_flow()
         replace_flow_element_vars_recursive(flow, flow._elements, flow.components)
 
         # check env lookup and controller var injection
