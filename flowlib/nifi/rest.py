@@ -14,7 +14,7 @@ from flowlib.logger import log
 from flowlib.nifi.state import ZookeeperClient
 from flowlib.model import FlowLibException, FlowNotFoundException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
-from flowlib.model.flow import InputPort, OutputPort, ProcessGroup, Processor
+from flowlib.model.flow import InputPort, OutputPort, RemoteProcessGroup, ProcessGroup, Processor
 
 
 def get_nifi_rest_api_info():
@@ -173,6 +173,7 @@ def deploy_flow(flow, config, force=False):
         # create a PG for the new flow
         flow_pg_element = ProcessGroup(name="(deploying) {}".format(flow.name), _type="process_group", _parent_path=flow.name)
         flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, deployment, is_flow_root=True)
+        flow.id = flow_pg.id
 
         _create_controllers(flow, flow_pg)
         # we have to wait until the controllers exist in NiFi before applying jinja templating
@@ -232,6 +233,8 @@ def _get_nifi_entity_by_id(kind, identifier):
         e = nipyapi.nifi.ProcessorsApi().get_processor(identifier)
     elif kind == 'process_group':
         e = nipyapi.nifi.ProcessGroupsApi().get_process_group(identifier)
+    elif kind == 'remote_process_group':
+        e = nipyapi.nifi.RemoteProcessGroupsApi().get_remote_process_group(identifier)
     else:
         raise FlowLibException("{} is not a valid NiFi api type")
     return e
@@ -370,6 +373,8 @@ def _create_canvas_elements_recursive(elements, parent_pg, config, current_deplo
             _create_canvas_elements_recursive(el._elements, pg, config, current_deployment, previous_deployment)
         elif isinstance(el, Processor):
             _create_processor(el, parent_pg, position, config, current_deployment, previous_deployment)
+        elif isinstance(el, RemoteProcessGroup):
+            _create_remote_process_group(el, parent_pg, position)
         elif isinstance(el, InputPort):
             _create_input_port(el, parent_pg, position)
         elif isinstance(el, OutputPort):
@@ -389,10 +394,30 @@ def _create_connections_recursive(flow, elements):
     for el in elements.values():
         if isinstance(el, ProcessGroup):
             _create_connections_recursive(flow, el._elements)
-        elif el.type in ['processor', 'input_port', 'output_port']:
-            _create_connections(flow, el)
+        elif el.type in ['input_port', 'output_port', 'remote_process_group', 'processor']:
+            _create_element_connections(flow, el)
         else:
             raise FlowLibException("Unsupported Element Type: {}".format(el.type))
+
+
+def _create_remote_process_group(element, parent_pg, position):
+    """
+    Create a Remote Process Group on the NiFi canvas
+    :param element: The Remote Process Group to deploy
+    :type element: flowlib.model.flow.RemoteProcessGroup
+    :param parent_pg: The process group in which to create the new remote process group
+    :type parent_pg: nipyapi.nifi.models.process_group_entity.ProcessGroupEntity
+    """
+    element.config.name = element.name
+    rpg = nipyapi.nifi.apis.ProcessGroupsApi().create_remote_process_group(
+        id=parent_pg.id,
+        body=nipyapi.nifi.RemoteProcessGroupEntity(
+            revision={'version': 0},
+            component=element.config
+        )
+    )
+    element.id = rpg.id
+    element.parent_id = parent_pg.id
 
 
 def _create_process_group(element, parent_pg, position, current_deployment, is_flow_root=False):
@@ -538,48 +563,55 @@ def _create_output_port(element, parent_pg, position):
     return op
 
 
-def _create_connections(flow, source_element):
+def _create_element_connections(flow, source_element):
     """
     Create the downstream connections for the element on the NiFi canvas
-    :param flow: The Flow to create connections for
+    :param flow: The Flow to create connections in
     :type flow: Flow
     :param source_element: The source FlowElement to connect to its downstreams
     :type source_element: FlowElement
     """
     log.info("Creating downstream connections for element: {}/{}".format(source_element.parent_path, source_element.name))
     parent = flow.get_parent_element(source_element)
+
+    # TODO: See https://github.com/B23admin/b23-flowlib/issues/50
+    # We should consider allowing input/output port connections for a flow
+    # so they can be referenced via a jinja helper lookup similar to the controller lookup
+
     # Validate no inputs or outputs on the root canvas
     if not parent and (isinstance(source_element, InputPort) or isinstance(source_element, OutputPort)):
         raise FlowLibException("Input and Output ports are not allowed in the root process group")
 
-    connections = source_element.connections
     if isinstance(source_element, OutputPort):
         if parent.connections:
             connections = [c for c in parent.connections if c.from_port == source_element.name]
         else:
             connections = None
+    else:
+        connections = source_element.connections
 
     if connections:
         for c in connections:
-            # Find the NiFi Entity ID of the source element
-            if isinstance(source_element, Processor) or isinstance(source_element, InputPort):
+            if isinstance(source_element, (InputPort, Processor, RemoteProcessGroup)):
                 elements = parent._elements
-                source = _get_nifi_entity_by_id(source_element.type, source_element.id)
             elif isinstance(source_element, OutputPort):
-                # if source is an output port then we need to to search the next parent's elements for the downstream element
+                # if source is an output port then we need to to search the
+                # parent's elements for the destination element
                 elements = flow.get_parent_element(parent)._elements
-                source = _get_nifi_entity_by_id(source_element.type, source_element.id)
             else:
                 raise FlowLibException("""
                     Something went wrong, failed while recursively connecting flow elements on the canvas.
                     Cannot create downstream connections for elements of type {}""".format(type(source_element)))
 
+            source = _get_nifi_entity_by_id(source_element.type, source_element.id)
+            source_id = source.component.id
+            source_group_id = source.component.parent_group_id
+
             dest_element = elements.get(c.name)
             if not dest_element:
                 raise FlowLibException("The destination element {} is not defined, must be one of: {}".format(c.name, elements.keys()))
 
-            # Find the NiFi Entity ID of the dest element
-            if isinstance(dest_element, Processor) or isinstance(dest_element, OutputPort):
+            if isinstance(dest_element, (OutputPort, Processor, RemoteProcessGroup)):
                 dest = _get_nifi_entity_by_id(dest_element.type, dest_element.id)
             elif isinstance(dest_element, ProcessGroup):
                 d = [v for k,v in dest_element._elements.items() if isinstance(v, InputPort) and k == c.to_port][0]
@@ -588,8 +620,61 @@ def _create_connections(flow, source_element):
                 raise FlowLibException("""Connections cannot be defined for downstream elements of type 'input_port'.
                   InputPorts can only be referenced from outside of the current component""")
 
+            dest_id = dest.component.id
+            dest_group_id = dest.component.parent_group_id
+
+            # if source or dest are a RPG then we need the IDs of the target input or output
+            # ports from the remote instance
+            if isinstance(source, nipyapi.nifi.RemoteProcessGroupEntity):
+                source_type = 'REMOTE_OUTPUT_PORT'
+                target = [op for op in source.component.contents.output_ports if op.name == c.from_port]
+                if len(target) != 1:
+                    raise FlowLibException("Output port {} not found. Found: {}".format(c.from_port, [op.name for op in dest.component.contents.output_ports]))
+                source_id = target[0].id
+                source_group_id = target[0].group_id
+            else:
+                source_type = nipyapi.utils.infer_object_label_from_class(source)
+
+            if isinstance(dest, nipyapi.nifi.RemoteProcessGroupEntity):
+                dest_type = 'REMOTE_INPUT_PORT'
+                target = [ip for ip in dest.component.contents.input_ports if ip.name == c.to_port]
+                if len(target) != 1:
+                    raise FlowLibException("Input port {} not found. Found: {}".format(c.to_port, [ip.name for ip in dest.component.contents.input_ports]))
+                dest_id = target[0].id
+                dest_group_id = target[0].group_id
+            else:
+                dest_type = nipyapi.utils.infer_object_label_from_class(dest)
+
+            # if the source of the connection is an output port then the group_id for the connection is the id of
+            # the parent group of the group which contains the output port
+            if isinstance(source_element, OutputPort):
+                group_id = flow.get_parent_element(parent).id
+            else:
+                group_id = source_element.parent_id
+
             log.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
-            nipyapi.canvas.create_connection(source, dest, c.relationships)
+            nipyapi.nifi.ProcessGroupsApi().create_connection(
+                id=group_id,
+                body=nipyapi.nifi.ConnectionEntity(
+                    revision=nipyapi.nifi.RevisionDTO(version=0),
+                    source_type=source_type,
+                    destination_type=dest_type,
+                    component=nipyapi.nifi.ConnectionDTO(
+                        source=nipyapi.nifi.ConnectableDTO(
+                            id=source_id,
+                            group_id=source_group_id,
+                            type=source_type
+                        ),
+                        name=c.name,
+                        destination=nipyapi.nifi.ConnectableDTO(
+                            id=dest_id,
+                            group_id=dest_group_id,
+                            type=dest_type
+                        ),
+                        selected_relationships=c.relationships
+                    )
+                )
+            )
     else:
         log.debug("Terminal node, no downstream connections found for element {}".format(source_element.name))
 

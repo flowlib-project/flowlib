@@ -6,6 +6,7 @@ from flowlib.model import FlowLibException
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
 from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
+from nipyapi.nifi.models.remote_process_group_dto import RemoteProcessGroupDTO
 
 
 PG_NAME_DELIMETER = '/'
@@ -51,6 +52,7 @@ class Flow:
         self._controllers = None
         self._loaded_components = dict()
         self._elements = dict()
+        self._id = None
 
     @property
     def components(self):
@@ -61,6 +63,16 @@ class Flow:
         if self._loaded_components:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._loaded_components = components
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        if self._id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._id = _id
 
     def find_component_by_path(self, path):
         """
@@ -150,6 +162,8 @@ class FlowElement(ABC):
             if elem_dict.get('vars'):
                 elem_dict['_vars'] = elem_dict.pop('vars')
             return ProcessGroup(**elem_dict)
+        elif elem_dict['_type'] == 'remote_process_group':
+            return RemoteProcessGroup(**elem_dict)
         elif elem_dict['_type'] == 'processor':
             return Processor(**elem_dict)
         elif elem_dict['_type'] == 'input_port':
@@ -157,7 +171,7 @@ class FlowElement(ABC):
         elif elem_dict['_type'] == 'output_port':
             return OutputPort(**elem_dict)
         else:
-            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'input_port', 'output_port']")
+            raise FlowLibException("Element 'type' field must be one of ['processor', 'process_group', 'remote_process_group', 'input_port', 'output_port']")
 
     @property
     def id(self):
@@ -195,6 +209,17 @@ class FlowElement(ABC):
 
     def __repr__(self):
         return str(vars(self))
+
+
+class RemoteProcessGroup(FlowElement):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.config = RemoteProcessGroupConfig(**kwargs['config'])
+
+
+class RemoteProcessGroupConfig(RemoteProcessGroupDTO):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 class ProcessGroup(FlowElement):

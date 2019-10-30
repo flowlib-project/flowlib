@@ -6,29 +6,29 @@ from flowlib.model import FlowLibException
 from flowlib.model.flow import PG_NAME_DELIMETER, Flow, FlowElement, ControllerService, ProcessGroup, Processor, InputPort, OutputPort
 from flowlib.model.component import FlowComponent
 
-from .. import flowlib_test_utils
+from tests import utils
 
 class TestFlow(unittest.TestCase):
 
 
     def test_load_flow(self):
-        flowlib_test_utils.load_test_flow(init=False)
+        utils.load_test_flow(init=False)
 
 
     def test_find_component_by_path(self):
-        flow = flowlib_test_utils.load_test_flow()
+        flow = utils.load_test_flow()
         real = 'component.yaml'
         notreal = 'not-real/abc.yaml'
         self.assertIsInstance(flow.find_component_by_path(real), FlowComponent)
         self.assertIsNone(flow.find_component_by_path(notreal))
 
-        duplicate = flowlib_test_utils.load_test_component('component.yaml')
+        duplicate = utils.load_test_component('component.yaml')
         flow._loaded_components['duplicate'] = duplicate
         self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'component.yaml')
 
 
     def find_controller_by_name(self):
-        flow = flowlib_test_utils.load_test_flow()
+        flow = utils.load_test_flow()
 
         controller = flow.find_controller_by_name('aws-s3-credentials')
         self.assertIsInstance(controller, ControllerService)
@@ -39,7 +39,7 @@ class TestFlow(unittest.TestCase):
 
 
     def test_get_parent_element(self):
-        flow = flowlib_test_utils.load_test_flow()
+        flow = utils.load_test_flow()
 
         # get the first element at the flow root
         el = [e for e in flow._elements.values()][0]

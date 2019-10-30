@@ -5,7 +5,7 @@ import unittest
 from flowlib.model.config import FlowLibConfig
 from flowlib.cli import FlowLibCLI
 
-from .. import flowlib_test_utils
+from tests import utils
 
 
 class TestFlowLibConfig(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestFlowLibConfig(unittest.TestCase):
             self.assertEqual(FlowLibConfig.DEFAULTS[k], getattr(config, k))
 
     def test_new_from_file(self):
-        config = flowlib_test_utils.load_test_config()
+        config = utils.load_test_config()
         self.assertIsNotNone(config)
         self.assertEqual(config.nifi_endpoint, 'http://nifi-dev:8080')
         self.assertEqual(config.zookeeper_connection, 'nifi-dev:2181')
