@@ -1,4 +1,4 @@
-### Concepts ###
+## Concepts ##
 
 `FlowComponent` - A re-useable process group definition
 
