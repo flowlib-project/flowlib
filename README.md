@@ -21,6 +21,7 @@ pip install requirements-dev.txt
 pip install -e ./
 ```
 
+
 ### Release ###
 
 For a major/minor release, pass the version as an argument to the release script
@@ -35,11 +36,14 @@ for a patch release, do not pass any arguments
 ./release.sh
 ```
 
+
 ### Resources ###
 
 [flowlib/](./flowlib/README.md) - A python module and cli tool for deploying NiFi flows from YAML
 
 [k8s/](./k8s/README.md) - kustomize resource definitions for bootstrapping local clusters and integrating with BDP
+
+[docs/](./docs) - Reference documentation for using FlowLib
 
 
 ### Usage Caveats ###

@@ -1,0 +1,301 @@
+{
+  "flow": {
+    "name": "pdf-processor-demo-flow",
+    "version": 1.0,
+    "comments": "This is a demo NiFi flow that was deployed to NiFi by B23 FlowLib.\nB23 FlowLib allows users to define NiFi flows as re-useable NiFi components\nwhich can be loaded into a root flow.yaml and deployed *idempotently* to a running\nNiFi instance.\n\nThis demo flow will watch for PDF files to land in Amazon S3, download the PDFs,\nprocess the PDFs, and then write the parsed results back to the same S3 bucket\nin the output directory\n",
+    "global_vars": {
+      "bucket": "kegs-b23-dataflow-demos",
+      "region": "us-east-1"
+    },
+    "controller_services": [
+      {
+        "name": "aws-s3-credentials",
+        "config": {
+          "package_id": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService",
+          "properties": {
+            "Access Key": "{{ env('AWS_ACCESS_KEY', 'AKIA43S572GR7SUSKWUK') }}",
+            "Secret Key": "{{ env('AWS_SECRET_KEY', '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') }}"
+          }
+        }
+      }
+    ],
+    "canvas": [
+      {
+        "name": "list-fetch",
+        "type": "process_group",
+        "component_path": "common/s3_list_fetch_with_retry.yaml",
+        "controllers": {
+          "aws_credential_service": "aws-s3-credentials"
+        },
+        "vars": {
+          "bucket": "{{ bucket }}",
+          "region": "{{ region }}",
+          "prefix": "demo-data/input"
+        },
+        "connections": [
+          {
+            "name": "process-pdfs",
+            "from_port": "output",
+            "to_port": "input"
+          }
+        ]
+      },
+      {
+        "name": "process-pdfs",
+        "type": "process_group",
+        "component_path": "pdf/process_pdfs.yaml",
+        "connections": [
+          {
+            "name": "update-filename",
+            "from_port": "output"
+          }
+        ]
+      },
+      {
+        "name": "update-filename",
+        "type": "processor",
+        "config": {
+          "package_id": "org.apache.nifi.processors.attributes.UpdateAttribute",
+          "auto_terminated_relationships": [
+            "failure"
+          ],
+          "properties": {
+            "file_dest": "demo-data/output/${filename:substringBeforeLast('.')}.json"
+          }
+        },
+        "connections": [
+          {
+            "name": "write-to-s3",
+            "relationships": [
+              "success"
+            ],
+            "to_port": "input"
+          }
+        ]
+      },
+      {
+        "name": "write-to-s3",
+        "type": "process_group",
+        "component_path": "common/s3_write_with_retry.yaml",
+        "controllers": {
+          "aws_credential_service": "aws-s3-credentials"
+        },
+        "vars": {
+          "bucket": "{{ bucket }}",
+          "region": "{{ region }}",
+          "destination_attribute": "file_dest"
+        }
+      }
+    ]
+  },
+  "components": [
+    {
+      "component": {
+        "name": "process-pdfs",
+        "process_group": [
+          {
+            "name": "input",
+            "type": "input_port",
+            "connections": [
+              {
+                "name": "process-pdf"
+              }
+            ]
+          },
+          {
+            "name": "process-pdf",
+            "type": "processor",
+            "config": {
+              "package_id": "org.apache.nifi.processors.standard.AttributesToJSON",
+              "auto_terminated_relationships": [
+                "failure"
+              ],
+              "properties": {
+                "Destination": "flowfile-content"
+              }
+            },
+            "connections": [
+              {
+                "name": "output",
+                "relationships": [
+                  "success"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "output",
+            "type": "output_port"
+          }
+        ],
+        "source_file": "pdf/process_pdfs.yaml"
+      },
+      "stateful_processors": {}
+    },
+    {
+      "component": {
+        "name": "s3-write-with-retry",
+        "defaults": {
+          "destination_attribute": "filename"
+        },
+        "required_vars": [
+          "bucket",
+          "region"
+        ],
+        "required_controllers": {
+          "aws_credential_service": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService"
+        },
+        "process_group": [
+          {
+            "name": "input",
+            "type": "input_port",
+            "connections": [
+              {
+                "name": "put-s3"
+              }
+            ]
+          },
+          {
+            "name": "put-s3",
+            "type": "processor",
+            "config": {
+              "package_id": "org.apache.nifi.processors.aws.s3.PutS3Object",
+              "auto_terminated_relationships": [
+                "success"
+              ],
+              "properties": {
+                "Bucket": "{{ bucket }}",
+                "Region": "{{ region }}",
+                "AWS Credentials Provider service": "{{ controller('aws_credential_service') }}",
+                "Object Key": "{{ '${' + destination_attribute + '}' }}"
+              }
+            },
+            "connections": [
+              {
+                "name": "put-s3",
+                "relationships": [
+                  "failure"
+                ]
+              }
+            ]
+          }
+        ],
+        "source_file": "common/s3_write_with_retry.yaml"
+      },
+      "stateful_processors": {}
+    },
+    {
+      "component": {
+        "name": "s3-list-fetch-with-retry",
+        "defaults": {
+          "min_object_age": "5m",
+          "prefix": ""
+        },
+        "required_vars": [
+          "bucket",
+          "region"
+        ],
+        "required_controllers": {
+          "aws_credential_service": "org.apache.nifi.processors.aws.credentials.provider.service.AWSCredentialsProviderControllerService"
+        },
+        "process_group": [
+          {
+            "name": "list-s3",
+            "type": "processor",
+            "config": {
+              "package_id": "org.apache.nifi.processors.aws.s3.ListS3",
+              "scheduling_strategy": "TIMER_DRIVEN",
+              "scheduling_period": "10 sec",
+              "properties": {
+                "Bucket": "{{ bucket }}",
+                "Region": "{{ region }}",
+                "AWS Credentials Provider service": "{{ controller('aws_credential_service') }}",
+                "prefix": "{{ prefix }}",
+                "min-age": "{{ min_object_age }}"
+              }
+            },
+            "connections": [
+              {
+                "name": "filter-directories",
+                "relationships": [
+                  "success"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "filter-directories",
+            "type": "processor",
+            "config": {
+              "package_id": "org.apache.nifi.processors.standard.RouteOnAttribute",
+              "auto_terminated_relationships": [
+                "unmatched"
+              ],
+              "properties": {
+                "is_file": "${filename:endsWith('/'):not()}"
+              }
+            },
+            "connections": [
+              {
+                "name": "fetch-s3",
+                "relationships": [
+                  "is_file"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "fetch-s3",
+            "type": "processor",
+            "config": {
+              "package_id": "org.apache.nifi.processors.aws.s3.FetchS3Object",
+              "properties": {
+                "Bucket": "{{ bucket }}",
+                "Region": "{{ region }}",
+                "AWS Credentials Provider service": "{{ controller('aws_credential_service') }}"
+              }
+            },
+            "connections": [
+              {
+                "name": "fetch-s3",
+                "relationships": [
+                  "failure"
+                ]
+              },
+              {
+                "name": "output",
+                "relationships": [
+                  "success"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "output",
+            "type": "output_port"
+          }
+        ],
+        "source_file": "common/s3_list_fetch_with_retry.yaml"
+      },
+      "stateful_processors": {
+        "pdf-processor-demo-flow/list-fetch/list-s3": {
+          "group_id": "1df05f54-016e-1000-0000-00005cf18731",
+          "processor_id": "1df05ffc-016e-1000-ffff-ffffc2ea3d47",
+          "state": {
+            "currentTimestamp": "1556737155000",
+            "key-0": "demo-data/input/ast_sci_data_tables_sample.pdf",
+            "key-1": "demo-data/input/dummy.pdf",
+            "key-2": "demo-data/input/sample.pdf",
+            "key-3": "demo-data/input/c4611_sample_explain.pdf"
+          }
+        }
+      }
+    }
+  ],
+  "root_group_id": "1df05e93-016e-1000-0000-000022147876",
+  "stateful_processors": {
+    "update-filename": {
+      "processor_id": "1df064ec-016e-1000-ffff-ffffa2ed5fba"
+    }
+  }
+}
