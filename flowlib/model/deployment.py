@@ -37,11 +37,11 @@ class FlowDeployment:
         """
         :param name: The name of the component
         :type name: str
-        :returns: DeployedComponent
+        :returns: The first DeployedComponent found or None
         """
         c = list(filter(lambda x: x.component['name'] == name, self.components))
         if len(c) <= 0:
-            raise FlowLibException("Component named {} was not found".format(name))
+            return None
         else:
             return c[0]
 
