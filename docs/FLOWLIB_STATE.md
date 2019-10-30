@@ -33,36 +33,48 @@ See the [FlowDeployment](../flowlib/model/deployment.py) model for the equivelan
 
 ```js
 {
-    "flow": {},                 // The raw flow.yaml definition stored as a json object.
+    // The raw flow.yaml definition stored as a json object.
+    "flow": {},
 
-    "root_group_id": "<uuid>",  // The NiFi uuid of the process group instance representing the deployed flow.
-                                // Note: this is _not_ the same uuid as the root process group of the NiFi instance.
+    // The NiFi uuid of the process group instance representing the deployed flow.
+    // Note: this is _not_ the same uuid as the root process group of the NiFi instance.
+    "root_group_id": "<uuid>",
 
-    "stateful_processors": {    // A map of stateful processors located at the
-                                // flow.canvas level (not contained in a component).
+    // A map of stateful processors located at the
+    // flow.canvas level (not contained in a component).
+    "stateful_processors": {
 
-        "update-filename": {    // The key is the name of the processor (flowlib.model.flow.Processor.name)
-            "processor_id": "<uuid>"  // The NiFi uuid of the processor instance
+        // The key is the name of the processor (flowlib.model.flow.Processor.name)
+        "update-filename": {
+
+            // The NiFi uuid of the processor instance
+            "processor_id": "<uuid>"
         }
     },
-    "components": [             // An array of components that are used by this flow
-        {
-            "component": {},    // The raw component.yaml definition stored as a json object.
 
-            "stateful_processors": {    // A dict(str:object) which maps the stateful processors to its
+    // An array of components that are used by this flow
+    "components": [{
 
-                "flow-name/component-instance-name/stateful-processor-name": { // The key is the path within the flow to the stateful processor instance
+        // The raw component.yaml definition stored as a json object.
+        "component": {},
 
-                    "group_id": "<uuid>",   // The NiFi uuid of the process group representing this component instance
+        // A dict(str:object) which maps the stateful processors to its
+        "stateful_processors": {
 
-                    "processor_id": "<uuid>",   // The NiFi uuid of the processor representing this stateful processor instance
+            // The key is the path within the flow to the stateful processor instance
+            "flow-name/component-instance-name/stateful-processor-name": {
 
-                    "state": {} // A dict(str:str) containing k,v pairs of this processor's state stored in zookeeper
-                }
+                // The NiFi uuid of the process group representing this component instance
+                "group_id": "<uuid>",
+
+                // The NiFi uuid of the processor representing this stateful processor instance
+                "processor_id": "<uuid>",
+
+                // A dict(str:str) containing k,v pairs of this processor's state stored in zookeeper
+                "state": {}
             }
-
         }
-    ]
+    }]
 }
 ```
 
