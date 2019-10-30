@@ -5,7 +5,6 @@ import yaml
 import jinja2
 import nipyapi.nifi
 import nipyapi.canvas
-from tabulate import tabulate
 
 from flowlib.layout import TOP_LEVEL_PG_LOCATION
 from flowlib.model import FlowLibException
@@ -224,6 +223,7 @@ def list_components(doc_dir, component_type):
     List the available components for a given component_type
     :param component_type: One of [processors, controllers, reporting-tasks]
     :type component_type: str
+    :return: list(str)
     """
     if component_type not in ['processors', 'controllers', 'reporting-tasks']:
         raise FlowLibException("Invalid component type: {}. Must be one of ('processors', 'controllers', 'reporting-tasks')".format(component_type))
@@ -242,6 +242,7 @@ def describe_component(doc_dir, component_type, package_id):
     :param component_type: One of [processor, controller, reporting-task]
     :type component_type: str
     :type package_id: str
+    :return: dict(str:dict(PropertyDescriptorDTO))
     """
     if component_type not in ['processor', 'controller', 'reporting-task']:
         raise FlowLibException("Invalid component type: {}. Must be one of ('processor', 'controller', 'reporting-task')".format(component_type))
@@ -253,20 +254,4 @@ def describe_component(doc_dir, component_type, package_id):
         raise FlowLibException("Component descriptor {} does not exist".format(desc))
 
     with open(desc, 'r') as f:
-        descriptor = yaml.safe_load(f)
-
-    headers = ['Name', 'Default', 'Allowable Values', 'Required', 'Sensitive', 'Supports EL', 'Description']
-    items = list()
-    for d in descriptor.values():
-        name = d.get('name')
-        default = d.get('default_value', '')
-        values = d.get('allowable_values') or list()
-        allowable_values = ','.join(list(map(lambda v: v['allowable_value']['value'], values)))
-        required = d.get('required')
-        sensitive = d.get('sensitive')
-        supports_el = d.get('supports_el')
-        description = d.get('description')
-        field = [name, default, allowable_values, required, sensitive, supports_el, description]
-        items.append(field)
-
-    print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
+        return yaml.safe_load(f)

@@ -141,7 +141,7 @@ def list_components(config, component_type):
     :type config: FlowLibConfig
     :param component_type: List the available components for this type
     :type component_type: str
-    :returns: list(str)
+    :return: list(str)
     """
     log.debug("Listing all available {}...".format(component_type))
     try:
@@ -158,10 +158,11 @@ def describe_component(config, component_type, package_id):
     :type component_type: str
     :param package_id: The package id of the component to describe
     :type package_id: str
+    :return: dict(str:dict(PropertyDescriptorDTO))
     """
     log.debug("Describing {}: {}...".format(component_type, package_id))
     try:
-        flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
+        return flowlib.nifi.docs.describe_component(config.docs_directory, component_type, package_id)
     except FlowLibException as e:
         log.error(e)
         raise
