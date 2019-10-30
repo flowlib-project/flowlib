@@ -52,6 +52,7 @@ class Flow:
         self._controllers = None
         self._loaded_components = dict()
         self._elements = dict()
+        self._id = None
 
     @property
     def components(self):
@@ -62,6 +63,16 @@ class Flow:
         if self._loaded_components:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._loaded_components = components
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        if self._id:
+            raise FlowLibException("Attempted to change readonly attribute after initialization")
+        self._id = _id
 
     def find_component_by_path(self, path):
         """

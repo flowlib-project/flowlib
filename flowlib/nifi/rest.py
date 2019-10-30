@@ -173,6 +173,7 @@ def deploy_flow(flow, config, force=False):
         # create a PG for the new flow
         flow_pg_element = ProcessGroup(name="(deploying) {}".format(flow.name), _type="process_group", _parent_path=flow.name)
         flow_pg = _create_process_group(flow_pg_element, canvas_root_pg, flowlib.layout.TOP_LEVEL_PG_LOCATION, deployment, is_flow_root=True)
+        flow.id = flow_pg.id
 
         _create_controllers(flow, flow_pg)
         # we have to wait until the controllers exist in NiFi before applying jinja templating
@@ -644,17 +645,17 @@ def _create_element_connections(flow, source_element):
             else:
                 dest_type = nipyapi.utils.infer_object_label_from_class(dest)
 
-            # print("""
-            # Creating connection for
-            # source_id: {},
-            # dest_id: {},
-            # source_parent: {}
-            # dest_parent: {},
-            # """.format(source_id, dest_id, source_group_id, dest_group_id))
+            # if the source of the connection is an output port then the group_id for the connection is the id of
+            # the parent group of the group which contains the output port
+            if isinstance(source_element, OutputPort):
+                print(flow.get_parent_element(parent).name)
+                group_id = flow.get_parent_element(parent).id
+            else:
+                group_id = source_element.parent_id
 
             log.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
             nipyapi.nifi.ProcessGroupsApi().create_connection(
-                id=source.component.parent_group_id,
+                id=group_id,
                 body=nipyapi.nifi.ConnectionEntity(
                     revision=nipyapi.nifi.RevisionDTO(version=0),
                     source_type=source_type,
