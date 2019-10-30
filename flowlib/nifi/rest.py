@@ -648,7 +648,6 @@ def _create_element_connections(flow, source_element):
             # if the source of the connection is an output port then the group_id for the connection is the id of
             # the parent group of the group which contains the output port
             if isinstance(source_element, OutputPort):
-                print(flow.get_parent_element(parent).name)
                 group_id = flow.get_parent_element(parent).id
             else:
                 group_id = source_element.parent_id
