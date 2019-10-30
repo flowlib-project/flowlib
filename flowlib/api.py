@@ -141,10 +141,11 @@ def list_components(config, component_type):
     :type config: FlowLibConfig
     :param component_type: List the available components for this type
     :type component_type: str
+    :returns: list(str)
     """
     log.debug("Listing all available {}...".format(component_type))
     try:
-        flowlib.nifi.docs.list_components(config.docs_directory, component_type)
+        return flowlib.nifi.docs.list_components(config.docs_directory, component_type)
     except FlowLibException as e:
         log.error(e)
         raise

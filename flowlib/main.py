@@ -26,7 +26,8 @@ def main():
     elif cli.args.configure_flow_controller:
         flowlib.api.configure_flow_controller(cli.config)
     elif cli.args.list:
-        flowlib.api.list_components(cli.config, cli.args.list)
+        components = flowlib.api.list_components(cli.config, cli.args.list)
+        print('\n'.join(components))
     elif cli.args.describe:
         flowlib.api.describe_component(cli.config, cli.args.describe.component_type, cli.args.describe.package_id)
     else:
