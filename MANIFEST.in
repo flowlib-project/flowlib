@@ -1,10 +1,10 @@
+exclude *
+
 include flowlib/logging.conf
 include setup.py
 
 graft flowlib/init/
 graft flowlib/templates/
-
-exclude *
 
 prune flowlib-components/
 prune flowlib/init/docs/
