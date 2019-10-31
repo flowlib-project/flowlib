@@ -110,7 +110,7 @@ def init_flow(flow, component_dir=None):
     log.info("Initializing root Flow {}".format(flow.name))
     for elem_dict in flow.canvas:
         elem_dict['_parent_path'] = flow.name
-        el = FlowElement.from_dict(elem_dict)
+        el = FlowElement.from_dict(copy.deepcopy(elem_dict))
         _validate_name(el.name)
         el.src_component_name = 'root'
 
@@ -182,7 +182,7 @@ def _init_component_recursive(pg_element, flow):
     # Call FlowElement.from_dict() on each element in the process_group
     for elem_dict in component.process_group:
         elem_dict['_parent_path'] = "{}/{}".format(pg_element._parent_path, pg_element.name)
-        el = FlowElement.from_dict(elem_dict)
+        el = FlowElement.from_dict(copy.deepcopy(elem_dict))
         _validate_name(el.name)
         el.src_component_name = component.name
 

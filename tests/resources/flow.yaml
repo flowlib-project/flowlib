@@ -23,7 +23,19 @@ canvas:
   vars:
     required_var: "{{ global_var }}"
     default_var2: "override"
+  connections:
+  - name: debug
+    from_port: output
 
+ # import the same component again, see #76
+- name: test-reuse-component
+  type: process_group
+  component_path: component.yaml
+  controllers:
+    test_controller: test-controller-service
+  vars:
+    required_var: "{{ global_var }}"
+    default_var2: "override"
   connections:
   - name: debug
     from_port: output
