@@ -5,9 +5,6 @@
 ```bash
 # Bootstrap cluster
 $ kubectl apply -k ./k8s/app/bootstrap
-
-# Launch nifi
-$ kubectl apply -k ./k8s/local
 ```
 
 Run: `kubectl port-forward svc/nifi 8080:8080`
