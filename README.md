@@ -11,7 +11,7 @@ pip install b23-flowlib-$VERSION.tar.gz
 Check out the [User Guide](./docs/FLOWLIB_USER_GUIDE.md) to get started
 
 
-## FlowLib Developer Getting Started ##
+## Developer Getting Started ##
 
 ```shell
 git clone git@github.com:B23admin/b23-flowlib.git && cd b23-flowlib
@@ -20,6 +20,10 @@ source env/bin/activate
 pip install requirements-dev.txt
 pip install -e ./
 ```
+
+## Testing ##
+
+Run `./test.sh` to run all the unit/integration tests
 
 
 ## Release ##
