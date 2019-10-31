@@ -87,3 +87,4 @@ EOF
 
 # echo "Waiting for local NiFi deployment..." && sleep 3
 # kubectl port-forward svc/nifi-dev 8080:8080
+# kubectl port-forward svc/nifi-dev 2181:2181
