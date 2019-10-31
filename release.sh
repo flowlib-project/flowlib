@@ -1,4 +1,6 @@
-#!/usr/bin/env bash -e
+#!/usr/bin/env bash
+set -exuo pipefail
+
 dir="$(dirname $0)"
 
 # if no arg, increment patch version
@@ -16,7 +18,7 @@ fi
 . test.sh
 
 # Tag release
-git tag -a v${REL} -m "B23 FlowLib: $(date)"
+git tag -a v${REL} -m "B23 FlowLib: $(date)" && git push origin v${REL}
 
 # Remove dist/ if it exists
 if [ -d $dir/dist ]; then
@@ -27,5 +29,6 @@ fi
 python ${dir}/setup.py sdist
 DIST="$(ls $dir/dist)"
 
+set +x
 echo ""
 echo "Don't forget to upload dist/${DIST} to github: https://github.com/B23admin/b23-flowlib/releases/edit/v${REL}"
