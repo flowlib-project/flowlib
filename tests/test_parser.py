@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import os
 import unittest
 
@@ -10,9 +11,8 @@ from tests import utils
 class TestParser(unittest.TestCase):
 
     def test_init_flow(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
-        init_flow(flow, component_dir)
+        init_flow(flow, utils.COMPONENT_DIR)
 
         self.assertIsInstance(flow.raw, dict)
         self.assertTrue(len(flow._elements.keys()) > 0)
@@ -22,21 +22,19 @@ class TestParser(unittest.TestCase):
 
 
     def test_required_controller(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['controllers'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_controllers.*', init_flow, flow, component_dir)
+        self.assertRaisesRegex(FlowLibException, '^Missing required_controllers.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_required_var(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['vars'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_vars.*', init_flow, flow, component_dir)
+        self.assertRaisesRegex(FlowLibException, '^Missing required_vars.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_var_injection(self):
@@ -70,3 +68,13 @@ class TestParser(unittest.TestCase):
         # so there is no uuid to lookup. This should probably be refactored so that it can be unit tested.
         # For now it will be tested by the itests
         # self.assertEqual(props['controller-lookup'], 'controller') # test controller
+
+    # Tests Github issue #76
+    def test_duplicate_components(self):
+        flow = utils.load_test_flow(init=False)
+        # Find the first process_group and duplicate it with a new name
+        pg_element = [el for el in flow.canvas if el['type'] == 'process_group'][0]
+        duplicate = copy.deepcopy(pg_element)
+        duplicate['name'] = duplicate['name'] + '-copy'
+        flow.canvas.append(duplicate)
+        init_flow(flow, utils.COMPONENT_DIR)
