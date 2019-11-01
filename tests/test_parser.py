@@ -78,3 +78,15 @@ class TestParser(unittest.TestCase):
         duplicate['name'] = duplicate['name'] + '-copy'
         flow.canvas.append(duplicate)
         init_flow(flow, utils.COMPONENT_DIR)
+
+    # Tests Github issue #32
+    def test_ciruclar_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        recursive_pg = {
+            'name': 'recursive-process-group',
+            'type': 'process_group',
+            'component_path': 'recursive-component.yaml',
+        }
+        flow.canvas.append(recursive_pg)
+        self.assertRaisesRegex(FlowLibException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
