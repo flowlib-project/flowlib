@@ -56,7 +56,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(flow._elements.get('debug').config.properties['prop2'], flow.global_vars['global_var'])
 
         # check component var injection
-        component = flow.find_component_by_path('component.yaml')
+        component = flow.find_component_by_path('test-component.yaml')
         pg = flow._elements.get('test-process-group')
         props = flow._elements.get('test-process-group')._elements.get('debug').config.properties
         self.assertEqual(props['prop1'], 'constant-value') # test constant
@@ -69,6 +69,20 @@ class TestParser(unittest.TestCase):
         # For now it will be tested by the itests
         # self.assertEqual(props['controller-lookup'], 'controller') # test controller
 
+    def test_nested_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        pg = {
+            'name': 'nested-process-group',
+            'type': 'process_group',
+            'component_path': 'nested-component.yaml',
+        }
+        flow.canvas.append(pg)
+        init_flow(flow, utils.COMPONENT_DIR)
+        self.assertIsInstance(flow.raw, dict)
+        self.assertTrue(len(flow._elements.keys()) > 0)
+        self.assertTrue(len(flow.components.keys()) == 2)
+
     # Tests Github issue #76
     def test_duplicate_components(self):
         flow = utils.load_test_flow(init=False)
@@ -78,15 +92,29 @@ class TestParser(unittest.TestCase):
         duplicate['name'] = duplicate['name'] + '-copy'
         flow.canvas.append(duplicate)
         init_flow(flow, utils.COMPONENT_DIR)
+        self.assertIsInstance(flow.raw, dict)
+        self.assertTrue(len(flow._elements.keys()) > 0)
+        self.assertTrue(len(flow.components.keys()) == 1)
 
-    # Tests Github issue #32
-    def test_ciruclar_components(self):
+    def test_recursive_components(self):
         flow = utils.load_test_flow(init=False)
         flow.canvas = []
-        recursive_pg = {
+        pg = {
             'name': 'recursive-process-group',
             'type': 'process_group',
             'component_path': 'recursive-component.yaml',
         }
-        flow.canvas.append(recursive_pg)
+        flow.canvas.append(pg)
         self.assertRaisesRegex(FlowLibException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+
+    # # Tests Github issue #32
+    # def test_circular_components(self):
+    #     flow = utils.load_test_flow(init=False)
+    #     flow.canvas = []
+    #     pg = {
+    #         'name': 'circular-process-group',
+    #         'type': 'process_group',
+    #         'component_path': 'circular-component-1.yaml',
+    #     }
+    #     flow.canvas.append(pg)
+    #     init_flow(flow, utils.COMPONENT_DIR)

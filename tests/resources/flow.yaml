@@ -17,7 +17,7 @@ controller_services:
 canvas:
 - name: test-process-group
   type: process_group
-  component_path: component.yaml
+  component_path: test-component.yaml
   controllers:
     test_controller: test-controller-service
   vars:

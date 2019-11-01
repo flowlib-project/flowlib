@@ -115,7 +115,7 @@ def init_flow(flow, component_dir=None):
                 raise FlowLibException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
             else:
                 _load_component(el, flow, component_dir)
-                _init_component_recursive(el, flow)
+                _init_component_recursive(el, flow, component_dir)
 
         if flow._elements.get(el.name):
             raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
@@ -156,7 +156,7 @@ def _load_component(el, flow, component_dir):
         flow._loaded_components[component_name] = FlowComponent(copy.deepcopy(raw_component), **raw_component)
 
 
-def _init_component_recursive(pg_element, flow):
+def _init_component_recursive(pg_element, flow, component_dir):
     log.info("Loading ProcessGroup: {}".format(pg_element.name))
     component = flow.find_component_by_path(pg_element.component_path)
     if not component:
@@ -195,7 +195,8 @@ def _init_component_recursive(pg_element, flow):
             if el.component_path == pg_element.component_path:
                 raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
             else:
-                _init_component_recursive(el, flow)
+                _load_component(el, flow, component_dir)
+                _init_component_recursive(el, flow, component_dir)
 
         if pg_element._elements.get(el.name):
             raise FlowLibException("Found duplicate elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
