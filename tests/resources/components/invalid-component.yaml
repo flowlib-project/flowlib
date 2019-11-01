@@ -1,0 +1,12 @@
+name: invalid-component
+
+abc: not a real component attribute
+
+process_group:
+- name: whatever
+  type: invalid_type
+  connections:
+  - name: output
+
+- name: output
+  type: output_port
