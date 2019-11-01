@@ -100,10 +100,6 @@ def init_flow(flow, component_dir=None):
     # Set jinja globals for templating process_group.vars and processor.properties later
     env.globals.update(**flow.global_vars)
 
-    if component_dir:
-        log.info("Loading component lib: {}".format(component_dir))
-        _load_components(flow, component_dir)
-
     # initialize and apply templating for the controller services
     flow._controllers = init_controllers(flow.controller_services)
 
@@ -115,7 +111,11 @@ def init_flow(flow, component_dir=None):
         el.src_component_name = 'root'
 
         if isinstance(el, ProcessGroup):
-            _init_component_recursive(el, flow)
+            if not component_dir:
+                raise FlowLibException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
+            else:
+                _load_component(el, flow, component_dir)
+                _init_component_recursive(el, flow)
 
         if flow._elements.get(el.name):
             raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
@@ -130,25 +130,30 @@ def init_flow(flow, component_dir=None):
     flow._initialized = True
 
 
-def _load_components(flow, component_dir):
-    for root, subdirs, files in os.walk(component_dir):
-        for _file in files:
-            if _file.endswith('.yaml') or _file.endswith('.yml'):
-                log.info("Loading component: {}".format(_file))
+def _load_component(el, flow, component_dir):
+    """
+    Parse and load a component from component from component_dir.
+    If the component already exists then this method does nothing
+    """
+    # Init the component from file
+    with open(os.path.join(component_dir, el.component_path), 'r') as f:
+        raw_component = yaml.safe_load(f)
 
-                # Init the component from file
-                with open(os.path.join(root, _file), 'r') as f:
-                    raw_component = yaml.safe_load(f)
+    source_file = f.name.split(component_dir)[1].lstrip(os.sep)
+    log.info("Loading component: {}".format(source_file))
+    raw_component['source_file'] = source_file
 
-                raw_component['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
-                loaded_component = FlowComponent(copy.deepcopy(raw_component), **raw_component)
-                _validate_name(loaded_component.name)
+    if not 'name' in raw_component:
+        raise FlowLibException("Component does not contain a valid name field")
+    else:
+        component_name = raw_component['name']
+    _validate_name(component_name)
 
-                # save the component so it can be instantiated later
-                if flow._loaded_components.get(loaded_component.name):
-                    raise FlowLibException("A component named '{}' is already defined".format(loaded_component.name))
-                else:
-                    flow._loaded_components[loaded_component.name] = loaded_component
+    # save the component so it can be instantiated later
+    if flow._loaded_components.get(component_name):
+        log.info("A component named {} is already defined, skipping...".format(component_name))
+    else:
+        flow._loaded_components[component_name] = FlowComponent(copy.deepcopy(raw_component), **raw_component)
 
 
 def _init_component_recursive(pg_element, flow):
