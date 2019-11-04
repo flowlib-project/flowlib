@@ -7,7 +7,7 @@ process_group:
   - name: circular-process-group
     to_port: input
 
-- name: circular-process-group
+- name: circular-process-group-1
   type: process_group
   component_path: circular-component-1.yaml
   connections:

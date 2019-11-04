@@ -3,7 +3,7 @@ import unittest
 
 import flowlib
 from flowlib.model import FlowLibException
-from flowlib.model.flow import (PG_NAME_DELIMETER, Flow, FlowElement,
+from flowlib.model.flow import (Flow, FlowElement,
     ControllerService, RemoteProcessGroup, ProcessGroup, Processor, InputPort, OutputPort)
 from flowlib.model.component import FlowComponent
 
@@ -60,7 +60,7 @@ class TestFlow(unittest.TestCase):
         }
         self.assertRaisesRegex(FlowLibException, "^Element names may not be empty.*", FlowElement.from_dict, no_name)
         invalid_name = {
-            'name': 'invalid{}name'.format(PG_NAME_DELIMETER),
+            'name': 'invalid{}name'.format(Flow.PG_NAME_DELIMETER),
             'type': 'processor'
         }
         self.assertRaisesRegex(FlowLibException, ".*Element names may not contain.*", FlowElement.from_dict, invalid_name)

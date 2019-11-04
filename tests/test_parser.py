@@ -107,14 +107,14 @@ class TestParser(unittest.TestCase):
         flow.canvas.append(pg)
         self.assertRaisesRegex(FlowLibException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
 
-    # # Tests Github issue #32
-    # def test_circular_components(self):
-    #     flow = utils.load_test_flow(init=False)
-    #     flow.canvas = []
-    #     pg = {
-    #         'name': 'circular-process-group',
-    #         'type': 'process_group',
-    #         'component_path': 'circular-component-1.yaml',
-    #     }
-    #     flow.canvas.append(pg)
-    #     init_flow(flow, utils.COMPONENT_DIR)
+    # Tests Github issue #32
+    def test_circular_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        pg = {
+            'name': 'circular-process-group-root',
+            'type': 'process_group',
+            'component_path': 'circular-component-1.yaml',
+        }
+        flow.canvas.append(pg)
+        self.assertRaisesRegex(FlowLibException, "^Circular component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
