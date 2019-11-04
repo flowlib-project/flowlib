@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
-import flowlib.parser
-import flowlib.validator
 from flowlib.logger import log
 from flowlib.exceptions import FlowLibException, FlowValidationException
 
@@ -37,7 +35,7 @@ class Flow:
         :param _loaded_components: A map of components (component_path) loaded while initializing the flow, these are re-useable components
         :type _loaded_components: dict(str:FlowComponent)
         :attr _elements: A map of elements defining the flow logic, may be deeply nested if the FlowElement is a ProcessGroup itself.
-          Initialized by calling flow.init()
+          Initialized by calling flow.initialize()
         :type _elements: dict(str:FlowElement)
         :attr _controllers: Whether this flow has been been initialized (elements and components loaded)
         :type _controllers: list(ControllerService)
@@ -84,7 +82,8 @@ class Flow:
 
     def initialize(self, component_dir=None):
         if self._is_initialized == False:
-            flowlib.parser.init_flow(self, component_dir)
+            from flowlib.parser import init_flow
+            init_flow(self, component_dir)
             self._is_initialized = True
         else:
             log.warn("Flow has already been initialized. Will not re-initialize")
@@ -95,7 +94,8 @@ class Flow:
             raise FlowValidationException("Cannot validate an uninitialized flow. Call flow.initialize() first")
 
         if self._is_valid == False:
-            flowlib.validator.check_connections(self)
+            from flowlib.validator import check_connections
+            check_connections(self, self._elements)
             self._is_valid = True
         else:
             log.warn("Flow has already been validated. Will not re-validate")
