@@ -12,7 +12,7 @@ class TestParser(unittest.TestCase):
 
     def test_init_flow(self):
         flow = utils.load_test_flow(init=False)
-        init_flow(flow, utils.COMPONENT_DIR)
+        flow.initialize(utils.COMPONENT_DIR)
 
         self.assertIsInstance(flow.raw, dict)
         self.assertTrue(len(flow._elements.keys()) > 0)
@@ -26,7 +26,7 @@ class TestParser(unittest.TestCase):
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['controllers'] = dict()
-        self.assertRaisesRegex(FlowValidationException, '^Missing required_controllers.*', init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, '^Missing required_controllers.*', flow.initialize, utils.COMPONENT_DIR)
 
 
     def test_required_var(self):
@@ -34,7 +34,7 @@ class TestParser(unittest.TestCase):
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['vars'] = dict()
-        self.assertRaisesRegex(FlowValidationException, '^Missing required_vars.*', init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, '^Missing required_vars.*', flow.initialize, utils.COMPONENT_DIR)
 
 
     def test_var_injection(self):
@@ -78,7 +78,7 @@ class TestParser(unittest.TestCase):
             'component_path': 'nested-component.yaml',
         }
         flow.canvas.append(pg)
-        init_flow(flow, utils.COMPONENT_DIR)
+        flow.initialize(utils.COMPONENT_DIR)
         self.assertIsInstance(flow.raw, dict)
         self.assertTrue(len(flow._elements.keys()) > 0)
         self.assertTrue(len(flow.components.keys()) == 2)
@@ -91,7 +91,7 @@ class TestParser(unittest.TestCase):
         duplicate = copy.deepcopy(pg_element)
         duplicate['name'] = duplicate['name'] + '-copy'
         flow.canvas.append(duplicate)
-        init_flow(flow, utils.COMPONENT_DIR)
+        flow.initialize(utils.COMPONENT_DIR)
         self.assertIsInstance(flow.raw, dict)
         self.assertTrue(len(flow._elements.keys()) > 0)
         self.assertTrue(len(flow.components.keys()) == 1)
@@ -105,7 +105,7 @@ class TestParser(unittest.TestCase):
             'component_path': 'recursive-component.yaml',
         }
         flow.canvas.append(pg)
-        self.assertRaisesRegex(FlowValidationException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, "^Recursive component reference found in.*", flow.initialize, utils.COMPONENT_DIR)
 
     # Tests Github issue #32
     def test_circular_components(self):
@@ -117,4 +117,4 @@ class TestParser(unittest.TestCase):
             'component_path': 'circular-component-1.yaml',
         }
         flow.canvas.append(pg)
-        self.assertRaisesRegex(FlowValidationException, "^Circular component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, "^Circular component reference found in.*", flow.initialize, utils.COMPONENT_DIR)

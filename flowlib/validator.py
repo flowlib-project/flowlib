@@ -15,13 +15,17 @@ def check_connections(flow, elements):
     """
     for el in elements.values():
         if isinstance(el, ProcessGroup):
-            # Check that every connection defines a from_port and
-            # that the from_port exists as an OutputPort in the component
-            for c in el.connections:
-                if not c.from_port:
-                    raise FlowValidationException('ProcessGroup {} does not define a from_port for connection {}'.format(el.name, c.name))
-                if not c.from_port in [op.name for op in el._elements if isinstance(op, OutputPort)]:
-                    raise FlowValidationException('ProcessGroup {} does not define an OutputPort named {}'.format(el.name, c.from_port ))
+
+            # Check that every connection defines a from_port and that the from_port exists as an OutputPort in the component
+            if isinstance(el, ProcessGroup):
+                for c in el.connections:
+                    if not c.from_port:
+                        raise FlowValidationException('ProcessGroup {} does not define a from_port for connection {}'.format(el.name, c.name))
+
+                    ops = [op.name for op in el._elements.values() if isinstance(op, OutputPort)]
+                    if not c.from_port in ops:
+                        raise FlowValidationException('ProcessGroup {} does not define an OutputPort named {}, must be one of: {}'.format(el.name, c.from_port, ops))
+
 
             # Recursively check the connections for the children elements of the ProcessGroup
             check_connections(flow, el._elements)
@@ -100,5 +104,6 @@ def _check_element_connections(flow, source_element):
             if isinstance(dest_element, ProcessGroup):
                 if not c.to_port:
                     raise FlowValidationException('ProcessGroup {} does not define a to_port for connection {}'.format(source_element.name, c.name))
-                if not c.to_port in [ip.name for ip in dest_element._elements if isinstance(ip, InputPort)]:
-                    raise FlowValidationException('ProcessGroup {} does not define an InputPort named {}'.format(dest_element.name, c.to_port))
+                ips = [ip.name for ip in dest_element._elements if isinstance(ip, InputPort)]
+                if not c.to_port in ips:
+                    raise FlowValidationException('ProcessGroup {} does not define an InputPort named {}, must be one of: {}'.format(dest_element.name, c.to_port, ips))
