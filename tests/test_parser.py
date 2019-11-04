@@ -3,7 +3,7 @@ import copy
 import os
 import unittest
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.parser import init_flow, replace_flow_element_vars_recursive
 
 from tests import utils

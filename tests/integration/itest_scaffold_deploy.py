@@ -7,7 +7,7 @@ import nipyapi.nifi.apis
 from nipyapi.nifi import ProcessGroupEntity, ProcessorEntity
 
 import flowlib.api
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.config import FlowLibConfig
 from flowlib.nifi.rest import wait_for_nifi_api
 from flowlib.nifi.state import ZookeeperClient

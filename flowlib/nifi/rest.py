@@ -12,7 +12,7 @@ import flowlib.layout
 import flowlib.parser
 from flowlib.logger import log
 from flowlib.nifi.state import ZookeeperClient
-from flowlib.model import FlowLibException, FlowNotFoundException
+from flowlib.exceptions import FlowLibException, FlowNotFoundException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, RemoteProcessGroup, ProcessGroup, Processor
 

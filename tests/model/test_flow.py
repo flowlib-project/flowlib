@@ -2,7 +2,7 @@
 import unittest
 
 import flowlib
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import (Flow, FlowElement,
     ControllerService, RemoteProcessGroup, ProcessGroup, Processor, InputPort, OutputPort)
 from flowlib.model.component import FlowComponent

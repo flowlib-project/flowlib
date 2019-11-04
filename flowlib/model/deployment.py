@@ -2,7 +2,7 @@
 import yaml
 import json
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.model.component import FlowComponent
 

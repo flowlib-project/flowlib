@@ -3,7 +3,7 @@ import os
 import json
 import unittest
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 
 from tests import utils

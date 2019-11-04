@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO

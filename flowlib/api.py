@@ -10,7 +10,7 @@ import yaml
 import flowlib.parser
 import flowlib.nifi.rest
 import flowlib.nifi.docs
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.logger import log
 

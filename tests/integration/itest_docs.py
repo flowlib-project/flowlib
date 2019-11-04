@@ -6,7 +6,7 @@ import unittest
 import nipyapi
 
 import flowlib.api
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.config import FlowLibConfig
 from flowlib.nifi.rest import wait_for_nifi_api
 

@@ -1,7 +1,7 @@
 import networkx as nx
 import random
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from nipyapi.nifi import PositionDTO
 
 TOP_LEVEL_PG_LOCATION = (300, 100)

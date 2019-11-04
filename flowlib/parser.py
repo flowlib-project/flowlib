@@ -9,9 +9,10 @@ from jinja2 import Environment
 
 import flowlib
 from flowlib.logger import log
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.component import FlowComponent
 from flowlib.model.flow import Flow, FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
+from flowlib.validator import check_name, is_component_circular
 
 env = Environment()
 
@@ -48,7 +49,7 @@ def init_controllers(controllers):
     # Inject template vars into controller properties
     _set_global_helpers()
     for c in controllers:
-        _validate_name(c.name)
+        check_name(c.name)
         _template_properties(c)
 
     return controllers
@@ -70,7 +71,7 @@ def init_reporting_tasks(controllers, reporting_tasks):
     # Inject template vars into reporting task properties, apply controller service lookups
     _set_global_helpers(controllers={c.name: c for c in controllers})
     for t in reporting_tasks:
-        _validate_name(t.name)
+        check_name(t.name)
         _template_properties(t)
 
     return reporting_tasks
@@ -84,7 +85,7 @@ def init_flow(flow, component_dir=None):
     :param component_dir: The directory of components to use for initializing process groups
     :type component_dir: str
     """
-    _validate_name(flow.name)
+    check_name(flow.name)
 
     # Set controllers as empty dict for now so that the env helper is available for templating controller properties
     _set_global_helpers()
@@ -107,7 +108,7 @@ def init_flow(flow, component_dir=None):
     for elem_dict in flow.canvas:
         elem_dict['_parent_path'] = flow.name
         el = FlowElement.from_dict(copy.deepcopy(elem_dict))
-        _validate_name(el.name)
+        check_name(el.name)
         el.src_component_name = 'root'
 
         if flow._elements.get(el.name):
@@ -147,7 +148,7 @@ def _load_component(el, flow, component_dir):
         raise FlowLibException("Component does not contain a valid name field")
     else:
         component_name = raw_component['name']
-    _validate_name(component_name)
+    check_name(component_name)
 
     # save the component so it can be instantiated later
     if flow._loaded_components.get(component_name):
@@ -188,7 +189,7 @@ def _init_component_recursive(pg_element, flow, component_dir):
     for elem_dict in component.process_group:
         elem_dict['_parent_path'] = "{}{}{}".format(pg_element._parent_path, Flow.PG_NAME_DELIMETER, pg_element.name)
         el = FlowElement.from_dict(copy.deepcopy(elem_dict))
-        _validate_name(el.name)
+        check_name(el.name)
         el.src_component_name = component.name
 
         if pg_element._elements.get(el.name):
@@ -199,7 +200,7 @@ def _init_component_recursive(pg_element, flow, component_dir):
         if isinstance(el, ProcessGroup):
             if el.component_path == pg_element.component_path:
                 raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
-            elif _is_component_circular(flow, el):
+            elif is_component_circular(flow, el):
                 raise FlowLibException("Circular component reference found in {}. One of this components's ancestors is another instance of this component".format(pg_element.component_path))
             else:
                 _load_component(el, flow, component_dir)
@@ -264,26 +265,3 @@ def _template_properties(el, context=dict()):
     for k,v in el.config.properties.items():
         t = env.from_string(v)
         el.config.properties[k] = t.render(**context)
-
-
-def _validate_name(name):
-    name_regex = '^[a-zA-Z0-9-_]+$'
-    pattern = re.compile(name_regex)
-    if not pattern.match(name):
-        raise FlowLibException("Invalid name. '{}' must match the regular expression: '{}'".format(name, name_regex))
-
-
-def _is_component_circular(flow, pg_element):
-    """
-    Check whether any of the ProcessGroup's ancestors are an instance of this
-    component. That would mean that there is a circular component relationship which
-    would cause a recursive depth exception to be raised.
-    """
-    this_component = pg_element.component_path
-    parent = flow.get_parent_element(pg_element)
-    while parent:
-        if hasattr(parent, 'component_path'):
-            if parent.component_path == this_component:
-                return True
-        parent = flow.get_parent_element(parent)
-    return False
