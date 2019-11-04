@@ -1,0 +1,18 @@
+name: circular-component-1
+
+process_group:
+- name: input
+  type: input_port
+  connections:
+  - name: circular-process-group
+    to_port: input
+
+- name: circular-process-group-2
+  type: process_group
+  component_path: circular-component-2.yaml
+  connections:
+  - name: output
+    from_port: output
+
+- name: output
+  type: output_port

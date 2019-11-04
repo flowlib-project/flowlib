@@ -9,9 +9,10 @@ from nipyapi.nifi.models.reporting_task_dto import ReportingTaskDTO
 from nipyapi.nifi.models.remote_process_group_dto import RemoteProcessGroupDTO
 
 
-PG_NAME_DELIMETER = '/'
-
 class Flow:
+
+    PG_NAME_DELIMETER = '/'
+
     def __init__(self, raw, name=None, canvas=None, flowlib_version=None, version=None, controller_services=None, comments=None, global_vars=None, components=None):
         """
         :param raw: The raw dictionary value of the Flow converted from yaml
@@ -108,12 +109,17 @@ class Flow:
         :param element: The element to retrieve the parent of
         :type element: FlowElement
         """
-        target = self
-        names = element.parent_path.split(PG_NAME_DELIMETER)
-        for n in names[1:]:
-            elements = target._elements
-            target = elements.get(n)
-        return target
+        if isinstance(element, FlowElement):
+            target = self
+            names = element.parent_path.split(Flow.PG_NAME_DELIMETER)
+            for n in names[1:]:
+                target = target._elements.get(n)
+            return target
+        elif isinstance(element, Flow):
+            return None
+        else:
+            raise FlowLibException("Flow.get_parent_element() requires an element which is a subclass of FlowElement")
+
 
     def __repr__(self):
         return str(vars(self))
@@ -154,8 +160,8 @@ class FlowElement(ABC):
         name = elem_dict.get('name')
         if not name or len(name) < 1:
             raise FlowLibException("Element names may not be empty. Found invalid element with parent path: {}".format(elem_dict.get('parent_path')))
-        if PG_NAME_DELIMETER in name:
-            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, PG_NAME_DELIMETER))
+        if Flow.PG_NAME_DELIMETER in name:
+            raise FlowLibException("Invalid element: '{}'. Element names may not contain '{}' characters".format(name, Flow.PG_NAME_DELIMETER))
 
         elem_dict['_type'] = elem_dict.pop('type')
         if elem_dict['_type'] == 'process_group':

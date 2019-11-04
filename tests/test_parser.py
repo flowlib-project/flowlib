@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import os
 import unittest
 
@@ -10,9 +11,8 @@ from tests import utils
 class TestParser(unittest.TestCase):
 
     def test_init_flow(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
-        init_flow(flow, component_dir)
+        init_flow(flow, utils.COMPONENT_DIR)
 
         self.assertIsInstance(flow.raw, dict)
         self.assertTrue(len(flow._elements.keys()) > 0)
@@ -22,21 +22,19 @@ class TestParser(unittest.TestCase):
 
 
     def test_required_controller(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['controllers'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_controllers.*', init_flow, flow, component_dir)
+        self.assertRaisesRegex(FlowLibException, '^Missing required_controllers.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_required_var(self):
-        component_dir = os.path.join(utils.RESOURCES_DIR, 'components')
         flow = utils.load_test_flow(init=False)
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['vars'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_vars.*', init_flow, flow, component_dir)
+        self.assertRaisesRegex(FlowLibException, '^Missing required_vars.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_var_injection(self):
@@ -58,7 +56,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(flow._elements.get('debug').config.properties['prop2'], flow.global_vars['global_var'])
 
         # check component var injection
-        component = flow.find_component_by_path('component.yaml')
+        component = flow.find_component_by_path('test-component.yaml')
         pg = flow._elements.get('test-process-group')
         props = flow._elements.get('test-process-group')._elements.get('debug').config.properties
         self.assertEqual(props['prop1'], 'constant-value') # test constant
@@ -70,3 +68,53 @@ class TestParser(unittest.TestCase):
         # so there is no uuid to lookup. This should probably be refactored so that it can be unit tested.
         # For now it will be tested by the itests
         # self.assertEqual(props['controller-lookup'], 'controller') # test controller
+
+    def test_nested_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        pg = {
+            'name': 'nested-process-group',
+            'type': 'process_group',
+            'component_path': 'nested-component.yaml',
+        }
+        flow.canvas.append(pg)
+        init_flow(flow, utils.COMPONENT_DIR)
+        self.assertIsInstance(flow.raw, dict)
+        self.assertTrue(len(flow._elements.keys()) > 0)
+        self.assertTrue(len(flow.components.keys()) == 2)
+
+    # Tests Github issue #76
+    def test_duplicate_components(self):
+        flow = utils.load_test_flow(init=False)
+        # Find the first process_group and duplicate it with a new name
+        pg_element = [el for el in flow.canvas if el['type'] == 'process_group'][0]
+        duplicate = copy.deepcopy(pg_element)
+        duplicate['name'] = duplicate['name'] + '-copy'
+        flow.canvas.append(duplicate)
+        init_flow(flow, utils.COMPONENT_DIR)
+        self.assertIsInstance(flow.raw, dict)
+        self.assertTrue(len(flow._elements.keys()) > 0)
+        self.assertTrue(len(flow.components.keys()) == 1)
+
+    def test_recursive_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        pg = {
+            'name': 'recursive-process-group',
+            'type': 'process_group',
+            'component_path': 'recursive-component.yaml',
+        }
+        flow.canvas.append(pg)
+        self.assertRaisesRegex(FlowLibException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+
+    # Tests Github issue #32
+    def test_circular_components(self):
+        flow = utils.load_test_flow(init=False)
+        flow.canvas = []
+        pg = {
+            'name': 'circular-process-group-root',
+            'type': 'process_group',
+            'component_path': 'circular-component-1.yaml',
+        }
+        flow.canvas.append(pg)
+        self.assertRaisesRegex(FlowLibException, "^Circular component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)

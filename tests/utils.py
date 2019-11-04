@@ -10,6 +10,7 @@ from flowlib.model.flow import Flow
 from flowlib.model.component import FlowComponent
 
 RESOURCES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources'))
+COMPONENT_DIR = os.path.join(RESOURCES_DIR, 'components')
 
 
 def load_test_config():
@@ -20,22 +21,20 @@ def load_test_config():
 
 
 def load_test_component(path):
-    component_dir = os.path.join(RESOURCES_DIR, 'components')
-    with open(os.path.join(component_dir, path), 'r') as f:
+    with open(os.path.join(COMPONENT_DIR, path), 'r') as f:
         raw = yaml.safe_load(f)
 
-    raw['source_file'] = f.name.split(component_dir)[1].lstrip(os.sep)
+    raw['source_file'] = f.name.split(COMPONENT_DIR)[1].lstrip(os.sep)
     return FlowComponent(copy.deepcopy(raw), **raw)
 
 
 def load_test_flow(init=True):
     flow_yaml = os.path.join(RESOURCES_DIR, 'flow.yaml')
-    component_dir = os.path.join(RESOURCES_DIR, 'components')
     with open(flow_yaml, 'r') as f:
         raw = yaml.safe_load(f)
 
     flow = Flow(copy.deepcopy(raw), **raw)
     if init:
-        init_flow(flow, component_dir)
+        init_flow(flow, COMPONENT_DIR)
 
     return flow

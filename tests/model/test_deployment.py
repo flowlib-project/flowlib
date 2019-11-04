@@ -22,7 +22,7 @@ class TestDeployment(unittest.TestCase):
     def test_add_get_component(self):
         flow = utils.load_test_flow()
         deployment = FlowDeployment(flow.raw)
-        component = utils.load_test_component('component.yaml')
+        component = utils.load_test_component('test-component.yaml')
         deployment.add_component(DeployedComponent(component.raw))
 
         self.assertTrue(len(deployment.components) == 1)

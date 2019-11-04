@@ -3,7 +3,7 @@ import unittest
 
 import flowlib
 from flowlib.model import FlowLibException
-from flowlib.model.flow import (PG_NAME_DELIMETER, Flow, FlowElement,
+from flowlib.model.flow import (Flow, FlowElement,
     ControllerService, RemoteProcessGroup, ProcessGroup, Processor, InputPort, OutputPort)
 from flowlib.model.component import FlowComponent
 
@@ -17,14 +17,14 @@ class TestFlow(unittest.TestCase):
 
     def test_find_component_by_path(self):
         flow = utils.load_test_flow()
-        real = 'component.yaml'
+        real = 'test-component.yaml'
         notreal = 'not-real/abc.yaml'
         self.assertIsInstance(flow.find_component_by_path(real), FlowComponent)
         self.assertIsNone(flow.find_component_by_path(notreal))
 
-        duplicate = utils.load_test_component('component.yaml')
+        duplicate = utils.load_test_component('test-component.yaml')
         flow._loaded_components['duplicate'] = duplicate
-        self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'component.yaml')
+        self.assertRaisesRegex(FlowLibException, '^Found multiple loaded components with source_file.*', flow.find_component_by_path, 'test-component.yaml')
 
     def find_controller_by_name(self):
         flow = utils.load_test_flow()
@@ -60,7 +60,7 @@ class TestFlow(unittest.TestCase):
         }
         self.assertRaisesRegex(FlowLibException, "^Element names may not be empty.*", FlowElement.from_dict, no_name)
         invalid_name = {
-            'name': 'invalid{}name'.format(PG_NAME_DELIMETER),
+            'name': 'invalid{}name'.format(Flow.PG_NAME_DELIMETER),
             'type': 'processor'
         }
         self.assertRaisesRegex(FlowLibException, ".*Element names may not contain.*", FlowElement.from_dict, invalid_name)

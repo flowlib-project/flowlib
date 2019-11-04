@@ -11,7 +11,7 @@ import flowlib
 from flowlib.logger import log
 from flowlib.model import FlowLibException
 from flowlib.model.component import FlowComponent
-from flowlib.model.flow import FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
+from flowlib.model.flow import Flow, FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
 
 env = Environment()
 
@@ -110,17 +110,17 @@ def init_flow(flow, component_dir=None):
         _validate_name(el.name)
         el.src_component_name = 'root'
 
+        if flow._elements.get(el.name):
+            raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
+        else:
+            flow._elements[el.name] = el
+
         if isinstance(el, ProcessGroup):
             if not component_dir:
                 raise FlowLibException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
             else:
                 _load_component(el, flow, component_dir)
-                _init_component_recursive(el, flow)
-
-        if flow._elements.get(el.name):
-            raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
-        else:
-            flow._elements[el.name] = el
+                _init_component_recursive(el, flow, component_dir)
 
     # Filter loaded_components that are not used in this flow
     for k in [k for k in flow.components.keys()]:
@@ -156,7 +156,7 @@ def _load_component(el, flow, component_dir):
         flow._loaded_components[component_name] = FlowComponent(copy.deepcopy(raw_component), **raw_component)
 
 
-def _init_component_recursive(pg_element, flow):
+def _init_component_recursive(pg_element, flow, component_dir):
     log.info("Loading ProcessGroup: {}".format(pg_element.name))
     component = flow.find_component_by_path(pg_element.component_path)
     if not component:
@@ -186,21 +186,24 @@ def _init_component_recursive(pg_element, flow):
 
     # Call FlowElement.from_dict() on each element in the process_group
     for elem_dict in component.process_group:
-        elem_dict['_parent_path'] = "{}/{}".format(pg_element._parent_path, pg_element.name)
+        elem_dict['_parent_path'] = "{}{}{}".format(pg_element._parent_path, Flow.PG_NAME_DELIMETER, pg_element.name)
         el = FlowElement.from_dict(copy.deepcopy(elem_dict))
         _validate_name(el.name)
         el.src_component_name = component.name
-
-        if isinstance(el, ProcessGroup):
-            if el.component_path == pg_element.component_path:
-                raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
-            else:
-                _init_component_recursive(el, flow)
 
         if pg_element._elements.get(el.name):
             raise FlowLibException("Found duplicate elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
         else:
             pg_element._elements[el.name] = el
+
+        if isinstance(el, ProcessGroup):
+            if el.component_path == pg_element.component_path:
+                raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
+            elif _is_component_circular(flow, el):
+                raise FlowLibException("Circular component reference found in {}. One of this components's ancestors is another instance of this component".format(pg_element.component_path))
+            else:
+                _load_component(el, flow, component_dir)
+                _init_component_recursive(el, flow, component_dir)
 
     component._is_used = True
 
@@ -268,4 +271,19 @@ def _validate_name(name):
     pattern = re.compile(name_regex)
     if not pattern.match(name):
         raise FlowLibException("Invalid name. '{}' must match the regular expression: '{}'".format(name, name_regex))
-    return name
+
+
+def _is_component_circular(flow, pg_element):
+    """
+    Check whether any of the ProcessGroup's ancestors are an instance of this
+    component. That would mean that there is a circular component relationship which
+    would cause a recursive depth exception to be raised.
+    """
+    this_component = pg_element.component_path
+    parent = flow.get_parent_element(pg_element)
+    while parent:
+        if hasattr(parent, 'component_path'):
+            if parent.component_path == this_component:
+                return True
+        parent = flow.get_parent_element(parent)
+    return False
