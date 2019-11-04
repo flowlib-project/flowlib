@@ -11,7 +11,6 @@ from tests import utils
 
 class TestFlow(unittest.TestCase):
 
-
     def test_load_flow(self):
         utils.load_test_flow(init=False)
 
@@ -38,6 +37,9 @@ class TestFlow(unittest.TestCase):
 
     def test_get_parent_element(self):
         flow = utils.load_test_flow()
+
+        # check that the parent of flow itself is None
+        self.assertIsNone(flow.get_parent_element(flow))
 
         # get the first element at the flow root
         el = [e for e in flow._elements.values()][0]
