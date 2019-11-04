@@ -7,11 +7,12 @@ from flowlib.exceptions import FlowValidationException
 def check_connections(flow):
     pass
 
+
 def check_name(name):
     name_regex = '^[a-zA-Z0-9-_]+$'
     pattern = re.compile(name_regex)
     if not pattern.match(name):
-        raise FlowValidationException("Invalid name. '{}' must match the regular expression: '{}'".format(name, name_regex))
+        raise FlowValidationException("Invalid name '{}'. Names must match the regular expression: '{}'".format(name, name_regex))
 
 
 def is_component_circular(flow, pg_element):

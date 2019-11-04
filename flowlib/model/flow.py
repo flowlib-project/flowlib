@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from abc import ABC
 
-from flowlib.exceptions import FlowLibException
+import flowlib.parser
+import flowlib.validator
+from flowlib.logger import log
+from flowlib.exceptions import FlowLibException, FlowValidationException
 
 from nipyapi.nifi.models.processor_config_dto import ProcessorConfigDTO
 from nipyapi.nifi.models.controller_service_dto import ControllerServiceDTO
@@ -38,8 +41,10 @@ class Flow:
         :type _elements: dict(str:FlowElement)
         :attr _controllers: Whether this flow has been been initialized (elements and components loaded)
         :type _controllers: list(ControllerService)
-        :attr _initialized: Whether this flow has been been initialized (elements and components loaded)
-        :type _initialized: bool
+        :attr _is_initialized: Whether this flow has been been initialized (elements and components loaded)
+        :type _is_initialized: bool
+        :attr _is_valid: Whether this flow has been been validated (elements and connections)
+        :type _is_valid: bool
         """
         self.raw = raw
         self.name = name
@@ -49,7 +54,8 @@ class Flow:
         self.comments = comments
         self.controller_services = controller_services or list()
         self.global_vars = global_vars or dict()
-        self._initialized = False
+        self._is_initialized = False
+        self._is_valid = False
         self._controllers = None
         self._loaded_components = dict()
         self._elements = dict()
@@ -74,6 +80,26 @@ class Flow:
         if self._id:
             raise FlowLibException("Attempted to change readonly attribute after initialization")
         self._id = _id
+
+
+    def initialize(self, component_dir=None):
+        if self._is_initialized == False:
+            flowlib.parser.init_flow(self, component_dir)
+            self._is_initialized = True
+        else:
+            log.warn("Flow has already been initialized. Will not re-initialize")
+
+
+    def validate(self):
+        if not self._is_initialized:
+            raise FlowValidationException("Cannot validate an uninitialized flow. Call flow.initialize() first")
+
+        if self._is_valid == False:
+            flowlib.validator.check_connections(self)
+            self._is_valid = True
+        else:
+            log.warn("Flow has already been validated. Will not re-validate")
+
 
     def find_component_by_path(self, path):
         """

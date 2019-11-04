@@ -128,8 +128,6 @@ def init_flow(flow, component_dir=None):
         if not flow.components[k]._is_used:
             del flow.components[k]
 
-    flow._initialized = True
-
 
 def _load_component(el, flow, component_dir):
     """
