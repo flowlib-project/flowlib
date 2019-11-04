@@ -9,7 +9,7 @@ from jinja2 import Environment
 
 import flowlib
 from flowlib.logger import log
-from flowlib.exceptions import FlowLibException
+from flowlib.exceptions import FlowValidationException
 from flowlib.model.component import FlowComponent
 from flowlib.model.flow import Flow, FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
 from flowlib.validator import check_name, is_component_circular
@@ -44,7 +44,7 @@ def init_controllers(controllers):
     # Construct and validate controllers
     controllers = list(map(lambda c: ControllerService(**c), controllers))
     if len(controllers) != len(set(list(map(lambda c: c.name, controllers)))):
-        raise FlowLibException("Duplicate controllers are defined. Controller names must be unique.")
+        raise FlowValidationException("Duplicate controllers are defined. Controller names must be unique.")
 
     # Inject template vars into controller properties
     _set_global_helpers()
@@ -66,7 +66,7 @@ def init_reporting_tasks(controllers, reporting_tasks):
     # Construct and validate reporting tasks
     reporting_tasks = list(map(lambda t: ReportingTask(**t), reporting_tasks))
     if len(reporting_tasks) != len(set(list(map(lambda t: t.name, reporting_tasks)))):
-        raise FlowLibException("Duplicate reporting_tasks are defined. ReportingTask names must be unique.")
+        raise FlowValidationException("Duplicate reporting_tasks are defined. ReportingTask names must be unique.")
 
     # Inject template vars into reporting task properties, apply controller service lookups
     _set_global_helpers(controllers={c.name: c for c in controllers})
@@ -112,13 +112,13 @@ def init_flow(flow, component_dir=None):
         el.src_component_name = 'root'
 
         if flow._elements.get(el.name):
-            raise FlowLibException("Root FlowElement named '{}' is already defined.".format(el.name))
+            raise FlowValidationException("Root FlowElement named '{}' is already defined.".format(el.name))
         else:
             flow._elements[el.name] = el
 
         if isinstance(el, ProcessGroup):
             if not component_dir:
-                raise FlowLibException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
+                raise FlowValidationException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
             else:
                 _load_component(el, flow, component_dir)
                 _init_component_recursive(el, flow, component_dir)
@@ -143,7 +143,7 @@ def _load_component(el, flow, component_dir):
     raw_component['source_file'] = source_file
 
     if not 'name' in raw_component:
-        raise FlowLibException("Component does not contain a valid name field")
+        raise FlowValidationException("Component does not contain a 'name' field")
     else:
         component_name = raw_component['name']
     check_name(component_name)
@@ -161,7 +161,7 @@ def _init_component_recursive(pg_element, flow, component_dir):
     if not component:
         parent = flow.get_parent_element(pg_element)
         source = parent.source_file if hasattr(parent, 'source_file') else 'root'
-        raise FlowLibException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
+        raise FlowValidationException("Component reference {} not found for ProcessGroup {} loaded from {}".format(
             pg_element.component_path, pg_element.name, source))
     else:
         pg_element.src_component_name = component.name
@@ -169,11 +169,11 @@ def _init_component_recursive(pg_element, flow, component_dir):
     # Validate all required controllers are provided
     for k,v in component.required_controllers.items():
         if not k in pg_element.controllers:
-            raise FlowLibException("Missing required_controllers. {} is not provided but is required by {}".format(k, component.source_file))
+            raise FlowValidationException("Missing required_controllers. {} is not provided but is required by {}".format(k, component.source_file))
 
         controller = flow.find_controller_by_name(pg_element.controllers[k])
         if v != controller.config.package_id:
-            raise FlowLibException("Invalid controller reference. A controller of type {} was provided, but {} is required by {}".format(controller.config.package_id, v, component.source_file))
+            raise FlowValidationException("Invalid controller reference. A controller of type {} was provided, but {} is required by {}".format(controller.config.package_id, v, component.source_file))
 
         pg_element.controllers[k] = controller
 
@@ -181,7 +181,7 @@ def _init_component_recursive(pg_element, flow, component_dir):
     if component.required_vars:
         for v in component.required_vars:
             if not v in pg_element.vars:
-                raise FlowLibException("Missing required_vars. {} is not provided but is required by {}".format(v, component.source_file))
+                raise FlowValidationException("Missing required_vars. {} is not provided but is required by {}".format(v, component.source_file))
 
     # Call FlowElement.from_dict() on each element in the process_group
     for elem_dict in component.process_group:
@@ -191,15 +191,15 @@ def _init_component_recursive(pg_element, flow, component_dir):
         el.src_component_name = component.name
 
         if pg_element._elements.get(el.name):
-            raise FlowLibException("Found duplicate elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
+            raise FlowValidationException("Found duplicate elements. A FlowElement named '{}' is already defined in {}".format(el.name, pg_element.component_ref))
         else:
             pg_element._elements[el.name] = el
 
         if isinstance(el, ProcessGroup):
             if el.component_path == pg_element.component_path:
-                raise FlowLibException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
+                raise FlowValidationException("Recursive component reference found in {}. A component cannot reference itself.".format(pg_element.component_path))
             elif is_component_circular(flow, el):
-                raise FlowLibException("Circular component reference found in {}. One of this components's ancestors is another instance of this component".format(pg_element.component_path))
+                raise FlowValidationException("Circular component reference found in {}. One of this components's ancestors is another instance of this component".format(pg_element.component_path))
             else:
                 _load_component(el, flow, component_dir)
                 _init_component_recursive(el, flow, component_dir)

@@ -3,7 +3,7 @@ import copy
 import os
 import unittest
 
-from flowlib.exceptions import FlowLibException
+from flowlib.exceptions import FlowValidationException
 from flowlib.parser import init_flow, replace_flow_element_vars_recursive
 
 from tests import utils
@@ -26,7 +26,7 @@ class TestParser(unittest.TestCase):
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['controllers'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_controllers.*', init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, '^Missing required_controllers.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_required_var(self):
@@ -34,7 +34,7 @@ class TestParser(unittest.TestCase):
 
         pg = [e for e in flow.canvas if e['name'] == 'test-process-group'][0]
         pg['vars'] = dict()
-        self.assertRaisesRegex(FlowLibException, '^Missing required_vars.*', init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, '^Missing required_vars.*', init_flow, flow, utils.COMPONENT_DIR)
 
 
     def test_var_injection(self):
@@ -105,7 +105,7 @@ class TestParser(unittest.TestCase):
             'component_path': 'recursive-component.yaml',
         }
         flow.canvas.append(pg)
-        self.assertRaisesRegex(FlowLibException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, "^Recursive component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
 
     # Tests Github issue #32
     def test_circular_components(self):
@@ -117,4 +117,4 @@ class TestParser(unittest.TestCase):
             'component_path': 'circular-component-1.yaml',
         }
         flow.canvas.append(pg)
-        self.assertRaisesRegex(FlowLibException, "^Circular component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
+        self.assertRaisesRegex(FlowValidationException, "^Circular component reference found in.*", init_flow, flow, utils.COMPONENT_DIR)
