@@ -2,7 +2,7 @@
 
 ## Install ##
 
-Download the latest release from https://github.com/B23admin/b23-flowlib/releases/latest
+Download the [latest release](https://github.com/B23admin/b23-flowlib/releases/latest) and install with pip:
 
 ```shell
 pip install b23-flowlib-$VERSION.tar.gz
