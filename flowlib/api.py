@@ -74,7 +74,7 @@ def validate_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml.name))
+    log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml))
     try:
         with open(config.flow_yaml, 'r') as f:
             new_flow_from_file(f, config.component_dir)
