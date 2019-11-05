@@ -176,7 +176,7 @@ class FlowElement(ABC):
         self._src_component_name = kwargs.get('_src_component_name')
         self._type = kwargs.get('_type')
         self.name = kwargs.get('name')
-        self.connections = [Connection(**c) for c in kwargs.get('connections')] if kwargs.get('connections') else None
+        self.connections = [Connection(**c) for c in kwargs.get('connections')] if kwargs.get('connections') else []
 
     @staticmethod
     def from_dict(elem_dict):
