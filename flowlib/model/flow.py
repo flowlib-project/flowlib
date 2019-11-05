@@ -80,10 +80,10 @@ class Flow:
         self._id = _id
 
 
-    def initialize(self, component_dir=None):
+    def initialize(self, component_dir=None, with_components=None):
         if self._is_initialized == False:
             from flowlib.parser import init_flow
-            init_flow(self, component_dir)
+            init_flow(self, component_dir=component_dir, with_components=with_components)
             self._is_initialized = True
         else:
             log.warn("Flow has already been initialized. Will not re-initialize")

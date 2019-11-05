@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import shutil
+import json
 import yaml
 
 import flowlib.parser
@@ -12,6 +13,7 @@ import flowlib.nifi.rest
 import flowlib.nifi.docs
 from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
+from flowlib.model.deployment import FlowDeployment
 from flowlib.logger import log
 
 
@@ -44,7 +46,23 @@ def gen_flowlib_docs(config, dest):
         raise
 
 
-def new_flow_from_file(flow_yaml, component_dir=None, validate=True):
+def new_flow_from_deployment(deployment_json, validate=True):
+    """
+    Construct a new flow from a deployment json file.
+    :param deployment_json: The flow deployment as a json file
+    :type deployment_json: io.TextIOWrapper
+    :raises: FlowLibException
+    """
+    deployment = FlowDeployment.from_dict(json.load(deployment_json))
+    flow = Flow(copy.deepcopy(deployment.flow), **deployment.flow)
+    flow.flowlib_version = flowlib.__version__
+    flow.initialize(with_components=deployment.components)
+    if validate:
+        flow.validate()
+    return flow
+
+
+def new_flow_from_yaml(flow_yaml, component_dir=None, validate=True):
     """
     Construct a new flow from a yaml file
     :param flow_yaml: The flow defined as a yaml file
@@ -64,7 +82,7 @@ def new_flow_from_file(flow_yaml, component_dir=None, validate=True):
 
     flow = Flow(copy.deepcopy(raw), **raw)
     flow.flowlib_version = flowlib.__version__
-    flow.initialize(component_dir)
+    flow.initialize(component_dir=component_dir)
     if validate:
         flow.validate()
     return flow
@@ -77,7 +95,7 @@ def validate_flow(config):
     log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml))
     try:
         with open(config.flow_yaml, 'r') as f:
-            new_flow_from_file(f, config.component_dir)
+            new_flow_from_yaml(f, config.component_dir)
     except FlowLibException as e:
         log.error(e)
         raise
@@ -90,7 +108,7 @@ def deploy_flow(config):
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
         with open(config.flow_yaml, 'r') as f:
-            flow = new_flow_from_file(f, config.component_dir)
+            flow = new_flow_from_yaml(f, config.component_dir)
 
         flowlib.nifi.rest.deploy_flow(flow, config, force=config.force)
         log.info("Flow deployment completed successfully")
