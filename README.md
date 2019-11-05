@@ -16,7 +16,7 @@ Check out the [User Guide](./docs/FLOWLIB_USER_GUIDE.md) to get started
 1. As a NiFi flow developer, I would like the ability to develop data flows in a way that is easily version controlled and code reviewed, and the ability to deploy those flows in a fully automated way with no user interaction.
 2. [#63](https://github.com/B23admin/b23-flowlib/issues/63) As a NiFi flow developer, I would like the ability to modify an existing data flow (that was previously deployed by FlowLib) and deploy the modified flow while maintaining processor state if it exists.
 3. [#59](https://github.com/B23admin/b23-flowlib/issues/59) As a NiFi flow developer, I would like the ability to export an existing data flow (that was previously deployed by FlowLib) and deploy the data flow to a new NiFi instance while maintaining processor state if it exists.
-4. [roadmap] As a NiFi flow developer, I would like the ability to export an existing data flow (that was *__not__* deployed by FlowLib) to a format that is compatible with FlowLib so that it can be modified as code and deployed by FlowLib.
+4. As a NiFi flow developer, I would like the ability to export an existing data flow (that was *__not__* deployed by FlowLib) to a format that is compatible with FlowLib so that it can be modified as code and deployed by FlowLib.
 
 
 ## Why FlowLib? ##
