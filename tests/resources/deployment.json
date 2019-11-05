@@ -91,7 +91,7 @@
   "components": [
     {
       "component": {
-        "name": "Process PDFs",
+        "name": "process-pdfs",
         "process_group": [
           {
             "name": "input",
@@ -134,7 +134,7 @@
     },
     {
       "component": {
-        "name": "S3 Write With Retry",
+        "name": "s3-write-with-retry",
         "defaults": {
           "destination_attribute": "filename"
         },
@@ -186,7 +186,7 @@
     },
     {
       "component": {
-        "name": "S3 List Fetch With Retry",
+        "name": "s3-list-fetch-with-retry",
         "defaults": {
           "min_object_age": "5m",
           "prefix": ""
