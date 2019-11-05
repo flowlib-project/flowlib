@@ -123,11 +123,6 @@ def init_flow(flow, component_dir=None):
                 _load_component(el, flow, component_dir)
                 _init_component_recursive(el, flow, component_dir)
 
-    # Filter loaded_components that are not used in this flow
-    for k in [k for k in flow.components.keys()]:
-        if not flow.components[k]._is_used:
-            del flow.components[k]
-
 
 def _load_component(el, flow, component_dir):
     """
