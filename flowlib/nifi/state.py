@@ -5,7 +5,7 @@ import struct
 from kazoo.client import KazooClient
 from kazoo.security import CREATOR_ALL_ACL, OPEN_ACL_UNSAFE
 
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 
 MAX_STATE_SIZE = 1024 * 1024
 ENCODING_VERSION = b'\x01'

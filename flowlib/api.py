@@ -10,7 +10,7 @@ import yaml
 import flowlib.parser
 import flowlib.nifi.rest
 import flowlib.nifi.docs
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.logger import log
 
@@ -44,7 +44,7 @@ def gen_flowlib_docs(config, dest):
         raise
 
 
-def new_flow_from_file(flow_yaml, component_dir=None):
+def new_flow_from_file(flow_yaml, component_dir=None, validate=True):
     """
     Construct a new flow from a yaml file
     :param flow_yaml: The flow defined as a yaml file
@@ -64,8 +64,9 @@ def new_flow_from_file(flow_yaml, component_dir=None):
 
     flow = Flow(copy.deepcopy(raw), **raw)
     flow.flowlib_version = flowlib.__version__
-
-    flowlib.parser.init_flow(flow, component_dir)
+    flow.initialize(component_dir)
+    if validate:
+        flow.validate()
     return flow
 
 
@@ -73,26 +74,10 @@ def validate_flow(config):
     """
     :type config: FlowLibConfig
     """
-    log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml.name))
+    log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml))
     try:
         with open(config.flow_yaml, 'r') as f:
-            flow = new_flow_from_file(f, config.component_dir)
-    except FlowLibException as e:
-        log.error(e)
-        raise
-
-
-def export_flow(config):
-    """
-    :type config: FlowLibConfig
-    :return: io.TextIOWrapper
-    """
-    log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
-    try:
-        deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
-        s = io.StringIO()
-        deployment.save(s)
-        return s
+            new_flow_from_file(f, config.component_dir)
     except FlowLibException as e:
         log.error(e)
         raise
@@ -111,6 +96,22 @@ def deploy_flow(config):
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")
+        log.error(e)
+        raise
+
+
+def export_flow(config):
+    """
+    :type config: FlowLibConfig
+    :return: io.TextIOWrapper
+    """
+    log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
+    try:
+        deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
+        s = io.StringIO()
+        deployment.save(s)
+        return s
+    except FlowLibException as e:
         log.error(e)
         raise
 

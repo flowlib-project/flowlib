@@ -5,7 +5,7 @@ import unittest
 from contextlib import contextmanager, ExitStack
 
 import flowlib.api
-from flowlib.model import FlowLibException
+from flowlib.exceptions import FlowLibException
 from flowlib.nifi.rest import wait_for_nifi_api
 
 

@@ -12,7 +12,7 @@ import flowlib.layout
 import flowlib.parser
 from flowlib.logger import log
 from flowlib.nifi.state import ZookeeperClient
-from flowlib.model import FlowLibException, FlowNotFoundException
+from flowlib.exceptions import FlowLibException, FlowNotFoundException
 from flowlib.model.deployment import FlowDeployment, DeployedComponent
 from flowlib.model.flow import InputPort, OutputPort, RemoteProcessGroup, ProcessGroup, Processor
 
@@ -147,8 +147,10 @@ def deploy_flow(flow, config, force=False):
     except FlowNotFoundException:
         pass
 
-    if not flow._initialized:
-        raise FlowLibException("Flow has not yet been initialized. Call parser.init_flow(flow) first")
+    if not flow._is_initialized:
+        raise FlowLibException("Flow has not yet been initialized. Call flow.initialize() first")
+    if not flow._is_valid:
+        raise FlowLibException("Flow has not yet been validated. Call flow.validate() first")
 
     # create a new FlowDeployment
     deployment = FlowDeployment(flow.raw)
@@ -575,15 +577,9 @@ def _create_element_connections(flow, source_element):
     log.info("Creating downstream connections for element: {}/{}".format(source_element.parent_path, source_element.name))
     parent = flow.get_parent_element(source_element)
 
-    # TODO: See https://github.com/B23admin/b23-flowlib/issues/50
-    # We should consider allowing input/output port connections for a flow
-    # so they can be referenced via a jinja helper lookup similar to the controller lookup
-
-    # Validate no inputs or outputs on the root canvas
-    if not parent and (isinstance(source_element, InputPort) or isinstance(source_element, OutputPort)):
-        raise FlowLibException("Input and Output ports are not allowed in the root process group")
-
+    # If source is an output_port then the downstream connections are the parent's connections
     if isinstance(source_element, OutputPort):
+        # We're only interested in connections from the current output port
         if parent.connections:
             connections = [c for c in parent.connections if c.from_port == source_element.name]
         else:

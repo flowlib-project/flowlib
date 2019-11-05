@@ -35,6 +35,6 @@ def load_test_flow(init=True):
 
     flow = Flow(copy.deepcopy(raw), **raw)
     if init:
-        init_flow(flow, COMPONENT_DIR)
+        flow.initialize(COMPONENT_DIR)
 
     return flow
