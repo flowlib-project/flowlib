@@ -104,6 +104,6 @@ def _check_element_connections(flow, source_element):
             if isinstance(dest_element, ProcessGroup):
                 if not c.to_port:
                     raise FlowValidationException('ProcessGroup {} does not define a to_port for connection {}'.format(source_element.name, c.name))
-                ips = [ip.name for ip in dest_element._elements if isinstance(ip, InputPort)]
+                ips = [ip.name for ip in dest_element._elements.values() if isinstance(ip, InputPort)]
                 if not c.to_port in ips:
                     raise FlowValidationException('ProcessGroup {} does not define an InputPort named {}, must be one of: {}'.format(dest_element.name, c.to_port, ips))
