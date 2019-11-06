@@ -34,7 +34,7 @@ def wait_for_nifi_api(nifi_endpoint, retries=12, delay=5):
     raise FlowLibException("Timeout reached while waiting for NiFi Rest API to be ready")
 
 
-def get_deployed_flow(nifi_endpoint, flow_name):
+def get_previous_deployment(nifi_endpoint, flow_name):
     """
     Get the currently deployed flow and its components
       (including processor state) from a running NiFi instance
@@ -45,19 +45,7 @@ def get_deployed_flow(nifi_endpoint, flow_name):
     :returns: flowlib.model.deployment.FlowDeployment
     """
     wait_for_nifi_api(nifi_endpoint)
-    flow_pg = nipyapi.canvas.get_process_group(flow_name, identifier_type='name')
-
-    if isinstance(flow_pg, list):
-        pgs = [pg for pg in flow_pg if pg.component.name == flow_name]
-        if len(pgs) > 1:
-            raise FlowLibException("Found multiple ProcessGroups named {}".format(flow_name))
-        elif len(pgs) == 0:
-            raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
-        else:
-            flow_pg = pgs[0]
-
-    if not flow_pg or flow_pg.component.name != flow_name:
-        raise FlowNotFoundException("No flow named {} is deployed".format(flow_name))
+    flow_pg = _find_flow_by_name(flow_name)
 
     queued = nipyapi.nifi.apis.FlowApi().get_process_group_status(flow_pg.id).process_group_status.aggregate_snapshot.flow_files_queued
     if queued > 0:
@@ -133,24 +121,35 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
-def deploy_flow(flow, config, force=False):
+def deploy_flow(flow, config, deployment=None, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
     :param flow: An initialized Flow instance
     :type flow: flowlib.model.flow.Flow
     :param config: A valid FlowLibConfig object
     :type config: FlowLibConfig
+    :param deployment: If a deployment is specified, then we will use the state from
+      the one provided instead of attempting to export the currently deployed flow first.
+      This means that if there is state to be migrated, it must be included in the provided
+      deployment because it will not be read from the currently deployed flow.
+    :type deployment: FlowDeployment
+    :param force: Whether to overwrite a previously deployed data flow
+    :type force: bool
     """
-    previous = None
-    try:
-        previous = get_deployed_flow(config.nifi_endpoint, flow.name)
-    except FlowNotFoundException:
-        pass
-
     if not flow._is_initialized:
         raise FlowLibException("Flow has not yet been initialized. Call flow.initialize() first")
     if not flow._is_valid:
         raise FlowLibException("Flow has not yet been validated. Call flow.validate() first")
+
+    wait_for_nifi_api(config.nifi_endpoint)
+    previous_deployment = deployment
+    try:
+        # if a deployment was not provided, then check to see if the flow is already deployed
+        # if it was provided and the flow already exists, then it will be overwritten if force is True
+        if not previous_deployment:
+            previous_deployment = get_previous_deployment(config.nifi_endpoint, flow.name)
+    except FlowNotFoundException:
+        pass
 
     # create a new FlowDeployment
     deployment = FlowDeployment(flow.raw)
@@ -161,11 +160,16 @@ def deploy_flow(flow, config, force=False):
     canvas_root_pg = nipyapi.canvas.get_process_group(canvas_root_id, identifier_type='id')
     log.info("Deploying {} to NiFi".format(flow.name))
 
-    # check if the flow being deployed was deployed previously
     previous_flow_pg = None
-    if previous:
-        log.info("Found previously deployed flow: {}".format(previous.root_group_id))
-        previous_flow_pg = nipyapi.canvas.get_process_group(previous.root_group_id, identifier_type='id')
+    if previous_deployment:
+        try:
+            previous_flow_pg = _find_flow_by_name(flow.name)
+        except FlowNotFoundException:
+            pass
+        if previous_flow_pg:
+            log.info("Found ProcessGroup of previously deployed flow: {}".format(previous_flow_pg.id))
+        if previous_flow_pg and deployment:
+            log.info("An explicit FlowDeployment was provided for this deployment so any existing state will be overwritten if the --force flag is true")
 
     flow_pg = None
     try:
@@ -182,7 +186,7 @@ def deploy_flow(flow, config, force=False):
         # because the controller() jinja helper needs to lookup controller IDs for injecting into the processor's properties
         flowlib.parser.replace_flow_element_vars_recursive(flow, flow._elements, flow.components)
 
-        _create_canvas_elements_recursive(flow._elements, flow_pg, config, deployment, previous)
+        _create_canvas_elements_recursive(flow._elements, flow_pg, config, deployment, previous_deployment)
         _create_connections_recursive(flow, flow._elements)
         _set_controllers_enabled(flow._controllers, enabled=True)
 
@@ -736,3 +740,25 @@ def _force_cleanup_reporting_tasks():
             version=controller.revision.version,
             client_id=controller.revision.client_id
         )
+
+
+def _find_flow_by_name(name):
+    """
+    Returns the ProcessGroupEntity of the flow
+    :raises: FlowLibException if multiple flows with that name are found
+    :raises: FlowNotFoundException if no flow is found with that name
+    """
+    flow_pg = nipyapi.canvas.get_process_group(name, identifier_type='name')
+    if isinstance(flow_pg, list):
+        pgs = [pg for pg in flow_pg if pg.component.name == name]
+        if len(pgs) > 1:
+            raise FlowLibException("Found multiple Flow ProcessGroups named {}".format(name))
+        elif len(pgs) == 0:
+            raise FlowNotFoundException("No flow ProcessGroup named {} is deployed".format(name))
+        else:
+            flow_pg = pgs[0]
+
+    if not flow_pg or flow_pg.component.name != name:
+        raise FlowNotFoundException("No flow named {} is deployed".format(name))
+
+    return flow_pg

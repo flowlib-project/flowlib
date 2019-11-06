@@ -23,6 +23,8 @@ def main():
         flowlib.api.validate_flow(cli.config)
     elif cli.args.flow_yaml:
         flowlib.api.deploy_flow(cli.config)
+    elif cli.args.deployment_json:
+        flowlib.api.deploy_flow(cli.config)
     elif cli.args.export:
         s = flowlib.api.export_flow(cli.config)
         s.seek(0)

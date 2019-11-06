@@ -49,6 +49,7 @@ def gen_flowlib_docs(config, dest):
 def new_flow_from_deployment(deployment_json, validate=True):
     """
     Construct a new flow from a deployment json file.
+    Deployment json is created using the --export option
     :param deployment_json: The flow deployment as a json file
     :type deployment_json: io.TextIOWrapper
     :raises: FlowLibException
@@ -59,7 +60,7 @@ def new_flow_from_deployment(deployment_json, validate=True):
     flow.initialize(with_components=deployment.components)
     if validate:
         flow.validate()
-    return flow
+    return (flow, deployment)
 
 
 def new_flow_from_yaml(flow_yaml, component_dir=None, validate=True):
@@ -107,10 +108,17 @@ def deploy_flow(config):
     """
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
-        with open(config.flow_yaml, 'r') as f:
-            flow = new_flow_from_yaml(f, config.component_dir)
+        deployment = None
+        if config.flow_yaml:
+            with open(config.flow_yaml, 'r') as f:
+                flow = new_flow_from_yaml(f, config.component_dir)
+        elif config.deployment_json:
+            with open(config.deployment_json, 'r') as f:
+                flow, deployment = new_flow_from_deployment(f)
+        else:
+            raise FlowLibException("One of config.flow_yaml or config.deployment_json must be specified")
 
-        flowlib.nifi.rest.deploy_flow(flow, config, force=config.force)
+        flowlib.nifi.rest.deploy_flow(flow, config, deployment=deployment, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")
@@ -125,7 +133,7 @@ def export_flow(config):
     """
     log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
-        deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
+        deployment = flowlib.nifi.rest.get_previous_deployment(config.nifi_endpoint, config.export)
         s = io.StringIO()
         deployment.save(s)
         return s
