@@ -126,17 +126,21 @@ def deploy_flow(config):
         raise
 
 
-def export_flow(config):
+def export_flow(config, fp=None):
     """
     :type config: FlowLibConfig
-    :return: io.TextIOWrapper
+    :param fp: A python file object to write to, if this is not provided then return a string buffer
+    :return: io.TextIOWrapper or None
     """
     log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
         deployment = flowlib.nifi.rest.get_previous_deployment(config.nifi_endpoint, config.export)
-        s = io.StringIO()
-        deployment.save(s)
-        return s
+        if fp:
+            deployment.save(fp)
+        else:
+            s = io.StringIO()
+            deployment.save(s)
+            return s
     except FlowLibException as e:
         log.error(e)
         raise
