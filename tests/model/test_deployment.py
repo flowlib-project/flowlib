@@ -17,7 +17,7 @@ class TestDeployment(unittest.TestCase):
         self.assertIsNotNone(deployment)
         self.assertTrue(deployment.flow['name'] == 'pdf-processor-demo-flow')
         self.assertTrue(len(deployment.components) == 3)
-        self.assertIsInstance(deployment.get_component('Process PDFs'), DeployedComponent)
+        self.assertIsInstance(deployment.get_component('process-pdfs'), DeployedComponent)
 
     def test_add_get_component(self):
         flow = utils.load_test_flow()
