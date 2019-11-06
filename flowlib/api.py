@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import shutil
+import json
 import yaml
 
 import flowlib.parser
@@ -12,6 +13,7 @@ import flowlib.nifi.rest
 import flowlib.nifi.docs
 from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
+from flowlib.model.deployment import FlowDeployment
 from flowlib.logger import log
 
 
@@ -44,7 +46,24 @@ def gen_flowlib_docs(config, dest):
         raise
 
 
-def new_flow_from_file(flow_yaml, component_dir=None, validate=True):
+def new_flow_from_deployment(deployment_json, validate=True):
+    """
+    Construct a new flow from a deployment json file.
+    Deployment json is created using the --export option
+    :param deployment_json: The flow deployment as a json file
+    :type deployment_json: io.TextIOWrapper
+    :raises: FlowLibException
+    """
+    deployment = FlowDeployment.from_dict(json.load(deployment_json))
+    flow = Flow(copy.deepcopy(deployment.flow), **deployment.flow)
+    flow.flowlib_version = flowlib.__version__
+    flow.initialize(with_components=deployment.components)
+    if validate:
+        flow.validate()
+    return (flow, deployment)
+
+
+def new_flow_from_yaml(flow_yaml, component_dir=None, validate=True):
     """
     Construct a new flow from a yaml file
     :param flow_yaml: The flow defined as a yaml file
@@ -64,7 +83,7 @@ def new_flow_from_file(flow_yaml, component_dir=None, validate=True):
 
     flow = Flow(copy.deepcopy(raw), **raw)
     flow.flowlib_version = flowlib.__version__
-    flow.initialize(component_dir)
+    flow.initialize(component_dir=component_dir)
     if validate:
         flow.validate()
     return flow
@@ -77,7 +96,7 @@ def validate_flow(config):
     log.info("Validating NiFi Flow YAML {}".format(config.flow_yaml))
     try:
         with open(config.flow_yaml, 'r') as f:
-            new_flow_from_file(f, config.component_dir)
+            new_flow_from_yaml(f, config.component_dir)
     except FlowLibException as e:
         log.error(e)
         raise
@@ -89,10 +108,17 @@ def deploy_flow(config):
     """
     log.info("Deploying NiFi flow to {}".format(config.nifi_endpoint))
     try:
-        with open(config.flow_yaml, 'r') as f:
-            flow = new_flow_from_file(f, config.component_dir)
+        deployment = None
+        if config.flow_yaml:
+            with open(config.flow_yaml, 'r') as f:
+                flow = new_flow_from_yaml(f, config.component_dir)
+        elif config.deployment_json:
+            with open(config.deployment_json, 'r') as f:
+                flow, deployment = new_flow_from_deployment(f)
+        else:
+            raise FlowLibException("One of config.flow_yaml or config.deployment_json must be specified")
 
-        flowlib.nifi.rest.deploy_flow(flow, config, force=config.force)
+        flowlib.nifi.rest.deploy_flow(flow, config, deployment=deployment, force=config.force)
         log.info("Flow deployment completed successfully")
     except FlowLibException as e:
         log.error("Flow deployment failed")
@@ -100,17 +126,21 @@ def deploy_flow(config):
         raise
 
 
-def export_flow(config):
+def export_flow(config, fp=None):
     """
     :type config: FlowLibConfig
-    :return: io.TextIOWrapper
+    :param fp: A python file object to write to, if this is not provided then return a string buffer
+    :return: io.TextIOWrapper or None
     """
     log.info("Exporting NiFi flow deployment {} from {}".format(config.export, config.nifi_endpoint))
     try:
-        deployment = flowlib.nifi.rest.get_deployed_flow(config.nifi_endpoint, config.export)
-        s = io.StringIO()
-        deployment.save(s)
-        return s
+        deployment = flowlib.nifi.rest.get_previous_deployment(config.nifi_endpoint, config.export)
+        if fp:
+            deployment.save(fp)
+        else:
+            s = io.StringIO()
+            deployment.save(s)
+            return s
     except FlowLibException as e:
         log.error(e)
         raise

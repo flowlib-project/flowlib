@@ -17,6 +17,7 @@ class FlowLibConfig:
     def __init__(self, **kwargs):
         """
         :type flow_yaml: str
+        :type deployment_json: str
         :type scaffold: str
         :type generate_docs: str
         :type force: bool
@@ -35,6 +36,7 @@ class FlowLibConfig:
         """
         # cli only flags
         self.flow_yaml = None
+        self.deployment_json = None
         self.scaffold = None
         self.generate_docs = None
         self.force = None

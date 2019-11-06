@@ -9,7 +9,7 @@ from jinja2 import Environment
 
 import flowlib
 from flowlib.logger import log
-from flowlib.exceptions import FlowValidationException
+from flowlib.exceptions import FlowLibException, FlowValidationException
 from flowlib.model.component import FlowComponent
 from flowlib.model.flow import Flow, FlowElement, ControllerService, Processor, ProcessGroup, ReportingTask
 from flowlib.validator import check_name, is_component_circular
@@ -77,13 +77,15 @@ def init_reporting_tasks(controllers, reporting_tasks):
     return reporting_tasks
 
 
-def init_flow(flow, component_dir=None):
+def init_flow(flow, component_dir=None, with_components=None):
     """
     Initialize a Flow from from a yaml definition
     :param flow: An unitialized Flow instance
     :type flow: flowlib.model.flow.Flow
     :param component_dir: The directory of components to use for initializing process groups
     :type component_dir: str
+    :param with_components: A list of components to use for initializing process groups
+    :type with_components: list(DeployedComponent)
     """
     check_name(flow.name)
 
@@ -116,31 +118,41 @@ def init_flow(flow, component_dir=None):
         else:
             flow._elements[el.name] = el
 
+        if component_dir and with_components:
+            raise FlowLibException("Only one of component_dir or with_components should be provided")
+
         if isinstance(el, ProcessGroup):
-            if not component_dir:
-                raise FlowValidationException("Attempted to load component {} but no component_dir was specified".format(el.component_path))
-            else:
-                _load_component(el, flow, component_dir)
+            if with_components:
+                # load all components before initialization
+                for component in [c.component for c in with_components]:
+                    _load_component(el, flow, component=component)
+                _init_component_recursive(el, flow)
+            elif component_dir:
+                _load_component(el, flow, component_dir=component_dir)
+                # otherwise, provide component_dir so we can load them only when they are needed
                 _init_component_recursive(el, flow, component_dir)
-
-    # Filter loaded_components that are not used in this flow
-    for k in [k for k in flow.components.keys()]:
-        if not flow.components[k]._is_used:
-            del flow.components[k]
+            else:
+                raise FlowValidationException("Attempted to load component {} but no component_dir or components were specified".format(el.component_path))
 
 
-def _load_component(el, flow, component_dir):
+def _load_component(el, flow, component_dir=None, component=None):
     """
-    Parse and load a component from component from component_dir.
+    Parse and load a component from a dict or from a component_dir.
     If the component already exists then this method does nothing
     """
-    # Init the component from file
-    with open(os.path.join(component_dir, el.component_path), 'r') as f:
-        raw_component = yaml.safe_load(f)
+    if component_dir and component:
+        raise FlowLibException("Only one of component_dir or component should be provided")
 
-    source_file = f.name.split(component_dir)[1].lstrip(os.sep)
-    log.info("Loading component: {}".format(source_file))
-    raw_component['source_file'] = source_file
+    if component_dir:
+        with open(os.path.join(component_dir, el.component_path), 'r') as f:
+            raw_component = yaml.safe_load(f)
+        source_file = f.name.split(component_dir)[1].lstrip(os.sep)
+        log.info("Loading component from file: {}".format(source_file))
+        raw_component['source_file'] = source_file
+    elif component:
+        raw_component = component
+    else:
+        raise FlowValidationException("Attempted to load component {} but no component_dir or raw component were specified".format(el.component_path))
 
     if not 'name' in raw_component:
         raise FlowValidationException("Component does not contain a 'name' field")
@@ -155,7 +167,7 @@ def _load_component(el, flow, component_dir):
         flow._loaded_components[component_name] = FlowComponent(copy.deepcopy(raw_component), **raw_component)
 
 
-def _init_component_recursive(pg_element, flow, component_dir):
+def _init_component_recursive(pg_element, flow, component_dir=None):
     log.info("Loading ProcessGroup: {}".format(pg_element.name))
     component = flow.find_component_by_path(pg_element.component_path)
     if not component:
@@ -201,8 +213,9 @@ def _init_component_recursive(pg_element, flow, component_dir):
             elif is_component_circular(flow, el):
                 raise FlowValidationException("Circular component reference found in {}. One of this components's ancestors is another instance of this component".format(pg_element.component_path))
             else:
-                _load_component(el, flow, component_dir)
-                _init_component_recursive(el, flow, component_dir)
+                if component_dir:
+                    _load_component(el, flow, component_dir=component_dir)
+                _init_component_recursive(el, flow, component_dir=component_dir)
 
     component._is_used = True
 

@@ -79,8 +79,6 @@ class FlowLibCLI:
 
         self.parser.add_argument('--validate',
             action = ValidateValidate,
-            # nargs=0,
-            # default=False,
             help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
         )
 
@@ -96,6 +94,10 @@ class FlowLibCLI:
         self.mx_group.add_argument('--flow-yaml',
             type = str,
             help = 'YAML file defining a NiFi flow to deploy'
+        )
+        self.mx_group.add_argument('--deployment-json',
+            type = str,
+            help = 'JSON file defining a NiFi flow to deploy, created by the --export option'
         )
         self.mx_group.add_argument('--export',
             type = str,
