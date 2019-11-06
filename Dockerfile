@@ -11,7 +11,7 @@ COPY flowlib-metrics/flowlib.metrics.nifi/nifi-flowlib.metrics.nifi-processors/s
 COPY flowlib-metrics/flowlib.metrics.nifi/nifi-flowlib.metrics.nifi-nar/pom.xml nifi-flowlib.metrics.nifi-nar/pom.xml
 RUN mvn clean install
 
-FROM 883886641571.dkr.ecr.us-east-1.amazonaws.com/apache/nifi:1.10.0-SNAPSHOT
+FROM apache/nifi:1.10.0
 
 USER root
 ADD nifi-docker/start.sh ${NIFI_BASE_DIR}/scripts/start.sh
