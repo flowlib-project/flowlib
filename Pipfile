@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 appnope = "==0.1.0"
 asn1crypto = "==0.24.0"
-b23-flowlib = {editable = true, git = "git@github.com:B23admin/b23-flowlib.git"}
+b23-flowlib = {path = "./b23-flowlib-1.1.0.tar.gz"}
 backcall = "==0.1.0"
 certifi = "==2019.3.9"
 cffi = "==1.12.3"

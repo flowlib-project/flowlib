@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2253acbc8bb641567daefe8408afef8099b05bf3d3d3047f4686e84347bcd58f"
+            "sha256": "300537e8030681151e6a37f0c0a22b7a5777d826ad5092f66ffdc85db2c8c129"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -31,6 +31,11 @@
             ],
             "index": "pypi",
             "version": "==0.24.0"
+        },
+        "b23-flowlib": {
+            "editable": true,
+            "git": "ssh://git@github.com/B23admin/b23-flowlib.git",
+            "ref": "b226361be82661e602a003528fd8a22dc48d56c9"
         },
         "backcall": {
             "hashes": [
