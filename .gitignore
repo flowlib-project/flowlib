@@ -1,3 +1,6 @@
+# toml file
+*.toml
+
 # tar files
 *.tar.gz
 
