@@ -50,6 +50,10 @@ def main():
             field = [name, default, allowable_values, required, sensitive, supports_el, description]
             items.append(field)
         print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
+    elif cli.args.registry_export:
+        flowlib.api.registry_export_flow(cli.config)
+    elif cli.args.registry_import:
+        flowlib.api.registry_import_flow(cli.config)
     else:
         cli.parser.print_usage()
 

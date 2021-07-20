@@ -103,6 +103,14 @@ class FlowLibCLI:
             type = str,
             help = 'Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
         )
+        self.mx_group.add_argument('--registry-export',
+                                   type=str,
+                                   help='Export the specified NiFi flow deployment and its components as JSON from Nifi Registry. Prints to stdout'
+                                   )
+        self.mx_group.add_argument('--registry-import',
+                                   type=str,
+                                   help='Import the specified NiFi flow deployment and its components into Nifi Registry.'
+                                   )
         self.mx_group.add_argument('--configure-flow-controller',
             action = 'store_true',
             help = 'Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'

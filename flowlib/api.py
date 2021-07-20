@@ -126,6 +126,16 @@ def deploy_flow(config):
         raise
 
 
+def registry_export_flow(config):
+    print(config)
+
+
+def registry_import_flow(config):
+    if config.registry_import:
+        # print(config.registry_import)
+        flowlib.nifi.rest.registry_import()
+
+
 def export_flow(config, fp=None):
     """
     :type config: FlowLibConfig

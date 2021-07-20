@@ -121,6 +121,12 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
+def registry_import():
+    # s = nipyapi.registry.apis.AccessApi.get_access_status()
+    d = nipyapi.registry.apis.buckets_api.BucketsApi.get_bucket(bucket_id="0ed09dd9-d4a6-47d4-b231-e5af64dce415")
+    # print(s)
+
+
 def deploy_flow(flow, config, deployment=None, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
