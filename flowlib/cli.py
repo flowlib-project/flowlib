@@ -109,6 +109,7 @@ class FlowLibCLI:
                                    )
         self.mx_group.add_argument('--registry-import',
                                    type=str,
+                                   nargs=2,
                                    help='Import the specified NiFi flow deployment and its components into Nifi Registry.'
                                    )
         self.mx_group.add_argument('--configure-flow-controller',

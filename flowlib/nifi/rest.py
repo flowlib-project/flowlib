@@ -121,11 +121,16 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
-def registry_import():
-    # s = nipyapi.registry.apis.AccessApi.get_access_status()
-    d = nipyapi.registry.apis.buckets_api.BucketsApi.get_bucket(bucket_id="0ed09dd9-d4a6-47d4-b231-e5af64dce415")
-    # print(s)
-
+def registry_import(config):
+    # print(config)
+    _t = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
+    # buckets = nipyapi.registry.apis.buckets_api.BucketsApi()
+    # print(buckets.get_bucket(bucket_id=config.registry_import))
+    # _x = _t.get_flows(bucket_id=config.registry_import)
+    # print(_x)
+    flow_data = _t.get_flow(bucket_id=config.registry_import[0], flow_id=config.registry_import[1])
+    # print(flow_data.to_dict())
+    print(nipyapi.versioning.export_flow_version(mode="json", bucket_id=flow_data.bucket_identifier, flow_id=flow_data.identifier))
 
 def deploy_flow(flow, config, deployment=None, force=False):
     """
