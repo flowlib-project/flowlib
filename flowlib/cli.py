@@ -40,94 +40,95 @@ class FlowLibCLI:
         Parse provided CLI flags with optional FlowLibConfig defaults
         """
         self.parser = argparse.ArgumentParser(prog="flowlib",
-            description="A python library and cli for deploying NiFi flows from YAML")
+                                              description="A python library and cli for deploying NiFi flows from YAML")
 
         self.parser.add_argument('--version',
-            action = 'version',
-            version = '%(prog)s {}'.format(flowlib.__version__)
-        )
+                                 action='version',
+                                 version='%(prog)s {}'.format(flowlib.__version__)
+                                 )
 
         self.parser.add_argument('--nifi-endpoint',
-            type = str,
-            help = 'A NiFi server endpoint (proto://host:port)'
-        )
+                                 type=str,
+                                 help='A NiFi server endpoint (proto://host:port)'
+                                 )
 
         self.parser.add_argument('--zookeeper-connection',
-            type = str,
-            help = 'A Zookeeper client connection string (host:port)'
-        )
+                                 type=str,
+                                 help='A Zookeeper client connection string (host:port)'
+                                 )
 
         self.parser.add_argument('--zookeeper-root-node',
-            type = str,
-            help = 'The root node in zookeeper to use when storing state'
-        )
+                                 type=str,
+                                 help='The root node in zookeeper to use when storing state'
+                                 )
 
         self.parser.add_argument('--zookeeper-acl',
-            choices = ['open', 'creator'],
-            help = 'The ACL to set for newly created zookeeper nodes if migrating state'
-        )
+                                 choices=['open', 'creator'],
+                                 help='The ACL to set for newly created zookeeper nodes if migrating state'
+                                 )
 
         self.parser.add_argument('--component-dir',
-            type = str,
-            help = 'A directory containing re-useable flowlib components'
-        )
+                                 type=str,
+                                 help='A directory containing re-useable flowlib components'
+                                 )
 
         self.parser.add_argument('--force',
-            action = 'store_true',
-            help = 'Force flowlib to overwrite an existing flow (or flow controller when used with --configure-flow-controller)'
-        )
+                                 action='store_true',
+                                 help='Force flowlib to overwrite an existing flow (or flow controller when used with --configure-flow-controller)'
+                                 )
 
         self.parser.add_argument('--validate',
-            action = ValidateValidate,
-            help = 'Attempt to initialize the Flow from a flow.yaml by loading all of its components'
-        )
+                                 action=ValidateValidate,
+                                 help='Attempt to initialize the Flow from a flow.yaml by loading all of its components'
+                                 )
 
         self.mx_group = self.parser.add_mutually_exclusive_group()
+
         self.mx_group.add_argument('--scaffold',
-            type = str,
-            help = 'Directory path to initialize with a new project scaffold'
-        )
-        self.mx_group.add_argument('--generate-docs',
-            type = str,
-            help = 'Directory path to initialize with flowlib helper documentation'
-        )
-        self.mx_group.add_argument('--flow-yaml',
-            type = str,
-            help = 'YAML file defining a NiFi flow to deploy'
-        )
-        self.mx_group.add_argument('--deployment-json',
-            type = str,
-            help = 'JSON file defining a NiFi flow to deploy, created by the --export option'
-        )
-        self.mx_group.add_argument('--export',
-            type = str,
-            help = 'Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
-        )
-        self.mx_group.add_argument('--registry-export',
                                    type=str,
-                                   help='Export the specified NiFi flow deployment and its components as JSON from Nifi Registry. Prints to stdout'
+                                   help='Directory path to initialize with a new project scaffold'
+                                   )
+        self.mx_group.add_argument('--generate-docs',
+                                   type=str,
+                                   help='Directory path to initialize with flowlib helper documentation'
+                                   )
+        self.mx_group.add_argument('--flow-yaml',
+                                   type=str,
+                                   help='YAML file defining a NiFi flow to deploy'
+                                   )
+        self.mx_group.add_argument('--deployment-json',
+                                   type=str,
+                                   help='JSON file defining a NiFi flow to deploy, created by the --export option'
+                                   )
+        self.mx_group.add_argument('--export',
+                                   type=str,
+                                   help='Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
                                    )
         self.mx_group.add_argument('--registry-import',
                                    type=str,
-                                   nargs=2,
+                                   help='Export the specified NiFi flow deployment and its components as JSON from Nifi Registry. Prints to stdout'
+                                   )
+        self.mx_group.add_argument('--registry-export',
+                                   type=str,
+                                   nargs=3,
                                    help='Import the specified NiFi flow deployment and its components into Nifi Registry.'
                                    )
         self.mx_group.add_argument('--configure-flow-controller',
-            action = 'store_true',
-            help = 'Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'
-        )
+                                   action='store_true',
+                                   help='Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'
+                                   )
         self.mx_group.add_argument('--list',
-            type = str,
-            choices = ['processors', 'controllers', 'reporting-tasks'],
-            help = 'List the available package ids for the specified component type'
-        )
+                                   type=str,
+                                   choices=['processors', 'controllers', 'reporting-tasks'],
+                                   help='List the available package ids for the specified component type'
+                                   )
         self.mx_group.add_argument('--describe',
-            type = str,
-            action = ValidateDescribe,
-            metavar=('{processor,controller,reporting-task}', 'PACKAGE_ID'),
-            nargs = 2,
-            help = 'Print the configurable properties for the specified component'
-        )
+                                   type=str,
+                                   action=ValidateDescribe,
+                                   metavar=('{processor,controller,reporting-task}', 'PACKAGE_ID'),
+                                   nargs=2,
+                                   help='Print the configurable properties for the specified component'
+                                   )
 
         if not file_config:
             file_config = FlowLibConfig()

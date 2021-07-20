@@ -8,6 +8,8 @@ import shutil
 import json
 import yaml
 
+from nipyapi.registry.rest import ApiException
+
 import flowlib.parser
 import flowlib.nifi.rest
 import flowlib.nifi.docs
@@ -126,14 +128,22 @@ def deploy_flow(config):
         raise
 
 
-def registry_export_flow(config):
+def registry_import_flow(config):
     print(config)
 
 
-def registry_import_flow(config):
-    if config.registry_import:
-        # print(config.registry_import)
-        flowlib.nifi.rest.registry_import(config)
+def registry_export_flow(config):
+    """
+    :type config: FlowLibConfig
+    """
+    try:
+        if config.registry_export:
+            yaml_content = yaml.dump(flowlib.nifi.rest.registry_export(config))
+            print(yaml_content)
+    except ApiException as e:
+        print(f'Error: {e.status} {e.reason}')
+    except ValueError as e:
+        print(e)
 
 
 def export_flow(config, fp=None):

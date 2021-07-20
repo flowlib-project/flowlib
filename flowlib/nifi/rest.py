@@ -121,16 +121,24 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
-def registry_import(config):
-    # print(config)
-    _t = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
-    # buckets = nipyapi.registry.apis.buckets_api.BucketsApi()
-    # print(buckets.get_bucket(bucket_id=config.registry_import))
-    # _x = _t.get_flows(bucket_id=config.registry_import)
-    # print(_x)
-    flow_data = _t.get_flow(bucket_id=config.registry_import[0], flow_id=config.registry_import[1])
-    # print(flow_data.to_dict())
-    print(nipyapi.versioning.export_flow_version(mode="json", bucket_id=flow_data.bucket_identifier, flow_id=flow_data.identifier))
+def registry_export(config):
+    """
+    Export a flow from a Nifi Registry via the Rest api
+    :param buckets: Initialized Registry Bucket Query
+    :param flow: Initialized Registry flow query
+    """
+    _flow_bucket_info = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
+    _flow_data_info = _flow_bucket_info.get_flow(bucket_id=config.registry_export[0],
+                                                 flow_id=config.registry_export[1])
+
+    flow_content = json.loads(
+        nipyapi.versioning.export_flow_version(mode="json", bucket_id=_flow_data_info.bucket_identifier,
+                                               flow_id=_flow_data_info.identifier,
+                                               version=None if config.registry_export[2] == "latest" else config.registry_export[2]))
+
+    # return {"flowContents": flow_content["flowContents"]}
+    return flow_content["flowContents"]
+
 
 def deploy_flow(flow, config, deployment=None, force=False):
     """
