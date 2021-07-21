@@ -52,6 +52,12 @@ class FlowLibCLI:
                                  help='A NiFi server endpoint (proto://host:port)'
                                  )
 
+        self.parser.add_argument('--output-syntax',
+                                 type=str,
+                                 default="None",
+                                 help='Output syntax (yaml/json)'
+                                 )
+
         self.parser.add_argument('--zookeeper-connection',
                                  type=str,
                                  help='A Zookeeper client connection string (host:port)'
@@ -106,6 +112,7 @@ class FlowLibCLI:
                                    )
         self.mx_group.add_argument('--registry-import',
                                    type=str,
+                                   nargs=3,
                                    help='Export the specified NiFi flow deployment and its components as JSON from Nifi Registry. Prints to stdout'
                                    )
         self.mx_group.add_argument('--registry-export',

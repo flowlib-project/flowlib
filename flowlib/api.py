@@ -129,17 +129,33 @@ def deploy_flow(config):
 
 
 def registry_import_flow(config):
-    print(config)
+    try:
+        if config.registry_import:
+            flowlib.nifi.rest.registry_import(config.registry_import)
+        print("Import complete...")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
-def registry_export_flow(config):
+def registry_export_flow(registry_options, syntax_format=None):
     """
     :type config: FlowLibConfig
     """
     try:
-        if config.registry_export:
-            yaml_content = yaml.dump(flowlib.nifi.rest.registry_export(config))
-            print(yaml_content)
+        if registry_options:
+            if syntax_format == "yaml":
+                json_content = flowlib.nifi.rest.registry_export(registry_options)
+                # bucket = json_content["bucket"]
+                # del json_content["bucket"]
+                content = yaml.dump(json_content)
+            elif syntax_format == "json" or syntax_format == "None":
+                json_content = flowlib.nifi.rest.registry_export(registry_options)
+                # bucket = json_content["bucket"]
+                # del json_content["bucket"]
+                content = json.dumps(json_content, indent=2, sort_keys=True)
+
+            print(content)
+            # print(bucket)
     except ApiException as e:
         print(f'Error: {e.status} {e.reason}')
     except ValueError as e:

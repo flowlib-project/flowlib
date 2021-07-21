@@ -51,7 +51,7 @@ def main():
             items.append(field)
         print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
     elif cli.args.registry_export:
-        flowlib.api.registry_export_flow(cli.config)
+        flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_syntax)
     elif cli.args.registry_import:
         flowlib.api.registry_import_flow(cli.config)
     else:
