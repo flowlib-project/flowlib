@@ -154,14 +154,15 @@ def nifi_import(config):
     del _pg["component"]["id"]
 
     splitEndpoint = _pg["uri"].split(":")
-    domain = config.nifi_endpoint.split(":")[1]
-    endponit = f'{config.nifi_endpoint.split(":")[2]}/{"/".join(str(splitEndpoint[2]).split("/")[1:])}'
-    newUri = f'{splitEndpoint[0]}:{domain}:{endponit}'
+    endpoint2 = "/".join(splitEndpoint[2].split("/")[1:-1])
+    endpoint1 = f'{splitEndpoint[0]}:{"/".join(splitEndpoint[1:-1])}:{config.nifi_endpoint.split(":")[2]}'
+    newUri = f'{endpoint1}/{endpoint2}/{nipyapi.canvas.get_root_pg_id()}'
     _pg["uri"] = newUri
 
-    response = pgi.create_process_group(id=_flow_content["id"], body=_pg).to_dict()
-    print(response)
-
+    try:
+        _find_flow_by_name(_pg["status"]["aggregateSnapshot"]["name"])
+    except FlowNotFoundException as e:
+        pgi.create_process_group(id=nipyapi.canvas.get_root_pg_id(), body=_pg).to_dict()
 
 def registry_import(config):
     """
