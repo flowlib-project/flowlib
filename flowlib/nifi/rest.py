@@ -123,6 +123,46 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
+def nifi_export(config):
+    endpoint = f'{config.nifi_endpoint}/nifi-api'
+    nipyapi.utils.set_endpoint(endpoint)
+
+    _pg = nipyapi.canvas.recurse_flow(pg_id=nipyapi.canvas.get_root_pg_id()).process_group_flow.to_dict()
+
+    _pgs = [x for x in _pg["flow"]["process_groups"] if x["component"]["id"] == config.nifi_export][0]
+
+    _pgsq = nipyapi.nifi.apis.process_groups_api.ProcessGroupsApi().get_process_group(_pgs["id"])
+
+    _rf = nipyapi.canvas.recurse_flow(pg_id=config.nifi_export)
+
+    nipyapi.utils.fs_write(nipyapi.utils.dump(_pgsq, mode=config.output_syntax), f"./processor-group.{config.output_syntax}")
+    nipyapi.utils.fs_write(nipyapi.utils.dump(_rf.process_group_flow, mode=config.output_syntax), f"./skeleton-flow.{config.output_syntax}")
+
+
+def nifi_import(config):
+    endpoint = f'{config.nifi_endpoint}/nifi-api'
+    nipyapi.utils.set_endpoint(endpoint)
+
+    pgi = nipyapi.nifi.apis.process_groups_api.ProcessGroupsApi()
+
+    _pg = nipyapi.utils.load(nipyapi.utils.fs_read(f"./processor-group.{config.output_syntax}"))
+
+    _flow_content = nipyapi.utils.load(nipyapi.utils.fs_read(f"./skeleton-flow.{config.output_syntax}"))
+
+    _pg["component"]["parentGroupId"] = nipyapi.canvas.get_root_pg_id()
+    _pg["revision"]["version"] = 0
+    del _pg["component"]["id"]
+
+    splitEndpoint = _pg["uri"].split(":")
+    domain = config.nifi_endpoint.split(":")[1]
+    endponit = f'{config.nifi_endpoint.split(":")[2]}/{"/".join(str(splitEndpoint[2]).split("/")[1:])}'
+    newUri = f'{splitEndpoint[0]}:{domain}:{endponit}'
+    _pg["uri"] = newUri
+
+    response = pgi.create_process_group(id=_flow_content["id"], body=_pg).to_dict()
+    print(response)
+
+
 def registry_import(config):
     """
     Export a flow from a Nifi Registry via the Rest api

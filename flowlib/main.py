@@ -54,6 +54,10 @@ def main():
         flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_syntax)
     elif cli.args.registry_import:
         flowlib.api.registry_import_flow(cli.config)
+    elif cli.args.nifi_export:
+        flowlib.api.n_export(cli.config)
+    elif cli.args.nifi_import:
+        flowlib.api.n_import(cli.config)
     else:
         cli.parser.print_usage()
 

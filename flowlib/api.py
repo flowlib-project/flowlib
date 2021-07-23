@@ -137,6 +137,14 @@ def registry_import_flow(config):
         print(f"Error: {e}")
 
 
+def n_export(config):
+    flowlib.nifi.rest.nifi_export(config)
+
+
+def n_import(config):
+    flowlib.nifi.rest.nifi_import(config)
+
+
 def registry_export_flow(registry_options, syntax_format=None):
     """
     :type config: FlowLibConfig

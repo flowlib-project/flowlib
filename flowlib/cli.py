@@ -54,7 +54,7 @@ class FlowLibCLI:
 
         self.parser.add_argument('--output-syntax',
                                  type=str,
-                                 default="None",
+                                 default="json",
                                  help='Output syntax (yaml/json)'
                                  )
 
@@ -107,6 +107,14 @@ class FlowLibCLI:
                                    help='JSON file defining a NiFi flow to deploy, created by the --export option'
                                    )
         self.mx_group.add_argument('--export',
+                                   type=str,
+                                   help='Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
+                                   )
+        self.mx_group.add_argument('--nifi-export',
+                                   type=str,
+                                   help='Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
+                                   )
+        self.mx_group.add_argument('--nifi-import',
                                    type=str,
                                    help='Export the specified NiFi flow deployment and its components as JSON. Prints to stdout'
                                    )
