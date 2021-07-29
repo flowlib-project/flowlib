@@ -17,6 +17,7 @@ from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.model.deployment import FlowDeployment
 from flowlib.logger import log
+from flowlib.registry2flowlib.convert import CONVERTION
 
 
 def gen_flow_scaffold(dest):
@@ -136,6 +137,10 @@ def registry_import_flow(config):
     except Exception as e:
         print(f"Error: {e}")
 
+
+def registry_convert_flow(config):
+    convertion = CONVERTION(config.registry_convert_flowlib[0])
+    convertion.build_flowlib_json_yaml_content(convertion.registry_file_content, config.output_syntax)
 
 def n_export(config):
     flowlib.nifi.rest.nifi_export(config)

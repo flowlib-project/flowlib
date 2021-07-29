@@ -128,6 +128,11 @@ class FlowLibCLI:
                                    nargs=3,
                                    help='Import the specified NiFi flow deployment and its components into Nifi Registry.'
                                    )
+        self.mx_group.add_argument('--registry-convert-flowlib',
+                                   type=str,
+                                   nargs=1,
+                                   help='Convert registry json content into flowlib yaml content'
+                                   )
         self.mx_group.add_argument('--configure-flow-controller',
                                    action='store_true',
                                    help='Deploy reporting tasks and set global configs for the flow controller specified by .flowlib.yml to a running NiFi instance'
