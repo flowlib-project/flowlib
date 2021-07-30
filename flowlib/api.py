@@ -139,16 +139,7 @@ def registry_import_flow(config):
 
 
 def registry_convert_flow(config):
-    convertion = CONVERTION(config.registry_convert_flowlib[0])
-    convertion.build_flowlib_json_yaml_content(convertion.registry_file_content, config.output_syntax)
-
-def n_export(config):
-    flowlib.nifi.rest.nifi_export(config)
-
-
-def n_import(config):
-    flowlib.nifi.rest.nifi_import(config)
-
+    CONVERTION(config.registry_convert_flowlib[0], config.output_format)
 
 def registry_export_flow(registry_options, syntax_format=None):
     """

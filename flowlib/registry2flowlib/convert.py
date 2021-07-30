@@ -1,109 +1,54 @@
 import json
 from nipyapi.utils import dump
+from .base_canvas import CONSTRUCTBASE
+from .component_canvas import CONSTRUCTIONCOMPONENT
 
 
 class CONVERTION:
-    output_format = ""
-    registry_file_content = ''
-    skeleton = {
-        "name": '',
-        "version": 1.0,
-        "comments": "",
-        "canvas": []
-    }
-    rec_counter = 0
+    flow_file_conten = ''
+    processor_groups = []
 
-
-    def __init__(self, registry_content_file):
+    def __init__(self, registry_content_file, output_format):
         with open(registry_content_file, "r") as rf:
-            self.registry_file_content = json.loads(rf.read())
+            self.flow_file_conten = json.loads(rf.read())
             rf.close()
 
-    def append_to_skeleton(self, **kwargs):
-        main_key = [x for x in kwargs][0]
-        if 'main' == main_key:
-            self.skeleton["name"] = kwargs["main"]["name"]
-            self.skeleton["comments"] = kwargs["main"]["comments"]
+        self.base_structure = CONSTRUCTBASE()
+        self.comp_structure = CONSTRUCTIONCOMPONENT()
 
-        elif 'controller_services' == main_key:
-            self.skeleton[main_key] = kwargs[main_key]
+        self.recursively_find_processor_groups([self.flow_file_conten["flowContents"]], 0)
 
-        elif 'canvas' == main_key:
-            for _x in kwargs[main_key]:
-                self.skeleton[main_key].append(_x)
 
-    def get_processor_connection(self, connections, processor_id, processor_type, processor_name):
-        found_connections = []
+        relationship_levels = list(set([[int(y.split("_")[1]) for y in x][0] for x in self.processor_groups]))
 
-        for _connection in connections:
-            if _connection["source"]["id"] == processor_id and _connection["source"]["name"] == processor_name and _connection["source"]["type"] == processor_type:
-                found_connections.append(_connection)
-                # print(json.dumps(_connection, sort_keys=True, indent=2))
+        self.base_pg_specifics(
+            [x for x in [x for x in self.processor_groups] if int(str(x).split("_")[1]) == relationship_levels[0]][0])
 
-        needed_fields = [{"relationships": x["selectedRelationships"], "name": x["destination"]["name"], "to_port": x["destination"]["name"]} for x in found_connections]
-        return needed_fields
+        for relationship in relationship_levels[1:]:
+            self.comp_structure.ingest_relationships(
+                [y for y in [x for x in self.processor_groups] if int(str(y).split("_")[1]) == (relationship - 1)],
+                [y for y in [x for x in self.processor_groups] if int(str(y).split("_")[1]) == relationship]
+            )
 
-    def build_flowlib_json_yaml_content(self, data_content, output_syntax_option):
-        self.output_format = output_syntax_option
-        root_content = data_content["flowContents"]
-        self.build_processor_group([root_content])
+        # print(dump(self.base_structure.root_pg_yaml, mode=output_format))
+        # print(dump(self.processor_groups, mode=output_format))
 
-    def get_external_controllers(self, body):
-        controllers = []
+    def recursively_find_processor_groups(self, processor_data :list, pg_counter :int) -> None:
+        for _pg in processor_data:
+            _tmp_pg = dict(_pg)
 
-        if len(body["controllerServices"]) > 0:
-            for controller in body["controllerServices"]:
-                controller_services = {
-                    "name": controller["name"],
-                    "config": {
-                        "package_id": controller["type"],
-                        "properties": controller["properties"]
-                    }
-                }
-                controllers.append(controller_services)
-        return {"controller_services": controllers}
+            if _tmp_pg["processGroups"]:
+                del _tmp_pg["processGroups"]
 
-    def get_processors(self, body):
-        processors = []
+            self.processor_groups.append({f'canvasLevel_{pg_counter}_{_pg["name"]}': _tmp_pg})
 
-        if len(body["processors"]) > 0:
-            for processor in body["processors"]:
-                processor_data = {
-                    # "position": processor["position"],
-                    "name": processor["name"],
-                    "type": str(processor["componentType"]).lower(),
-                    "config": {
-                        "package_id": processor["type"],
-                        "properties": processor["properties"]
-                    },
-                    "connections": self.get_processor_connection(body["connections"], processor["identifier"], processor["componentType"], processor["name"])
-                }
+            if [x for x in _pg["processGroups"]]:
+                self.recursively_find_processor_groups(_pg["processGroups"], (pg_counter + 1))
 
-                processors.append(processor_data)
+    def base_pg_specifics(self, content: dict) -> None:
+        _pg_content = content[[x for x in content][0]]
 
-        return {"canvas": processors}
-
-    def get_pg_headers(self, body):
-        info = {
-            "name": body["name"],
-            "comments": body["comments"]
-        }
-
-        return {"main": info}
-
-    def get_out_in_ports(self, body):
-        input_ports = [{"type": x["componentType"].lower(), "name": x["name"]} for x in body["inputPorts"]]
-        output_ports = [{"type": x["componentType"].lower(), "name": x["name"]} for x in body["outputPorts"]]
-        total = output_ports + input_ports
-        return {"canvas": total}
-
-    def build_processor_group(self, data):
-        for _pg in data:
-            self.append_to_skeleton(**self.get_pg_headers(_pg))
-            self.append_to_skeleton(**self.get_external_controllers(_pg))
-            self.append_to_skeleton(**self.get_processors(_pg))
-            self.append_to_skeleton(**self.get_out_in_ports(_pg))
-
-            print(dump(self.skeleton, mode=self.output_format))
-            new_data = _pg["processGroups"]
-            self.build_processor_group(new_data)
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.pg_name(_pg_content))
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.controller_services(_pg_content))
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.processors(_pg_content))
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.input_ports(_pg_content))

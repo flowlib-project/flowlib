@@ -51,15 +51,11 @@ def main():
             items.append(field)
         print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
     elif cli.args.registry_export:
-        flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_syntax)
+        flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_format)
     elif cli.args.registry_import:
         flowlib.api.registry_import_flow(cli.config)
     elif cli.args.registry_convert_flowlib:
         flowlib.api.registry_convert_flow(cli.config)
-    elif cli.args.nifi_export:
-        flowlib.api.n_export(cli.config)
-    elif cli.args.nifi_import:
-        flowlib.api.n_import(cli.config)
     else:
         cli.parser.print_usage()
 
