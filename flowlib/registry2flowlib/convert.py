@@ -18,20 +18,23 @@ class CONVERTION:
 
         self.recursively_find_processor_groups([self.flow_file_conten["flowContents"]], 0)
 
-
         relationship_levels = list(set([[int(y.split("_")[1]) for y in x][0] for x in self.processor_groups]))
 
         self.base_pg_specifics(
             [x for x in [x for x in self.processor_groups] if int(str(x).split("_")[1]) == relationship_levels[0]][0])
 
         for relationship in relationship_levels[1:]:
-            self.comp_structure.ingest_relationships(
+            self.comp_structure.relationships(
                 [y for y in [x for x in self.processor_groups] if int(str(y).split("_")[1]) == (relationship - 1)],
                 [y for y in [x for x in self.processor_groups] if int(str(y).split("_")[1]) == relationship]
             )
+        self.merge_main_canvas_component_with_base_structure(self.comp_structure.main_canvas_structure)
 
-        # print(dump(self.base_structure.root_pg_yaml, mode=output_format))
-        # print(dump(self.processor_groups, mode=output_format))
+        print(dump(self.base_structure.root_pg_yaml, mode=output_format))
+
+    def merge_main_canvas_component_with_base_structure(self, data: list) -> None:
+        for _data in data:
+            self.base_structure.root_pg_yaml["canvas"].append(_data)
 
     def recursively_find_processor_groups(self, processor_data :list, pg_counter :int) -> None:
         for _pg in processor_data:
