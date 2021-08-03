@@ -1,5 +1,5 @@
 import json
-from nipyapi.utils import dump
+from nipyapi.utils import dump, fs_write
 from .base_canvas import CONSTRUCTBASE
 from .component_canvas import CONSTRUCTIONCOMPONENT
 
@@ -14,7 +14,12 @@ class CONVERTION:
             rf.close()
 
         self.base_structure = CONSTRUCTBASE()
+        self.base_structure.output_format = output_format
+        self.base_structure.flow_file_conten = self.flow_file_conten
+
         self.comp_structure = CONSTRUCTIONCOMPONENT()
+        self.comp_structure.output_format = output_format
+        self.comp_structure.flow_file_conten = self.flow_file_conten
 
         self.recursively_find_processor_groups([self.flow_file_conten["flowContents"]], 0)
 
@@ -30,7 +35,8 @@ class CONVERTION:
             )
         self.merge_main_canvas_component_with_base_structure(self.comp_structure.main_canvas_structure)
 
-        print(dump(self.base_structure.root_pg_yaml, mode=output_format))
+        # print(dump(self.base_structure.root_pg_yaml, mode=output_format))
+        self.base_structure.write_content_to_file(self.base_structure.root_pg_yaml, f"./flow.{output_format}")
 
     def merge_main_canvas_component_with_base_structure(self, data: list) -> None:
         for _data in data:
@@ -49,9 +55,11 @@ class CONVERTION:
                 self.recursively_find_processor_groups(_pg["processGroups"], (pg_counter + 1))
 
     def base_pg_specifics(self, content: dict) -> None:
+        """
+        No input or output ports can be created in the root canvas
+        """
         _pg_content = content[[x for x in content][0]]
 
         self.base_structure.append_to_root_pg_yaml(**self.base_structure.pg_name(_pg_content))
         self.base_structure.append_to_root_pg_yaml(**self.base_structure.controller_services(_pg_content))
-        self.base_structure.append_to_root_pg_yaml(**self.base_structure.processors(_pg_content))
-        self.base_structure.append_to_root_pg_yaml(**self.base_structure.input_ports(_pg_content))
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.connections(_pg_content))
