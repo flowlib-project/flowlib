@@ -16,10 +16,12 @@ class CONVERTION:
         self.base_structure = CONSTRUCTBASE()
         self.base_structure.output_format = output_format
         self.base_structure.flow_file_conten = self.flow_file_conten
+        self.base_structure.processor_groups = self.processor_groups
 
         self.comp_structure = CONSTRUCTIONCOMPONENT()
         self.comp_structure.output_format = output_format
         self.comp_structure.flow_file_conten = self.flow_file_conten
+        self.comp_structure.processor_groups = self.processor_groups
 
         self.recursively_find_processor_groups([self.flow_file_conten["flowContents"]], 0)
 

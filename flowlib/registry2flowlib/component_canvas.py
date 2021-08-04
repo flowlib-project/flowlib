@@ -68,8 +68,6 @@ class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
             if root_key == "processors":
                 self._component_canvas_structure.update({"process_group": []})
 
-
-
     def return_normalized_pg(self, data: list) -> dict:
         return [data[_root_key] for _root_key in [_pg for _pg in data]][0]
 
@@ -81,13 +79,25 @@ class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
                 if _single_data_payload[_root_key]["identifier"] == _pg["groupIdentifier"]:
                     _parent_processor_group = _single_data_payload[_root_key]
                     for _connections in _parent_processor_group["connections"]:
-                        if _connections["source"]["groupId"] == _pg["identifier"] and _connections["groupIdentifier"] == \
-                                _pg["groupIdentifier"]:
-                            connections = {
-                                "name": _connections["destination"]["name"],
-                                "from_port": _connections["source"]["name"],
-                            }
-                            return {"connections": [connections]}
+
+                        if _connections["source"]["type"] == "PROCESSOR":
+                            if _connections["source"]["groupId"] == _pg["identifier"] and _connections["groupIdentifier"] == \
+                                    _pg["groupIdentifier"]:
+                                connections = {
+                                    "name": _connections["destination"]["name"],
+                                    "from_port": _connections["source"]["name"],
+                                }
+                                return {"connections": [connections]}
+
+                        elif _connections["source"]["type"] == "OUTPUT_PORT":
+                            if _connections["source"]["groupId"] == _pg["identifier"] and _connections["groupIdentifier"] == \
+                                    _pg["groupIdentifier"]:
+                                connections = {
+                                    "name": self.extract_processor_name(_connections["destination"]["groupId"], self.processor_groups),
+                                    "from_port": _connections["source"]["name"],
+                                    "to_port": _connections["destination"]["name"],
+                                }
+                                return {"connections": [connections]}
 
     def core_pg_vars(self, data: dict) -> dict:
         _pg = self.return_normalized_pg(data)
@@ -117,6 +127,7 @@ class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
         self.append_to_component_canvas(**{"componentGroupName": self._main_canvas_structure["component_path"]})
         self.append_to_component_canvas(**self.controller_services(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.connections(self.return_normalized_pg(child_content)))
+        # print(self.connections(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.input_ports(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.output_ports(self.return_normalized_pg(child_content)))
 

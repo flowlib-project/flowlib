@@ -11,6 +11,9 @@ class CONSTRUCTBASE:
         "version": 1.0
     }
 
+    def return_normalized_pg(self, data: list) -> dict:
+        return [data[_root_key] for _root_key in [_pg for _pg in data]][0]
+
     def write_content_to_file(self, content: dict, file_location: str) -> None:
         if self.output_format == "yaml":
             with open(file_location, 'w') as outfile:
@@ -20,7 +23,6 @@ class CONSTRUCTBASE:
             json_obj = json.dumps(content, sort_keys=True, indent=2)
             with open(file_location, 'w') as outfile:
                 outfile.write(json_obj)
-
 
     def append_to_root_pg_yaml(self, **kwargs) -> None:
         root_key = [x for x in kwargs][0]
@@ -90,7 +92,6 @@ class CONSTRUCTBASE:
                     inputPorts.append({"type": port["type"], "name": port["name"]})
 
         if inputPorts:
-            print(inputPorts)
             return {"inputPorts": inputPorts}
 
         else:
@@ -111,114 +112,182 @@ class CONSTRUCTBASE:
         else:
             return {"outputPorts": None}
 
-    def connections_processor_2_processor(self, processor_connections: list, processors: list) -> dict:
-        _tmp_processors = []
+    def components_with_no_connections_in_canvas(self, processors: list) -> dict:
+        current_local_process_group_connections = []
+        solo_processor = []
+        _processors = []
 
-        for _x in processors:
-            processorName = _x["name"]
-            componentType = _x["componentType"]
-            javaClassType = _x["type"]
-            configProp = _x["properties"]
-            identifier = _x["identifier"]
+        for _processor_group in self.processor_groups:
+            _normalized_data = self.return_normalized_pg(_processor_group)
+            current_local_process_group_connections = _normalized_data["connections"]
 
-            processor = {
-                "name": processorName,
-                "type": str(componentType).lower(),
+        for _processor_ids in [x["identifier"] for x in processors]:
+            if _processor_ids not in [x["source"]["id"] for x in current_local_process_group_connections]:
+                for _entry in [x for x in processors if x["identifier"] == _processor_ids]:
+                    _proc = {
+                        "name": _entry["name"],
+                        "type": _entry["componentType"].lower(),
+                        "config": {
+                            "package_id": _entry["type"],
+                            "properties": _entry["properties"]
+                        }
+                    }
+
+                    _processors.append(_proc)
+
+        return _processors
+
+    def extract_processor_name(self, match_groupId: list, data: dict) -> str:
+        for _a in data:
+            for _s in _a:
+                content = _a[_s]
+                if content["identifier"] == match_groupId:
+                    return content["name"]
+
+    def append_connection(self, processor: dict, connection: dict) -> dict:
+        if connection["source"]["type"] == "PROCESSOR" and connection["destination"]["type"] == "PROCESSOR":
+            if connection:
+                _con = {
+                    "connections": [
+                        {
+                            "name": connection["destination"]["name"],
+                            "relationships": connection["selectedRelationships"]
+                        }
+                    ]
+                }
+
+                processor.update(_con)
+
+                return processor
+
+        elif connection["source"]["type"] == "PROCESSOR" and connection["destination"]["type"] == "INPUT_PORT":
+            if connection:
+                _con = {
+                    "connections": [
+                        {
+                            "name": self.extract_processor_name(connection["destination"]["groupId"],
+                                                                self.processor_groups),
+                            "relationships": connection["selectedRelationships"],
+                            "to_port": connection["destination"]["name"]
+                        }
+                    ]
+                }
+
+                processor.update(_con)
+
+                return processor
+
+    def connections_processor_2_processor(self, processor_connection: dict, processor_group: dict) -> dict:
+        _processors = [x for x in processor_group["processors"] if x["identifier"] == processor_connection["source"]["id"]]
+
+        for _processor_combine_connections in _processors:
+            _extracted_process_data = {
+                "name": _processor_combine_connections["name"],
+                "type":  _processor_combine_connections["componentType"].lower(),
                 "config": {
-                    "package_id": javaClassType,
-                    "properties": configProp
+                    "package_id": _processor_combine_connections["type"],
+                    "properties": _processor_combine_connections["properties"]
                 }
             }
 
-            if [{"name": x["destination"]["name"], "relationships": x["selectedRelationships"]} for x in
-                processor_connections if x["source"]["id"] == identifier]:
-                processor["connections"] = [
-                    {"name": x["destination"]["name"], "relationships": x["selectedRelationships"]} for
-                    x in processor_connections if x["source"]["id"] == identifier]
+            if _processor_combine_connections["autoTerminatedRelationships"]:
+                _extracted_process_data["config"].update(
+                    {"auto_terminated_relationships": _processor_combine_connections["autoTerminatedRelationships"]})
 
-            if _x["autoTerminatedRelationships"]:
-                processor["config"].update({"auto_terminated_relationships": _x["autoTerminatedRelationships"]})
+            return self.append_connection(_extracted_process_data, processor_connection)
 
-            _tmp_processors.append(processor)
-
-        return _tmp_processors
-
-    def extract_processor_name(self, match_id: list, data: dict) -> str:
-        if match_id == data["identifier"]:
-            return ([x["name"] for x in data["processGroups"] if x["groupIdentifier"] == match_id][0])
-        else:
-            print('nope')
-
-    def connections_processor_2_child_pg(self, processor_connections: dict, processors: list) -> dict:
-        _tmp_processors = []
-
-        for _x in processors:
-            processorName = _x["name"]
-            componentType = _x["componentType"]
-            javaClassType = _x["type"]
-            configProp = _x["properties"]
-            identifier = _x["identifier"]
-
-            processor = {
-                "name": processorName,
-                "type": str(componentType).lower(),
+    def connections_processor_2_child_pg(self, processor_connection: dict, processor_group: list) -> dict:
+        _processors = [x for x in processor_group["processors"] if
+                       x["identifier"] == processor_connection["source"]["id"]]
+        for _processor_combine_connections in _processors:
+            _extracted_process_data = {
+                "name": _processor_combine_connections["name"],
+                "type":  _processor_combine_connections["componentType"].lower(),
                 "config": {
-                    "package_id": javaClassType,
-                    "properties": configProp
+                    "package_id": _processor_combine_connections["type"],
+                    "properties": _processor_combine_connections["properties"]
                 }
             }
 
-            _t = [{"name": self.extract_processor_name(_x["groupIdentifier"], self.flow_file_conten["flowContents"]),
-                   "to_port": x["destination"]["name"], "relationships": x["selectedRelationships"]} for x in
-                  processor_connections if x["source"]["id"] == identifier]
-            if _t:
-                return {processorName: _t}
+            if _processor_combine_connections["autoTerminatedRelationships"]:
+                _extracted_process_data["config"].update(
+                    {"auto_terminated_relationships": _processor_combine_connections["autoTerminatedRelationships"]})
 
-    def components_with_no_connections_in_canvas(self, data: list) -> dict:
-        components = []
-        for processor in data:
-            processorName = processor["name"]
-            componentType = processor["componentType"]
-            javaClassType = processor["type"]
-            configProp = processor["properties"]
-            identifier = processor["identifier"]
+            return self.append_connection(_extracted_process_data, processor_connection)
 
-            processor = {
-                "name": processorName,
-                "type": str(componentType).lower(),
-                "config": {
-                    "package_id": javaClassType,
-                    "properties": configProp
+    def connections_child_pg_2_child_pg(self, processor_connection: dict, processor_group: list) -> dict:
+        _connection = {
+            f'for_processor_{self.extract_processor_name(processor_connection["source"]["groupId"], self.processor_groups)}': {
+                "connections": {
+                    "from_port": processor_connection["source"]["name"],
+                    "to_port": processor_connection["destination"]["name"],
+                    "name": self.extract_processor_name(processor_connection["destination"]["groupId"],
+                                                        self.processor_groups)
                 }
             }
+        }
 
-            components.append(processor)
+        return _connection
 
-            return processor
+    def connections_child_pg_2_processor(self, processor_connection: dict, processor_group: list) -> dict:
+        # print([x for x in processor_group["processors"] if x["identifier"] == processor_connection["source"]["id"]])
+        # _processors = [x for x in processor_group["processors"] if x["identifier"] == processor_connection["source"]["id"]]
 
-    def connections(self, content: dict) -> dict:
+        # print(json.dumps(processor_connection, indent=2, sort_keys=True))
+        pass
+
+    def connections(self, processor_group: dict) -> dict:
         canvas = []
+        core_procesgroup_connections = []
+        _processor_connections = processor_group["connections"]
+        _processors = processor_group["processors"]
 
-        if content["connections"]:
-            _t = self.connections_processor_2_processor([x for x in content["connections"] if
-                                                    x["source"]["type"] == "PROCESSOR" and x["destination"][
-                                                        "type"] == "PROCESSOR"], content["processors"])
+        if _processor_connections:
+            for _connection in _processor_connections:
+                if _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "PROCESSOR":
+                    print("1")
+                    _data = self.connections_processor_2_processor(_connection, processor_group)
+                    if _data:
+                        canvas.append(_data)
 
-            _q = self.connections_processor_2_child_pg([x for x in content["connections"] if
-                                                        x["source"]["type"] == "PROCESSOR" and x["destination"][
-                                                            "type"] == "INPUT_PORT"], content["processors"])
+                elif _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "INPUT_PORT":
+                    _data = self.connections_processor_2_child_pg(_connection, processor_group)
+                    print("2")
+                    if _data:
+                        canvas.append(_data)
 
-            [canvas.append(x) for x in _t]
+                elif _connection["source"]["type"] == "INPUT_PORT" and _connection["destination"]["type"] == "PROCESSOR":
+                    _data = self.connections_child_pg_2_processor(_connection, processor_group)
+                    print("3")
+                    if _data:
+                        canvas.append(_data)
 
-            if _q:
-                for _x in [x for x in canvas if x["name"] == [x for x in _q][0]]:
-                    if "connections" not in [y for y in _x]:
-                        _x.update({"connections": [_q[[x for x in _q][0]][0]]})
+                elif _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "OUTPUT_PORT":
+                    _data = self.connections_processor_2_processor(_connection, processor_group)
+                    print("4")
+                    if _data:
+                        canvas.append(_data)
 
-            return {"processors": canvas}
-        else:
-            processors = self.components_with_no_connections_in_canvas(content["processors"])
-            if processors:
-                return {"processors": processors}
+                elif _connection["source"]["type"] == "OUTPUT_PORT" and _connection["destination"]["type"] == "INPUT_PORT" or \
+                        _connection["source"]["type"] == "INPUT_PORT" and _connection["destination"]["type"] == "OUTPUT_PORT":
+                    print("5")
+                    core_procesgroup_connections.append(self.connections_child_pg_2_child_pg(_connection, processor_group))
+
+                else:
+                    print(_connection["source"]["type"], _connection["destination"]["type"])
+                    print("This didn't not get caught...")
+
+            for _solo_processor in self.components_with_no_connections_in_canvas(_processors):
+                if not [x for x in canvas if _solo_processor["name"] in x["name"]]:
+                    canvas.append(_solo_processor)
+
+            if canvas:
+                return {"processors": canvas}
             else:
                 return {"processors": None}
+
+        elif _processors:
+            print("6")
+            return {"processors": self.components_with_no_connections_in_canvas(_processors)}
+        else:
+            return {"processors": None}
