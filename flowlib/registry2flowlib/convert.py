@@ -37,7 +37,7 @@ class CONVERTION:
             )
         self.merge_main_canvas_component_with_base_structure(self.comp_structure.main_canvas_structure)
 
-        # print(dump(self.base_structure.root_pg_yaml, mode=output_format))
+        print(dump(self.base_structure.root_pg_yaml, mode=output_format))
         self.base_structure.write_content_to_file(self.base_structure.root_pg_yaml, f"./flow.{output_format}")
 
     def merge_main_canvas_component_with_base_structure(self, data: list) -> None:
@@ -63,5 +63,6 @@ class CONVERTION:
         _pg_content = content[[x for x in content][0]]
 
         self.base_structure.append_to_root_pg_yaml(**self.base_structure.pg_name(_pg_content))
+        self.base_structure.append_to_root_pg_yaml(**self.base_structure.remote_processor_groups(_pg_content))
         self.base_structure.append_to_root_pg_yaml(**self.base_structure.controller_services(_pg_content))
         self.base_structure.append_to_root_pg_yaml(**self.base_structure.connections(_pg_content))

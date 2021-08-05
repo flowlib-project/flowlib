@@ -1,4 +1,3 @@
-from nipyapi.utils import dump
 import yaml
 import json
 
@@ -47,6 +46,11 @@ class CONSTRUCTBASE:
             elif "outputPorts" == root_key and kwargs[root_key] is not None:
                 for _port in kwargs[root_key]:
                     self.root_pg_yaml["canvas"].append(_port)
+
+            elif "remote-process-groups" == root_key and kwargs[root_key] is not None:
+                old_data = self.root_pg_yaml["canvas"]
+                for _rp in kwargs[root_key]:
+                    old_data.append(_rp)
 
     def pg_name(self, content: dict) -> dict:
         return {"pg_name": {"name": content["name"]}}
@@ -112,9 +116,8 @@ class CONSTRUCTBASE:
         else:
             return {"outputPorts": None}
 
-    def components_with_no_connections_in_canvas(self, processors: list) -> dict:
+    def components_with_no_connections_in_canvas(self, processors: list) -> list:
         current_local_process_group_connections = []
-        solo_processor = []
         _processors = []
 
         for _processor_group in self.processor_groups:
@@ -137,7 +140,7 @@ class CONSTRUCTBASE:
 
         return _processors
 
-    def extract_processor_name(self, match_groupId: list, data: dict) -> str:
+    def extract_processor_name(self, match_groupId: list, data: list) -> str:
         for _a in data:
             for _s in _a:
                 content = _a[_s]
@@ -145,7 +148,8 @@ class CONSTRUCTBASE:
                     return content["name"]
 
     def append_connection(self, processor: dict, connection: dict) -> dict:
-        if connection["source"]["type"] == "PROCESSOR" and connection["destination"]["type"] == "PROCESSOR":
+        if connection["source"]["type"] == "PROCESSOR" and connection["destination"]["type"] == "PROCESSOR" or \
+                connection["source"]["type"] == "PROCESSOR" and connection["destination"]["type"] == "OUTPUT_PORT":
             if connection:
                 _con = {
                     "connections": [
@@ -196,7 +200,7 @@ class CONSTRUCTBASE:
 
             return self.append_connection(_extracted_process_data, processor_connection)
 
-    def connections_processor_2_child_pg(self, processor_connection: dict, processor_group: list) -> dict:
+    def connections_processor_2_child_pg(self, processor_connection: dict, processor_group: dict) -> dict:
         _processors = [x for x in processor_group["processors"] if
                        x["identifier"] == processor_connection["source"]["id"]]
         for _processor_combine_connections in _processors:
@@ -215,7 +219,7 @@ class CONSTRUCTBASE:
 
             return self.append_connection(_extracted_process_data, processor_connection)
 
-    def connections_child_pg_2_child_pg(self, processor_connection: dict, processor_group: list) -> dict:
+    def connections_child_pg_2_child_pg(self, processor_connection: dict, processor_group: dict) -> dict:
         _connection = {
             f'for_processor_{self.extract_processor_name(processor_connection["source"]["groupId"], self.processor_groups)}': {
                 "connections": {
@@ -229,48 +233,68 @@ class CONSTRUCTBASE:
 
         return _connection
 
-    def connections_child_pg_2_processor(self, processor_connection: dict, processor_group: list) -> dict:
+    def connections_child_pg_2_processor(self, processor_connection: dict, processor_group: dict) -> dict:
         # print([x for x in processor_group["processors"] if x["identifier"] == processor_connection["source"]["id"]])
         # _processors = [x for x in processor_group["processors"] if x["identifier"] == processor_connection["source"]["id"]]
 
         # print(json.dumps(processor_connection, indent=2, sort_keys=True))
         pass
 
+    def remote_processor_groups_with_no_connections(self, remote_processors: list) -> list:
+        _grouped = []
+
+        for _remote_processors in remote_processors:
+            _rp = {
+                "name": _remote_processors["name"].replace(" ", "_"),
+                "type": _remote_processors["componentType"].lower(),
+                "config": {
+                    "target_uri":  _remote_processors["targetUri"]
+                }
+            }
+            _grouped.append(_rp)
+
+        return _grouped
+
+    def remote_processor_groups(self, processor_group: dict) -> dict:
+        _remote_processor_groups = processor_group["remoteProcessGroups"]
+        return {"remote-process-groups": self.remote_processor_groups_with_no_connections(_remote_processor_groups)}
+
     def connections(self, processor_group: dict) -> dict:
         canvas = []
         core_procesgroup_connections = []
         _processor_connections = processor_group["connections"]
         _processors = processor_group["processors"]
+        _remote_processor_groups = processor_group["remoteProcessGroups"]
 
         if _processor_connections:
             for _connection in _processor_connections:
                 if _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "PROCESSOR":
-                    print("1")
+                    # print("1")
                     _data = self.connections_processor_2_processor(_connection, processor_group)
                     if _data:
                         canvas.append(_data)
 
                 elif _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "INPUT_PORT":
                     _data = self.connections_processor_2_child_pg(_connection, processor_group)
-                    print("2")
+                    # print("2")
                     if _data:
                         canvas.append(_data)
 
                 elif _connection["source"]["type"] == "INPUT_PORT" and _connection["destination"]["type"] == "PROCESSOR":
                     _data = self.connections_child_pg_2_processor(_connection, processor_group)
-                    print("3")
+                    # print("3")
                     if _data:
                         canvas.append(_data)
 
                 elif _connection["source"]["type"] == "PROCESSOR" and _connection["destination"]["type"] == "OUTPUT_PORT":
-                    _data = self.connections_processor_2_processor(_connection, processor_group)
-                    print("4")
+                    _data = self.connections_processor_2_child_pg(_connection, processor_group)
+                    # print("4")
                     if _data:
                         canvas.append(_data)
 
                 elif _connection["source"]["type"] == "OUTPUT_PORT" and _connection["destination"]["type"] == "INPUT_PORT" or \
                         _connection["source"]["type"] == "INPUT_PORT" and _connection["destination"]["type"] == "OUTPUT_PORT":
-                    print("5")
+                    # print("5")
                     core_procesgroup_connections.append(self.connections_child_pg_2_child_pg(_connection, processor_group))
 
                 else:
@@ -287,7 +311,12 @@ class CONSTRUCTBASE:
                 return {"processors": None}
 
         elif _processors:
-            print("6")
+            # print("6")
             return {"processors": self.components_with_no_connections_in_canvas(_processors)}
+
+        elif _remote_processor_groups:
+            # print("7")
+            return {"remote-process-groups": self.remote_processor_groups_with_no_connections(_remote_processor_groups)}
+
         else:
             return {"processors": None}

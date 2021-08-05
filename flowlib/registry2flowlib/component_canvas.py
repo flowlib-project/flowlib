@@ -1,9 +1,5 @@
-import json
-
-from nipyapi.utils import dump
 from .base_canvas import CONSTRUCTBASE
 import os
-import yaml
 
 
 class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
@@ -68,7 +64,7 @@ class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
             if root_key == "processors":
                 self._component_canvas_structure.update({"process_group": []})
 
-    def return_normalized_pg(self, data: list) -> dict:
+    def return_normalized_pg(self, data: dict) -> dict:
         return [data[_root_key] for _root_key in [_pg for _pg in data]][0]
 
     def core_pg_connections(self, child_data: dict, parent_data: list) -> dict:
@@ -126,8 +122,8 @@ class CONSTRUCTIONCOMPONENT(CONSTRUCTBASE):
 
         self.append_to_component_canvas(**{"componentGroupName": self._main_canvas_structure["component_path"]})
         self.append_to_component_canvas(**self.controller_services(self.return_normalized_pg(child_content)))
+        self.append_to_component_canvas(** self.remote_processor_groups(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.connections(self.return_normalized_pg(child_content)))
-        # print(self.connections(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.input_ports(self.return_normalized_pg(child_content)))
         self.append_to_component_canvas(**self.output_ports(self.return_normalized_pg(child_content)))
 
