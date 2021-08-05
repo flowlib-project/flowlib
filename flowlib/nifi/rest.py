@@ -173,6 +173,7 @@ def registry_import(config):
     _buckets_info = nipyapi.registry.apis.buckets_api.BucketsApi()
 
     _bucket = [x for x in _buckets_info.get_buckets() if x.to_dict()["name"] == config[1]][0].to_dict()
+
     _bucket_flows = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
 
     names = [x.to_dict()["name"] for x in _bucket_flows.get_flows(_bucket["identifier"])]

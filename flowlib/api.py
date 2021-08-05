@@ -141,6 +141,7 @@ def registry_import_flow(config):
 def registry_convert_flow(config):
     CONVERTION(config.registry_convert_flowlib[0], config.output_format)
 
+
 def registry_export_flow(registry_options, syntax_format=None):
     """
     :type config: FlowLibConfig
@@ -149,17 +150,12 @@ def registry_export_flow(registry_options, syntax_format=None):
         if registry_options:
             if syntax_format == "yaml":
                 json_content = flowlib.nifi.rest.registry_export(registry_options)
-                # bucket = json_content["bucket"]
-                # del json_content["bucket"]
                 content = yaml.dump(json_content)
             elif syntax_format == "json" or syntax_format == "None":
                 json_content = flowlib.nifi.rest.registry_export(registry_options)
-                # bucket = json_content["bucket"]
-                # del json_content["bucket"]
                 content = json.dumps(json_content, indent=2, sort_keys=True)
 
             print(content)
-            # print(bucket)
     except ApiException as e:
         print(f'Error: {e.status} {e.reason}')
     except ValueError as e:
