@@ -2,8 +2,6 @@
 import copy
 import io
 import os
-import re
-import sys
 import shutil
 import json
 import yaml
@@ -17,7 +15,8 @@ from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.model.deployment import FlowDeployment
 from flowlib.logger import log
-from flowlib.registry2flowlib.convert import CONVERTION
+# from flowlib.registry2flowlib.convert import CONVERTION
+from flowlib.convert2flowlib.structure import NIFIFILECONTENTS, STRUCTURE
 
 
 def gen_flow_scaffold(dest):
@@ -139,7 +138,10 @@ def registry_import_flow(config):
 
 
 def registry_convert_flow(config):
-    CONVERTION(config.registry_convert_flowlib[0], config.output_format)
+    nifi_contents = NIFIFILECONTENTS(config.registry_convert_flowlib[0], config.output_format)
+
+    structure = STRUCTURE()
+    structure.construct_flowlib_format(child_pgs=nifi_contents.return_root_processor_group())
 
 
 def registry_export_flow(registry_options, syntax_format=None):
