@@ -142,6 +142,7 @@ def registry_convert_flow(config):
 
     structure = STRUCTURE()
     structure.construct_flowlib_format(child_pgs=nifi_contents.return_root_processor_group())
+    structure.write_to_files()
 
 
 def registry_export_flow(registry_options, syntax_format=None):
