@@ -55,17 +55,27 @@ class STRUCTURE:
                 write_to_file(self.global_content[_keys], file_path)
 
     def append_to_parent_canvas(self, data: dict, parent_processor_group: str) -> None:
-        processor_group_data = [_root_key for _root_key in [x for x in self.global_content] if parent_processor_group == _root_key.split("_")[1]]
-        if len(processor_group_data) == 1:
-            old_data = self.global_content[processor_group_data[0]]["canvas"]
+        processor_group_data = {}
+
+        for x in self.global_content:
+            if parent_processor_group in x:
+                processor_group_data.update(self.global_content[x])
+
+        if "canvas" in [_x for _x in processor_group_data]:
+            old_data = processor_group_data["canvas"]
             old_data.append(data)
+
+        elif "process_group" in [_x for _x in processor_group_data]:
+            old_data = processor_group_data["process_group"]
+            old_data.append(data)
+
         else:
             msg = "* Process Group Names Not Unique *"
             totalMsg = "%s\n%s\n%s\n" % ("*"*len(msg), msg, "*"*len(msg))
             sys.exit(totalMsg)
 
     def append_component(self, data: dict) -> None:
-        self.global_content.setdefault(data["name"], {}).update(data)
+        self.global_content.setdefault(data["name"].replace("-", "_"), {}).update(data)
 
     def construct_flowlib_format(self, parent_pg=None, child_pgs=None) -> None:
         def append_to_tmp(data):
@@ -94,8 +104,8 @@ class STRUCTURE:
 
                     del _tmp
 
-                    if [x for x in child_pgs if x["processGroups"]]:
-                        self.construct_flowlib_format(parent_pg=child_pgs, child_pgs=[x["processGroups"] for x in child_pgs if x["processGroups"]][0])
+                    if process_group["processGroups"]:
+                        self.construct_flowlib_format(parent_pg=process_group, child_pgs=process_group["processGroups"])
 
             else:
                 if process_group["connections"]:
@@ -103,22 +113,8 @@ class STRUCTURE:
 
                 else:
                     structures = entry_for_parent_data_file_no_connections(process_group, language_format)
-                    self.append_to_parent_canvas(structures[0], [x["name"] for x in parent_pg][0])
+                    self.append_to_parent_canvas(structures[0], parent_pg["name"])
                     self.append_component(structures[1])
 
-
-
-
-
-            # The below is the old way of doing it for the moment
-            #     self.append_to_file_body(process_group_identity(process_group))
-            #     self.append_to_file_body(multiple_resources_with_no_connections(process_group))
-            #     self.append_to_file_body(controller_services(process_group))
-            #     self.append_to_file_body(processor_group_variables(process_group))
-            #
-            #     write_to_file(self.file_body, self.create_component(process_group['name'], parent_pg))
-            #
-            # # if [x for x in child_pgs if x["processGroups"]]:
-            # #     self.construct_flowlib_format(parent_pg=child_pgs, child_pgs=[x["processGroups"] for x in child_pgs
-            # #                                                                   if x["processGroups"]][0])
-
+                    if process_group["processGroups"]:
+                        self.construct_flowlib_format(parent_pg=process_group, child_pgs=process_group["processGroups"])

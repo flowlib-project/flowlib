@@ -1,4 +1,3 @@
-import os
 from .root_canvas import controller_services, processor_group_variables, multiple_resources_with_no_connections
 
 component_dir = "common"
