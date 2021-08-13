@@ -1,6 +1,6 @@
 import json
-from .root_canvas import process_group_identity, multiple_resources_with_no_connections, controller_services, processor_group_variables
-from .component_canvas import entry_for_parent_data_file_no_connections
+from .root_canvas import process_group_identity, multiple_resources_with_no_connections, multiple_resources_with_connections, controller_services, processor_group_variables
+from .component_canvas import entry_for_parent_data_file_no_connections, entry_for_parent_data_file_with_connections
 from nipyapi.utils import fs_read, fs_write, dump
 import os
 import sys
@@ -88,10 +88,20 @@ class STRUCTURE:
                 _tmp = {}
 
                 if process_group["connections"]:
-                    self.append_to_file_body(process_group_identity(process_group))
-                    self.append_to_file_body(multiple_resources_with_no_connections(process_group))
-                    self.append_to_file_body(controller_services(process_group))
-                    self.append_to_file_body(processor_group_variables(process_group))
+                    append_to_tmp(process_group_identity(process_group))
+                    append_to_tmp(multiple_resources_with_connections(child_process_group_data=process_group))
+                    append_to_tmp(controller_services(process_group))
+                    append_to_tmp(processor_group_variables(process_group))
+
+                    self.global_content.setdefault(
+                        f'{process_group["name"]}_component'
+                        if parent_pg is not None else f'root_{process_group["name"]}', {}).update(_tmp)
+
+                    del _tmp
+
+                    if process_group["processGroups"]:
+                        self.construct_flowlib_format(parent_pg=process_group, child_pgs=process_group["processGroups"])
+
                 else:
                     append_to_tmp(process_group_identity(process_group))
                     append_to_tmp(multiple_resources_with_no_connections(process_group))
@@ -109,10 +119,15 @@ class STRUCTURE:
 
             else:
                 if process_group["connections"]:
-                    pass
+                    structures = entry_for_parent_data_file_with_connections(process_group, language_format, parent_pg)
+                    self.append_to_parent_canvas(structures[0], parent_pg["name"])
+                    self.append_component(structures[1])
+
+                    if process_group["processGroups"]:
+                        self.construct_flowlib_format(parent_pg=process_group, child_pgs=process_group["processGroups"])
 
                 else:
-                    structures = entry_for_parent_data_file_no_connections(process_group, language_format)
+                    structures = entry_for_parent_data_file_no_connections(process_group, language_format, parent_pg)
                     self.append_to_parent_canvas(structures[0], parent_pg["name"])
                     self.append_component(structures[1])
 

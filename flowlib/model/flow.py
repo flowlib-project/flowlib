@@ -311,6 +311,7 @@ class OutputPort(FlowElement):
 
 class Connection:
     def __init__(self, name, from_port=None, to_port=None, relationships=None):
+        # Add parameters from yaml for connections
         self.name = name
         self.from_port = from_port
         self.to_port = to_port

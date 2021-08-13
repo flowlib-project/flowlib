@@ -289,6 +289,7 @@ def deploy_flow(flow, config, deployment=None, force=False):
         flowlib.parser.replace_flow_element_vars_recursive(flow, flow._elements, flow.components)
 
         _create_canvas_elements_recursive(flow._elements, flow_pg, config, deployment, previous_deployment)
+        #
         _create_connections_recursive(flow, flow._elements)
         _set_controllers_enabled(flow._controllers, enabled=True)
 
@@ -756,6 +757,7 @@ def _create_element_connections(flow, source_element):
                 group_id = source_element.parent_id
 
             log.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
+            # Add parameters from yaml that nifi API is expecting. -----------Cesar
             nipyapi.nifi.ProcessGroupsApi().create_connection(
                 id=group_id,
                 body=nipyapi.nifi.ConnectionEntity(
