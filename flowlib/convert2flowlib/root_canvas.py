@@ -1,4 +1,4 @@
-def build_connection_type(resource: dict, parent_processor_group: dict, child_processor_group: dict) -> dict:
+def build_connection_type(resource: dict, parent_processor_group: dict, child_processor_group: dict) -> list:
     _data = []
 
     connection_resources = [_x for _x in child_processor_group["connections"] if _x["source"]["id"] == resource["identifier"]]
@@ -43,8 +43,8 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                 print("missed one..")
                 print(source_entry_type, destination_entry_type)
 
-
     return _data
+
 
 def extract_processors(processors: list) -> list:
     _data = []
@@ -66,6 +66,7 @@ def extract_processors(processors: list) -> list:
         _data.append(build_processor)
 
     return _data
+
 
 def extract_processors_with_connections(parent_data: dict, child_data: dict) -> list:
     _data = []
@@ -93,6 +94,7 @@ def extract_processors_with_connections(parent_data: dict, child_data: dict) -> 
 
     return _data
 
+
 def extract_remote_process_group(remote_processor_groups: list) -> list:
     _data = []
 
@@ -106,7 +108,9 @@ def extract_remote_process_group(remote_processor_groups: list) -> list:
         }
 
         _data.append(build_remote_process_group)
+
     return _data
+
 
 def extract_input_ports(input_ports: list) -> list:
     _data = []
@@ -115,6 +119,7 @@ def extract_input_ports(input_ports: list) -> list:
         _data.append({"name": inputPort["name"], "type": inputPort["type"].lower()})
 
     return _data
+
 
 def extract_input_ports_with_connections(parent_data: dict, child_data: dict) -> list:
     _data = []
@@ -134,6 +139,7 @@ def extract_input_ports_with_connections(parent_data: dict, child_data: dict) ->
 
     return _data
 
+
 def extract_output_ports(output_ports: list) -> list:
     _data = []
 
@@ -141,6 +147,7 @@ def extract_output_ports(output_ports: list) -> list:
         _data.append({"name": outputPort["name"], "type": outputPort["type"].lower()})
 
     return _data
+
 
 def extract_output_ports_with_connections(parent_data: dict, child_data: dict) -> list:
     _data = []
@@ -160,6 +167,7 @@ def extract_output_ports_with_connections(parent_data: dict, child_data: dict) -
 
     return _data
 
+
 def extract_controller_services(controller_services: list) -> list:
     _data = []
 
@@ -175,6 +183,7 @@ def extract_controller_services(controller_services: list) -> list:
         _data.append(build_controller_service)
 
     return _data
+
 
 def multiple_resources_with_no_connections(data: dict) -> dict:
     """
@@ -206,6 +215,7 @@ def multiple_resources_with_no_connections(data: dict) -> dict:
 
     return _tmp
 
+
 def multiple_resources_with_connections(parent_process_group_data=None, child_process_group_data=None) -> dict:
     _tmp = {
         "canvas": []
@@ -233,7 +243,8 @@ def multiple_resources_with_connections(parent_process_group_data=None, child_pr
 
     return _tmp
 
-def processor_group_connection(parent_pg: dict, child_pg: dict) -> dict:
+
+def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
     _data = []
 
     for connections in [_x for _x in parent_pg["connections"] if _x["source"]["groupId"] == child_pg["identifier"]]:
@@ -261,6 +272,7 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> dict:
 
     return _data
 
+
 def process_group_identity(data: dict) -> dict:
     content = {
         "version": 1.0
@@ -273,11 +285,13 @@ def process_group_identity(data: dict) -> dict:
 
     return content
 
+
 def controller_services(data: dict) -> dict:
     if data["controllerServices"]:
         return {"controller_services": extract_controller_services(data["controllerServices"])}
     else:
         return {"controller_services": None}
+
 
 def processor_group_variables(data: dict) -> dict:
     _data = {}

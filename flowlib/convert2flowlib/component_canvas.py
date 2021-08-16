@@ -8,6 +8,7 @@ def create_component_name(component_name: str) -> str:
     component_full_path = f'{component_dir}/{component_name}_component.{language_format}'
     return component_full_path
 
+
 def cleanup_multiple_resources_with_no_connections(data: dict) -> dict:
     content = multiple_resources_with_no_connections(data)
     old_data = content["canvas"]
@@ -18,6 +19,7 @@ def cleanup_multiple_resources_with_no_connections(data: dict) -> dict:
 
     return component_processor_group_data
 
+
 def cleanup_multiple_resources_with_connections(data: dict) -> dict:
     content = multiple_resources_with_connections(child_process_group_data=data)
     old_data = content["canvas"]
@@ -27,6 +29,7 @@ def cleanup_multiple_resources_with_connections(data: dict) -> dict:
     }
 
     return component_processor_group_data
+
 
 def entry_for_parent_data_file_no_connections(data: dict, output_format: str) -> tuple:
     global language_format
@@ -48,7 +51,8 @@ def entry_for_parent_data_file_no_connections(data: dict, output_format: str) ->
 
     return parent_structure, component_structure
 
-def entry_for_parent_data_file_with_connections(data: dict, output_format: str, parent_pg: dict) -> None:
+
+def entry_for_parent_data_file_with_connections(data: dict, output_format: str, parent_pg: dict) -> tuple:
     global language_format
     language_format = output_format
 
