@@ -15,7 +15,6 @@ from flowlib.exceptions import FlowLibException
 from flowlib.model.flow import Flow
 from flowlib.model.deployment import FlowDeployment
 from flowlib.logger import log
-# from flowlib.registry2flowlib.convert import CONVERTION
 from flowlib.convert2flowlib.structure import NIFIFILECONTENTS, STRUCTURE
 
 
