@@ -310,12 +310,13 @@ class OutputPort(FlowElement):
 
 
 class Connection:
-    def __init__(self, name, from_port=None, to_port=None, relationships=None):
-        # Add parameters from yaml for connections
+    def __init__(self, name, from_port=None, to_port=None, relationships=None, back_pressure_object_threshold=None, back_pressure_data_size_threshold=None):
         self.name = name
         self.from_port = from_port
         self.to_port = to_port
         self.relationships = relationships
+        self.back_pressure_object_threshold = back_pressure_object_threshold
+        self.back_pressure_data_size_threshold = back_pressure_data_size_threshold
 
     def __repr__(self):
         return str(vars(self))

@@ -9,7 +9,9 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
 
             if source_entry_type == "INPUT_PORT" and destination_entry_type == "PROCESSOR":
                 connection_record = {
-                    "name": connection_resources_entry["destination"]["name"]
+                    "name": connection_resources_entry["destination"]["name"],
+                    "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
                 }
 
                 _data.append(connection_record)
@@ -17,7 +19,9 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
             elif source_entry_type == "PROCESSOR" and destination_entry_type == "PROCESSOR":
                 connection_record = {
                     "name": connection_resources_entry["destination"]["name"],
-                    "relationships": connection_resources_entry["selectedRelationships"]
+                    "relationships": connection_resources_entry["selectedRelationships"],
+                    "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
                 }
 
                 _data.append(connection_record)
@@ -26,7 +30,9 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                 connection_record = {
                     "name": [x["name"] for x in child_processor_group["processGroups"] if x["identifier"] == connection_resources_entry["destination"]["groupId"]][0],
                     "relationships": connection_resources_entry["selectedRelationships"],
-                    "to_port": connection_resources_entry["destination"]["name"]
+                    "to_port": connection_resources_entry["destination"]["name"],
+                    "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
                 }
 
                 _data.append(connection_record)
@@ -34,7 +40,9 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
             elif source_entry_type == "PROCESSOR" and destination_entry_type == "OUTPUT_PORT":
                 connection_record = {
                     "name": connection_resources_entry["destination"]["name"],
-                    "relationships": connection_resources_entry["selectedRelationships"]
+                    "relationships": connection_resources_entry["selectedRelationships"],
+                    "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
                 }
 
                 _data.append(connection_record)
@@ -252,7 +260,9 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "PROCESSOR":
             connection_record = {
                 "name": connections["destination"]["name"],
-                "from_port": connections["source"]["name"]
+                "from_port": connections["source"]["name"],
+                "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
+                "back_pressure_object_threshold": connections["backPressureObjectThreshold"]
             }
             _data.append(connection_record)
 
@@ -260,7 +270,9 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
             connection_record = {
                 "name": [x["name"] for x in parent_pg["processGroups"] if x["identifier"] == connections["destination"]["groupId"]][0],
                 "from_port": connections["source"]["name"],
-                "to_port": connections["destination"]["name"]
+                "to_port": connections["destination"]["name"],
+                "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
+                "back_pressure_object_threshold": connections["backPressureObjectThreshold"]
             }
 
             _data.append(connection_record)

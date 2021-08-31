@@ -757,7 +757,7 @@ def _create_element_connections(flow, source_element):
                 group_id = source_element.parent_id
 
             log.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
-            # Add parameters from yaml that nifi API is expecting. -----------Cesar
+
             nipyapi.nifi.ProcessGroupsApi().create_connection(
                 id=group_id,
                 body=nipyapi.nifi.ConnectionEntity(
@@ -770,6 +770,8 @@ def _create_element_connections(flow, source_element):
                             group_id=source_group_id,
                             type=source_type
                         ),
+                        back_pressure_data_size_threshold=c.back_pressure_data_size_threshold,
+                        back_pressure_object_threshold=c.back_pressure_object_threshold,
                         name=c.name,
                         destination=nipyapi.nifi.ConnectableDTO(
                             id=dest_id,
