@@ -278,7 +278,6 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
     for connections in [_x for _x in parent_pg["connections"] if _x["source"]["groupId"] == child_pg["identifier"]]:
         source_entry_type, destination_entry_type = (connections["source"]["type"], connections["destination"]["type"])
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "PROCESSOR":
-            print(connections)
             connection_record = {
                 "name": connections["destination"]["name"],
                 "from_port": connections["source"]["name"],
