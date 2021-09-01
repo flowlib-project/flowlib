@@ -772,6 +772,8 @@ def _create_element_connections(flow, source_element):
                         ),
                         back_pressure_data_size_threshold=c.back_pressure_data_size_threshold,
                         back_pressure_object_threshold=c.back_pressure_object_threshold,
+                        load_balance_strategy=c.load_balance_strategy,
+                        flow_file_expiration=c.flow_file_expiration,
                         name=c.name,
                         destination=nipyapi.nifi.ConnectableDTO(
                             id=dest_id,

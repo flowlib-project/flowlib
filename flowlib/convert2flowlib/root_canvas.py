@@ -11,8 +11,13 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                 connection_record = {
                     "name": connection_resources_entry["destination"]["name"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
-                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
+                    "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
+                    "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
                 }
+
+                if connection_resources_entry["prioritizers"]:
+                    connection_record[""] = connection_resources_entry["prioritizers"]
 
                 _data.append(connection_record)
 
@@ -21,8 +26,13 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "name": connection_resources_entry["destination"]["name"],
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
-                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
+                    "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
+                    "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
                 }
+
+                if connection_resources_entry["prioritizers"]:
+                    connection_record[""] = connection_resources_entry["prioritizers"]
 
                 _data.append(connection_record)
 
@@ -32,8 +42,13 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "to_port": connection_resources_entry["destination"]["name"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
-                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
+                    "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
+                    "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
                 }
+
+                if connection_resources_entry["prioritizers"]:
+                    connection_record[""] = connection_resources_entry["prioritizers"]
 
                 _data.append(connection_record)
 
@@ -42,8 +57,13 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "name": connection_resources_entry["destination"]["name"],
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
-                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"]
+                    "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
+                    "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
+                    "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
                 }
+
+                if connection_resources_entry["prioritizers"]:
+                    connection_record[""] = connection_resources_entry["prioritizers"]
 
                 _data.append(connection_record)
 
@@ -258,12 +278,19 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
     for connections in [_x for _x in parent_pg["connections"] if _x["source"]["groupId"] == child_pg["identifier"]]:
         source_entry_type, destination_entry_type = (connections["source"]["type"], connections["destination"]["type"])
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "PROCESSOR":
+            print(connections)
             connection_record = {
                 "name": connections["destination"]["name"],
                 "from_port": connections["source"]["name"],
                 "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
-                "back_pressure_object_threshold": connections["backPressureObjectThreshold"]
+                "back_pressure_object_threshold": connections["backPressureObjectThreshold"],
+                "flow_file_expiration": connections["flowFileExpiration"],
+                "load_balance_strategy": connections["loadBalanceStrategy"],
             }
+
+            if connections["prioritizers"]:
+                connection_record[""] = connections["prioritizers"]
+
             _data.append(connection_record)
 
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "INPUT_PORT":
@@ -272,8 +299,13 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
                 "from_port": connections["source"]["name"],
                 "to_port": connections["destination"]["name"],
                 "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
-                "back_pressure_object_threshold": connections["backPressureObjectThreshold"]
+                "back_pressure_object_threshold": connections["backPressureObjectThreshold"],
+                "flow_file_expiration": connections["flowFileExpiration"],
+                "load_balance_strategy": connections["loadBalanceStrategy"],
             }
+
+            if connections["prioritizers"]:
+                connection_record[""] = connections["prioritizers"]
 
             _data.append(connection_record)
 
