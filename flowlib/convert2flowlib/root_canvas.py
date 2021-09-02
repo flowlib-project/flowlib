@@ -14,6 +14,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
                     "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
                     "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
+                    "load_balance_compression": connection_resources_entry["loadBalanceCompression"]
                 }
 
                 if connection_resources_entry["prioritizers"]:
@@ -29,6 +30,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
                     "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
                     "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
+                    "load_balance_compression": connection_resources_entry["loadBalanceCompression"]
                 }
 
                 if connection_resources_entry["prioritizers"]:
@@ -45,6 +47,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
                     "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
                     "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
+                    "load_balance_compression": connection_resources_entry["loadBalanceCompression"]
                 }
 
                 if connection_resources_entry["prioritizers"]:
@@ -60,6 +63,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
                     "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
                     "load_balance_strategy": connection_resources_entry["loadBalanceStrategy"],
+                    "load_balance_compression": connection_resources_entry["loadBalanceCompression"]
                 }
 
                 if connection_resources_entry["prioritizers"]:
@@ -285,6 +289,7 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
                 "back_pressure_object_threshold": connections["backPressureObjectThreshold"],
                 "flow_file_expiration": connections["flowFileExpiration"],
                 "load_balance_strategy": connections["loadBalanceStrategy"],
+                "load_balance_compression": connections["loadBalanceCompression"]
             }
 
             if connections["prioritizers"]:
@@ -301,6 +306,7 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
                 "back_pressure_object_threshold": connections["backPressureObjectThreshold"],
                 "flow_file_expiration": connections["flowFileExpiration"],
                 "load_balance_strategy": connections["loadBalanceStrategy"],
+                "load_balance_compression": connections["loadBalanceCompression"]
             }
 
             if connections["prioritizers"]:

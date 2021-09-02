@@ -310,7 +310,7 @@ class OutputPort(FlowElement):
 
 
 class Connection:
-    def __init__(self, name, from_port=None, to_port=None, relationships=None, back_pressure_object_threshold=None, back_pressure_data_size_threshold=None, flow_file_expiration=None, load_balance_strategy=None, prioritizers=None):
+    def __init__(self, name, from_port=None, to_port=None, relationships=None, back_pressure_object_threshold=None, back_pressure_data_size_threshold=None, flow_file_expiration=None, load_balance_strategy=None, prioritizers=None, load_balance_compression=None):
         self.name = name
         self.from_port = from_port
         self.to_port = to_port
@@ -320,6 +320,7 @@ class Connection:
         self.flow_file_expiration = flow_file_expiration
         self.load_balance_strategy = load_balance_strategy
         self.prioritizers = prioritizers
+        self.load_balance_compression = load_balance_compression
 
     def __repr__(self):
         return str(vars(self))
