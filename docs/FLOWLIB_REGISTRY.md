@@ -7,8 +7,11 @@
         * Version, is an int value or the word latest to retrieve the latest version
         * You can also the **--output-format** to specify between json or yaml output
         * To specify the registry or nifi endpoint desired, use the **--nifi-endpoint** flag
+        * Specify the portion of the bucket name and the tool will return all buckets that start with the value you used
+        * Using the "**all**" value will return all buckets in the registry
     * Ex:
-        * flowlib --output-format json --nifi-endpoint http://localhost:18080 --registry-export 58045f90-0b5c-40ac-85ce-140df7dc11c1 159a95d4-3ffe-4122-905d-b1e05a230eb4 latest > registry-output.json
+        * flowlib --output-format json --nifi-endpoint http://localhost:18080 --registry-export all
+        * flowlib --output-format json --nifi-endpoint http://localhost:18080 --registry-export pims
 
 # Import Into Registry
 To import a flow that was exported from the registry using this tool, you need to make sure that it's exported in json format.
@@ -22,7 +25,4 @@ To import a flow that was exported from the registry using this tool, you need t
         * flowlib --nifi-endpoint http://localhost:18080 --registry-import ./registry-output.json sample4 brad
 
 # Convert To Flowlib Format
-To convert the registry json file to a flowlib format just make sure your in the same directory of where the registry json output file is located. Make sure you specify to convert with the **--output-format** value to yaml
-*  flowlib --output-format yaml --registry-convert-flowlib ./registry-output.json
-
-This command should create all the dependancies, components and valid structure in order to create the flow in the nifi cluster
+Conversion is now done automatically when the export command is run

@@ -117,13 +117,8 @@ class FlowLibCLI:
                                    )
         self.mx_group.add_argument('--registry-export',
                                    type=str,
-                                   nargs=3,
-                                   help='Export the specified NiFi flow and its components from the Nifi Registry by passing <BUCKET IDENTIFIER> <FLOW IDENTIFIER> <VERSION(latest or #)>'
-                                   )
-        self.mx_group.add_argument('--registry-convert-flowlib',
-                                   type=str,
                                    nargs=1,
-                                   help='Expected path of json file'
+                                   help='Export the specified NiFi flow and its components from the Nifi Registry by passing <all> or <bucket name>, will match names that start with this value'
                                    )
         self.mx_group.add_argument('--configure-flow-controller',
                                    action='store_true',

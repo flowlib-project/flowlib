@@ -218,7 +218,7 @@ def registry_export(registry_options):
     flow_content = json.loads(
         nipyapi.versioning.export_flow_version(mode="json", bucket_id=_flow_data_info.bucket_identifier,
                                                flow_id=_flow_data_info.identifier,
-                                               version=None if registry_options[2] == "latest" else registry_options[2]))
+                                               version=None))
     del flow_content["bucket"]
     return flow_content
 

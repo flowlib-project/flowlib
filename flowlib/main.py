@@ -52,10 +52,12 @@ def main():
         print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
     elif cli.args.registry_export:
         flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_format)
+        try:
+            flowlib.api.registry_convert_flow(cli.config)
+        except FileNotFoundError as e:
+            print("There were no resources in the specified bucket & flow...")
     elif cli.args.registry_import:
         flowlib.api.registry_import_flow(cli.config)
-    elif cli.args.registry_convert_flowlib:
-        flowlib.api.registry_convert_flow(cli.config)
     else:
         cli.parser.print_usage()
 
