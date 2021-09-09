@@ -1,3 +1,12 @@
+# toml file
+*.toml
+
+# tar files
+*.tar.gz
+
+# IDE's
+.idea/
+
 # flowlib generated docs
 flowlib/init/docs
 

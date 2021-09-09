@@ -5,8 +5,10 @@ import json
 import yaml
 import time
 import re
+import uuid
 
 import nipyapi
+import urllib3
 
 import flowlib.layout
 import flowlib.parser
@@ -121,6 +123,106 @@ def configure_flow_controller(nifi_endpoint, reporting_task_controllers, reporti
     _set_reporting_tasks_enabled(reporting_tasks, enabled=True)
 
 
+def nifi_export(config):
+    endpoint = f'{config.nifi_endpoint}/nifi-api'
+    nipyapi.utils.set_endpoint(endpoint)
+
+    _pg = nipyapi.canvas.recurse_flow(pg_id=nipyapi.canvas.get_root_pg_id()).process_group_flow.to_dict()
+
+    _pgs = [x for x in _pg["flow"]["process_groups"] if x["component"]["id"] == config.nifi_export][0]
+
+    _pgsq = nipyapi.nifi.apis.process_groups_api.ProcessGroupsApi().get_process_group(_pgs["id"])
+
+    _rf = nipyapi.canvas.recurse_flow(pg_id=config.nifi_export)
+
+    nipyapi.utils.fs_write(nipyapi.utils.dump(_pgsq, mode=config.output_syntax), f"./processor-group.{config.output_syntax}")
+    nipyapi.utils.fs_write(nipyapi.utils.dump(_rf.process_group_flow, mode=config.output_syntax), f"./skeleton-flow.{config.output_syntax}")
+
+
+def nifi_import(config):
+    endpoint = f'{config.nifi_endpoint}/nifi-api'
+    nipyapi.utils.set_endpoint(endpoint)
+
+    pgi = nipyapi.nifi.apis.process_groups_api.ProcessGroupsApi()
+
+    _pg = nipyapi.utils.load(nipyapi.utils.fs_read(f"./processor-group.{config.output_syntax}"))
+
+    _flow_content = nipyapi.utils.load(nipyapi.utils.fs_read(f"./skeleton-flow.{config.output_syntax}"))
+
+    _pg["component"]["parentGroupId"] = nipyapi.canvas.get_root_pg_id()
+    _pg["revision"]["version"] = 0
+    del _pg["component"]["id"]
+
+    splitEndpoint = _pg["uri"].split(":")
+    endpoint2 = "/".join(splitEndpoint[2].split("/")[1:-1])
+    endpoint1 = f'{splitEndpoint[0]}:{"/".join(splitEndpoint[1:-1])}:{config.nifi_endpoint.split(":")[2]}'
+    newUri = f'{endpoint1}/{endpoint2}/{nipyapi.canvas.get_root_pg_id()}'
+    _pg["uri"] = newUri
+
+    try:
+        _find_flow_by_name(_pg["status"]["aggregateSnapshot"]["name"])
+    except FlowNotFoundException as e:
+        pgi.create_process_group(id=nipyapi.canvas.get_root_pg_id(), body=_pg).to_dict()
+
+def registry_import(config):
+    """
+    Export a flow from a Nifi Registry via the Rest api
+    :param buckets: Initialized Registry Bucket Query
+    :param flow: Initialized Registry flow query
+    """
+    _buckets_info = nipyapi.registry.apis.buckets_api.BucketsApi()
+
+    _bucket = [x for x in _buckets_info.get_buckets() if x.to_dict()["name"] == config[1]][0].to_dict()
+
+    _bucket_flows = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
+
+    names = [x.to_dict()["name"] for x in _bucket_flows.get_flows(_bucket["identifier"])]
+
+    if config[2] not in names:
+        _bucket["name"] = config[2]
+        bucket_id = _bucket["identifier"]
+        _bucket["identifier"] = str(uuid.uuid4())
+        _bucket["link"]["href"] = f'buckets/{_bucket["identifier"] }'
+
+        _bucket_flows.create_flow(
+            bucket_id=bucket_id,
+            body=_bucket
+        )
+
+        nipyapi.versioning.import_flow_version(
+            bucket_id=bucket_id,
+            file_path=config[0],
+            flow_id=_bucket["identifier"]
+        )
+
+    else:
+        _s = [x.to_dict() for x in _bucket_flows.get_flows(_bucket["identifier"]) if x.to_dict()["name"] == config[2]][0]
+
+        nipyapi.versioning.import_flow_version(
+            bucket_id=_s["bucket_identifier"],
+            file_path=config[0],
+            flow_id=_s["identifier"]
+        )
+
+
+def registry_export(registry_options):
+    """
+    Export a flow from a Nifi Registry via the Rest api
+    :param buckets: Initialized Registry Bucket Query
+    :param flow: Initialized Registry flow query
+    """
+    _flow_bucket_info = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
+    _flow_data_info = _flow_bucket_info.get_flow(bucket_id=registry_options[0],
+                                                 flow_id=registry_options[1])
+
+    flow_content = json.loads(
+        nipyapi.versioning.export_flow_version(mode="json", bucket_id=_flow_data_info.bucket_identifier,
+                                               flow_id=_flow_data_info.identifier,
+                                               version=None))
+    del flow_content["bucket"]
+    return flow_content
+
+
 def deploy_flow(flow, config, deployment=None, force=False):
     """
     Deploy a Flow to NiFi via the Rest api
@@ -187,6 +289,7 @@ def deploy_flow(flow, config, deployment=None, force=False):
         flowlib.parser.replace_flow_element_vars_recursive(flow, flow._elements, flow.components)
 
         _create_canvas_elements_recursive(flow._elements, flow_pg, config, deployment, previous_deployment)
+        #
         _create_connections_recursive(flow, flow._elements)
         _set_controllers_enabled(flow._controllers, enabled=True)
 
@@ -654,6 +757,7 @@ def _create_element_connections(flow, source_element):
                 group_id = source_element.parent_id
 
             log.debug("Creating connection between source {} and dest {} for relationships {}".format(source.component.name, dest.component.name, c.relationships))
+
             nipyapi.nifi.ProcessGroupsApi().create_connection(
                 id=group_id,
                 body=nipyapi.nifi.ConnectionEntity(
@@ -666,6 +770,12 @@ def _create_element_connections(flow, source_element):
                             group_id=source_group_id,
                             type=source_type
                         ),
+                        back_pressure_data_size_threshold=c.back_pressure_data_size_threshold,
+                        back_pressure_object_threshold=c.back_pressure_object_threshold,
+                        load_balance_strategy=c.load_balance_strategy,
+                        flow_file_expiration=c.flow_file_expiration,
+                        load_balance_compression=c.load_balance_compression,
+                        prioritizers=c.prioritizers,
                         name=c.name,
                         destination=nipyapi.nifi.ConnectableDTO(
                             id=dest_id,
