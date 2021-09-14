@@ -5,7 +5,7 @@ language_format = ""
 
 
 def create_component_name(component_name: str) -> str:
-    component_full_path = f'{component_dir}/{component_name}_component.{language_format}'
+    component_full_path = f'{component_dir}/{component_name.replace(" ", "_")}_component.{language_format}'
     return component_full_path
 
 
@@ -57,7 +57,7 @@ def entry_for_parent_data_file_with_connections(data: dict, output_format: str, 
     language_format = output_format
 
     parent_structure = {
-        "name": data["name"],
+        "name": data["name"].replace(" ", "_"),
         "type": data["componentType"].lower(),
         "component_path": create_component_name(data["name"].replace("-", "_"))
     }

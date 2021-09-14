@@ -50,7 +50,7 @@ class STRUCTURE:
                 write_to_file(self.global_content[_keys], "flow")
 
             elif "component" in _keys:
-                file_path = f"components/common/{_keys.replace('-', '_')}"
+                file_path = f"components/common/{_keys.replace('-', '_').replace(' ', '_')}"
                 self.component_directory(file_path)
                 write_to_file(self.global_content[_keys], file_path)
 

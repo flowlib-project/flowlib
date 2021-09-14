@@ -9,7 +9,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
 
             if source_entry_type == "INPUT_PORT" and destination_entry_type == "PROCESSOR":
                 connection_record = {
-                    "name": connection_resources_entry["destination"]["name"],
+                    "name": connection_resources_entry["destination"]["name"].replace(" ", "_"),
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
                     "flow_file_expiration": connection_resources_entry["flowFileExpiration"],
@@ -24,7 +24,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
 
             elif source_entry_type == "PROCESSOR" and destination_entry_type == "PROCESSOR":
                 connection_record = {
-                    "name": connection_resources_entry["destination"]["name"],
+                    "name": connection_resources_entry["destination"]["name"].replace(" ", "_"),
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
@@ -40,7 +40,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
 
             elif source_entry_type == "PROCESSOR" and destination_entry_type == "INPUT_PORT":
                 connection_record = {
-                    "name": [x["name"] for x in child_processor_group["processGroups"] if x["identifier"] == connection_resources_entry["destination"]["groupId"]][0],
+                    "name": [x["name"] for x in child_processor_group["processGroups"] if x["identifier"] == connection_resources_entry["destination"]["groupId"]][0].replace(" ", "_"),
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "to_port": connection_resources_entry["destination"]["name"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
@@ -57,7 +57,7 @@ def build_connection_type(resource: dict, parent_processor_group: dict, child_pr
 
             elif source_entry_type == "PROCESSOR" and destination_entry_type == "OUTPUT_PORT":
                 connection_record = {
-                    "name": connection_resources_entry["destination"]["name"],
+                    "name": connection_resources_entry["destination"]["name"].replace(" ", "_"),
                     "relationships": connection_resources_entry["selectedRelationships"],
                     "back_pressure_data_size_threshold": connection_resources_entry["backPressureDataSizeThreshold"],
                     "back_pressure_object_threshold": connection_resources_entry["backPressureObjectThreshold"],
@@ -283,7 +283,7 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
         source_entry_type, destination_entry_type = (connections["source"]["type"], connections["destination"]["type"])
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "PROCESSOR":
             connection_record = {
-                "name": connections["destination"]["name"],
+                "name": connections["destination"]["name"].replace(" ", "_"),
                 "from_port": connections["source"]["name"],
                 "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
                 "back_pressure_object_threshold": connections["backPressureObjectThreshold"],
@@ -299,7 +299,7 @@ def processor_group_connection(parent_pg: dict, child_pg: dict) -> list:
 
         if source_entry_type == "OUTPUT_PORT" and destination_entry_type == "INPUT_PORT":
             connection_record = {
-                "name": [x["name"] for x in parent_pg["processGroups"] if x["identifier"] == connections["destination"]["groupId"]][0],
+                "name": [x["name"] for x in parent_pg["processGroups"] if x["identifier"] == connections["destination"]["groupId"]][0].replace(" ", "_"),
                 "from_port": connections["source"]["name"],
                 "to_port": connections["destination"]["name"],
                 "back_pressure_data_size_threshold": connections["backPressureDataSizeThreshold"],
@@ -327,7 +327,7 @@ def process_group_identity(data: dict) -> dict:
         "version": 1.0
     }
 
-    content.update({"name": data["name"]})
+    content.update({"name": str(data["name"]).replace(" ", "_")})
 
     if data["comments"]:
         content.update({"comments": data["comments"]})
