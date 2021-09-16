@@ -164,54 +164,28 @@ def nifi_import(config):
     except FlowNotFoundException as e:
         pgi.create_process_group(id=nipyapi.canvas.get_root_pg_id(), body=_pg).to_dict()
 
-def registry_import(config):
+def registry_import(ids, endpoint=None):
+    nipyapi.config.registry_config.host = f'{endpoint}/nifi-registry-api'
+
+    nipyapi.versioning.import_flow_version(
+        bucket_id=ids[0],
+        flow_id=ids[1],
+        file_path="./registry-output.json"
+    )
+
+def registry_export(registry_options, endpoint=None):
     """
     Export a flow from a Nifi Registry via the Rest api
     :param buckets: Initialized Registry Bucket Query
     :param flow: Initialized Registry flow query
     """
-    _buckets_info = nipyapi.registry.apis.buckets_api.BucketsApi()
 
-    _bucket = [x for x in _buckets_info.get_buckets() if x.to_dict()["name"] == config[1]][0].to_dict()
-
-    _bucket_flows = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
-
-    names = [x.to_dict()["name"] for x in _bucket_flows.get_flows(_bucket["identifier"])]
-
-    if config[2] not in names:
-        _bucket["name"] = config[2]
-        bucket_id = _bucket["identifier"]
-        _bucket["identifier"] = str(uuid.uuid4())
-        _bucket["link"]["href"] = f'buckets/{_bucket["identifier"] }'
-
-        _bucket_flows.create_flow(
-            bucket_id=bucket_id,
-            body=_bucket
-        )
-
-        nipyapi.versioning.import_flow_version(
-            bucket_id=bucket_id,
-            file_path=config[0],
-            flow_id=_bucket["identifier"]
-        )
-
+    if endpoint is None:
+        _flow_bucket_info = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
     else:
-        _s = [x.to_dict() for x in _bucket_flows.get_flows(_bucket["identifier"]) if x.to_dict()["name"] == config[2]][0]
+        nipyapi.config.registry_config.host = f'{endpoint}/nifi-registry-api'
+        _flow_bucket_info = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
 
-        nipyapi.versioning.import_flow_version(
-            bucket_id=_s["bucket_identifier"],
-            file_path=config[0],
-            flow_id=_s["identifier"]
-        )
-
-
-def registry_export(registry_options):
-    """
-    Export a flow from a Nifi Registry via the Rest api
-    :param buckets: Initialized Registry Bucket Query
-    :param flow: Initialized Registry flow query
-    """
-    _flow_bucket_info = nipyapi.registry.apis.bucket_flows_api.BucketFlowsApi()
     _flow_data_info = _flow_bucket_info.get_flow(bucket_id=registry_options[0],
                                                  flow_id=registry_options[1])
 

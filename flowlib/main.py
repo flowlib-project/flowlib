@@ -51,7 +51,7 @@ def main():
             items.append(field)
         print(tabulate(items, headers=headers, stralign="left", tablefmt="psql"))
     elif cli.args.registry_export:
-        flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_format)
+        flowlib.api.registry_export_flow(cli.config.registry_export, cli.config.output_format, cli.config.nifi_endpoint)
         try:
             flowlib.api.registry_convert_flow(cli.config)
         except FileNotFoundError as e:

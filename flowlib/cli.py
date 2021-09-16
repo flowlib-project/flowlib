@@ -112,8 +112,8 @@ class FlowLibCLI:
                                    )
         self.mx_group.add_argument('--registry-import',
                                    type=str,
-                                   nargs=3,
-                                   help='Import the specified NiFi registry output into a new flow within an existing bucket: <FILE> <BUCKET_NAME> <NEW_DESIRED_FLOWNAME>'
+                                   nargs=1,
+                                   help='Import the specified flow and its components from the NiFi registry by passing <all> or <bucket name>, will match names that start with this value'
                                    )
         self.mx_group.add_argument('--registry-export',
                                    type=str,

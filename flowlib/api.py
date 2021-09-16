@@ -8,9 +8,11 @@ import uuid
 from nipyapi.registry.apis.buckets_api import BucketsApi
 from nipyapi.registry.apis.items_api import ItemsApi
 from nipyapi.registry.apis.bucket_flows_api import BucketFlowsApi
+from nipyapi.config import registry_config
+import nipyapi
 import yaml
 from nipyapi.registry.rest import ApiException
-from nipyapi.utils import fs_write
+from nipyapi.utils import fs_write, is_endpoint_up
 import flowlib.parser
 import flowlib.nifi.rest
 import flowlib.nifi.docs
@@ -131,23 +133,6 @@ def deploy_flow(config):
 
 
 def registry_import_flow(config):
-    try:
-        if config.registry_import:
-            flowlib.nifi.rest.registry_import(config.registry_import)
-        print("Import complete...")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-def registry_convert_flow(config):
-    nifi_contents = NIFIFILECONTENTS("registry-output.json", config.output_format)
-
-    structure = STRUCTURE()
-    structure.construct_flowlib_format(child_pgs=nifi_contents.return_root_processor_group())
-    structure.write_to_files()
-
-
-def registry_export_flow(registry_options, syntax_format=None):
     """
     :type config: FlowLibConfig
     """
@@ -160,14 +145,17 @@ def registry_export_flow(registry_options, syntax_format=None):
     flow_counter = 0
     export_bucket_id = None
     export_flow_id = None
+    nipyapi.config.registry_config.host = f'{config.nifi_endpoint}/nifi-registry'
+    buckets.api_client.host = f'{config.nifi_endpoint}/nifi-registry-api'
 
-    try:
-        if registry_options:
-            desired_bucket_name = registry_options[0]
+    if is_endpoint_up(registry_config.host):
+        try:
+            desired_bucket_name = config.registry_import[0]
             print(desired_bucket_name)
 
             found_buckets = buckets.get_buckets()
-            normalized_data = [{"name": _x.name, "identifier": _x.identifier, "revision": _x.revision.version} for _x in found_buckets]
+            normalized_data = [{"name": _x.name, "identifier": _x.identifier, "revision": _x.revision.version} for
+                               _x in found_buckets]
 
             if desired_bucket_name == 'all':
                 obj = [_x for _x in normalized_data]
@@ -181,9 +169,9 @@ def registry_export_flow(registry_options, syntax_format=None):
 
             user_options_headers = '* Option | Bucket Name *'
 
-            print('*'*len(user_options_headers))
+            print('*' * len(user_options_headers))
             print(user_options_headers)
-            print('*'*len(user_options_headers), "\n")
+            print('*' * len(user_options_headers), "\n")
 
             for _t in bucket_tracker:
                 option = f'{_t["counter"]} | {_t["name"]}'
@@ -273,15 +261,169 @@ def registry_export_flow(registry_options, syntax_format=None):
                     flow_data = [_x for _x in flow_tracker if _x["counter"] == int(user_option)][0]
                     export_flow_id = flow_data["identifier"]
 
-            if export_flow_id is not None and export_bucket_id is not None:
-                json_content = flowlib.nifi.rest.registry_export((export_bucket_id, export_flow_id))
-                content = json.dumps(json_content, indent=2, sort_keys=True)
-                fs_write(content, "registry-output.json")
+            try:
+                flowlib.nifi.rest.registry_import((export_bucket_id, export_flow_id), config.nifi_endpoint)
+                print("Import complete...")
 
-    except ApiException as e:
-        print(f'Error: {e.status} {e.reason}')
-    except ValueError as e:
-        print(e)
+            except Exception as e:
+                print(f"Error: {e}")
+
+        except ApiException as e:
+            print(f'Error: {e.status} {e.reason}')
+        except ValueError as e:
+            print(e)
+    else:
+        print(f'Connection error to {endpoint}')
+
+
+def registry_convert_flow(config):
+    nifi_contents = NIFIFILECONTENTS("registry-output.json", config.output_format)
+
+    structure = STRUCTURE()
+    structure.construct_flowlib_format(child_pgs=nifi_contents.return_root_processor_group())
+    structure.write_to_files()
+
+
+def registry_export_flow(registry_options, syntax_format=None, endpoint=None):
+    """
+    :type config: FlowLibConfig
+    """
+    buckets = BucketsApi()
+    flows = ItemsApi()
+    bucketFlows = BucketFlowsApi
+    bucket_tracker = []
+    bucket_counter = 0
+    flow_tracker = []
+    flow_counter = 0
+    export_bucket_id = None
+    export_flow_id = None
+    registry_config.host = f'{endpoint}/nifi-registry'
+    buckets.api_client.host = f'{endpoint}/nifi-registry-api'
+
+    if is_endpoint_up(registry_config.host):
+        try:
+            if registry_options:
+                desired_bucket_name = registry_options[0]
+                print(desired_bucket_name)
+
+                found_buckets = buckets.get_buckets()
+                normalized_data = [{"name": _x.name, "identifier": _x.identifier, "revision": _x.revision.version} for _x in found_buckets]
+
+                if desired_bucket_name == 'all':
+                    obj = [_x for _x in normalized_data]
+                else:
+                    obj = [_x for _x in normalized_data if str(_x["name"]).startswith(desired_bucket_name)]
+
+                for _t in obj:
+                    _t["counter"] = bucket_counter
+                    bucket_counter += 1
+                    bucket_tracker.append(_t)
+
+                user_options_headers = '* Option | Bucket Name *'
+
+                print('*'*len(user_options_headers))
+                print(user_options_headers)
+                print('*'*len(user_options_headers), "\n")
+
+                for _t in bucket_tracker:
+                    option = f'{_t["counter"]} | {_t["name"]}'
+                    print(option)
+
+                print(f"{str(bucket_counter)} | Create New Bucket")
+
+                user_option = input("\nOption: ")
+                print()
+                verify_digit = user_option.isdigit()
+                verify_range = (int(user_option) in list(range(bucket_counter + 1))) if verify_digit else False
+
+                while not verify_digit or not verify_range:
+                    user_option = input("\nOption isn't a number or \nValue is not an option: ")
+                    verify_digit = user_option.isdigit()
+                    verify_range = (int(user_option) in list(range(bucket_counter + 1))) if verify_digit else False
+
+                if bucket_counter == int(user_option):
+                    msg = "* Creating a new bucket and flow *"
+                    print("*" * len(msg))
+                    print(msg)
+                    print("*" * len(msg))
+                    new_bucket = input("Bucket name: ")
+                    new_flow = input("Flow name: ")
+
+                    bucket_creation = buckets.create_bucket(
+                        body={
+                            "name": new_bucket
+                        }
+                    )
+
+                    theFlow = bucketFlows()
+                    theFlow.create_flow(
+                        bucket_id=bucket_creation.identifier,
+                        body={
+                            "name": new_flow
+                        }
+                    )
+
+                    print("\nBucket and flow created successfully!!")
+
+                else:
+                    bucket_data = [_x for _x in bucket_tracker if _x["counter"] == int(user_option)][0]
+                    export_bucket_id = bucket_data["identifier"]
+                    found_flows = flows.get_items_in_bucket(bucket_data["identifier"])
+                    flow_obj = [{"name": _x.name, "identifier": _x.identifier} for _x in found_flows]
+
+                    for _t in flow_obj:
+                        _t["counter"] = flow_counter
+                        flow_counter += 1
+                        flow_tracker.append(_t)
+
+                    user_options_headers = f'* Bucket: {bucket_data["name"]} | Flow Name *'
+
+                    print('*' * len(user_options_headers))
+                    print(user_options_headers)
+                    print('*' * len(user_options_headers), "\n")
+
+                    for _t in flow_tracker:
+                        option = f'{_t["counter"]} | {_t["name"]}'
+                        print(option)
+
+                    print(f"{str(flow_counter)} | Create New Flow")
+
+                    user_option = input("\nOption: ")
+                    print()
+                    verify_digit = user_option.isdigit()
+                    verify_range = (int(user_option) in list(range(flow_counter + 1))) if verify_digit else False
+
+                    while not verify_digit or not verify_range:
+                        user_option = input("\nOption isn't a number or \nValue is not an option: ")
+                        verify_digit = user_option.isdigit()
+                        verify_range = (int(user_option) in list(range(flow_counter + 1))) if verify_digit else False
+
+                    if int(user_option) == flow_counter:
+                        new_flow = input("\nName of new flow: ")
+                        theFlow = bucketFlows()
+                        theFlow.create_flow(
+                            bucket_id=bucket_data["identifier"],
+                            body={
+                                "name": new_flow
+                            }
+                        )
+
+                        print("\nBucket and flow created successfully!!")
+                    else:
+                        flow_data = [_x for _x in flow_tracker if _x["counter"] == int(user_option)][0]
+                        export_flow_id = flow_data["identifier"]
+
+                if export_flow_id is not None and export_bucket_id is not None:
+                    json_content = flowlib.nifi.rest.registry_export((export_bucket_id, export_flow_id), endpoint)
+                    content = json.dumps(json_content, indent=2, sort_keys=True)
+                    fs_write(content, "registry-output.json")
+
+        except ApiException as e:
+            print(f'Error: {e.status} {e.reason}')
+        except ValueError as e:
+            print(e)
+    else:
+        print(f'Connection error to {endpoint}')
 
 
 def export_flow(config, fp=None):
