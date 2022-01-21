@@ -52,6 +52,10 @@ class FlowLibCLI:
                                  help='A NiFi server endpoint (proto://host:port)'
                                  )
 
+        self.parser.add_argument('--registry-endpoint',
+                                 type=str,
+                                 help='A NiFi registry server endpoint (proto://host:port)')
+
         self.parser.add_argument('--output-format',
                                  type=str,
                                  default="yaml",
@@ -136,6 +140,13 @@ class FlowLibCLI:
                                    nargs=2,
                                    help='Print the configurable properties for the specified component'
                                    )
+        self.mx_group.add_argument('--list-flows',
+                                   type=str,
+                                   nargs='?',
+                                   const='all',
+                                   default="all",
+                                   #action="StartAction",
+                                   help='Lists flows for the bucket name specified or for all buckets by providing "all"')
 
         if not file_config:
             file_config = FlowLibConfig()
