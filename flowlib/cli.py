@@ -144,9 +144,7 @@ class FlowLibCLI:
                                    type=str,
                                    nargs='?',
                                    const='all',
-                                   default="all",
-                                   #action="StartAction",
-                                   help='Lists flows for the bucket name specified or for all buckets by providing "all"')
+                                   help='Lists flows for all buckets in the registry or for a bucket name specified')
 
         if not file_config:
             file_config = FlowLibConfig()
