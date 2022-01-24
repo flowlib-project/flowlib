@@ -6,7 +6,7 @@ from tabulate import tabulate
 
 import flowlib.api
 from flowlib.cli import FlowLibCLI, FlowLibConfig
-from flowlib.new.registry import list_flows, deploy_flows
+from flowlib.new.registry import list_flows
 
 
 def main():
