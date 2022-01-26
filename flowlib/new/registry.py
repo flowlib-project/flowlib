@@ -2,7 +2,7 @@
 from flowlib.new.util import call_cmd
 
 def list_flows(config, bucket_name):
-    all_buckets = call_cmd(config.registry_endpoint, "registry list-buckets")
+    all_buckets = call_cmd(config.container, config.registry_endpoint, "registry list-buckets")
     for bucket in all_buckets:
         if bucket_name == "all" or bucket_name == bucket['name']:
             print("Bucket: {}".format(bucket['name']))
@@ -10,7 +10,7 @@ def list_flows(config, bucket_name):
 
 
 def __display_flows(config, bucket_id):
-    flows = call_cmd(config.registry_endpoint, "registry list-flows --bucketIdentifier {id}".format(id=bucket_id))
+    flows = call_cmd(config.container, config.registry_endpoint, "registry list-flows --bucketIdentifier {id}".format(id=bucket_id))
     if flows:
         i = 1
         for key in flows:

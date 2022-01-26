@@ -92,6 +92,10 @@ class FlowLibCLI:
                                  help='Attempt to initialize the Flow from a flow.yaml by loading all of its components'
                                  )
 
+        self.parser.add_argument('--container',
+                                 type=str,
+                                 help='The name of the docker container to run to execute NiFi Toolkit commands')
+
         self.mx_group = self.parser.add_mutually_exclusive_group()
 
         self.mx_group.add_argument('--scaffold',
