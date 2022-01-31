@@ -4,7 +4,7 @@ import sys
 import json
 
 def call_cmd(container, endpoint, cmd):
-    cmd = "docker run -it --rm --entrypoint /opt/nifi/nifi-toolkit-1.11.4/bin/cli.sh {container} {cmd} --baseUrl {endpt} -ot json"\
+    cmd = "docker run -it --rm --entrypoint /opt/nifi/nifi-toolkit-current/bin/cli.sh {container} {cmd} --baseUrl {endpt} -ot json"\
         .format(container=container, cmd=cmd, endpt=endpoint)
     cmd_output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='UTF-8')
     response = cmd_output.communicate()[0]
