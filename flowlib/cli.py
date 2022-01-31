@@ -52,6 +52,10 @@ class FlowLibCLI:
                                  help='A NiFi server endpoint (proto://host:port)'
                                  )
 
+        self.parser.add_argument('--registry-endpoint',
+                                 type=str,
+                                 help='A NiFi registry server endpoint (proto://host:port)')
+
         self.parser.add_argument('--output-format',
                                  type=str,
                                  default="yaml",
@@ -87,6 +91,10 @@ class FlowLibCLI:
                                  action=ValidateValidate,
                                  help='Attempt to initialize the Flow from a flow.yaml by loading all of its components'
                                  )
+
+        self.parser.add_argument('--container',
+                                 type=str,
+                                 help='The name of the docker container to run to execute NiFi Toolkit commands')
 
         self.mx_group = self.parser.add_mutually_exclusive_group()
 
@@ -136,6 +144,11 @@ class FlowLibCLI:
                                    nargs=2,
                                    help='Print the configurable properties for the specified component'
                                    )
+        self.mx_group.add_argument('--list-flows',
+                                   type=str,
+                                   nargs='?',
+                                   const='all',
+                                   help='Lists flows for all buckets in the registry or for a bucket name specified')
 
         if not file_config:
             file_config = FlowLibConfig()

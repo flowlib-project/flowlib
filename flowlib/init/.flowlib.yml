@@ -1,4 +1,5 @@
 nifi_endpoint: http://nifi-dev:8080
+registry_endpoint: http://localhost:18080
 zookeeper_connection: nifi-dev:2181
 
 component_dir: components
