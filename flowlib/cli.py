@@ -3,7 +3,6 @@ import argparse
 from argparse import Namespace
 import collections
 import sys
-import yaml
 
 import flowlib
 from flowlib.model.config import FlowLibConfig
@@ -32,7 +31,11 @@ class ValidateValidate(argparse._StoreTrueAction):
         if not args.flow_yaml:
             parser.error("argument --validate: --flow-yaml is required when --validate is true")
 
-
+class ValidateDeployFlows2(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        setattr(args, self.dest, values)
+        if not args.dest_registry_endpoint:
+            parser.error("argument --deploy-flows: --dest-registry-endpoint is required")
 
 class FlowLibCLI:
     def __init__(self, args=None, file_config=None):
@@ -96,6 +99,10 @@ class FlowLibCLI:
                                  type=str,
                                  help='The name of the docker container to run to execute NiFi Toolkit commands')
 
+        self.parser.add_argument('--dest-registry-endpoint',
+                                 type=str,
+                                 help='The NiFi Registry endpoint (proto://host:port) to deploy a flow from the --registry-endpoint')
+
         self.mx_group = self.parser.add_mutually_exclusive_group()
 
         self.mx_group.add_argument('--scaffold',
@@ -149,6 +156,14 @@ class FlowLibCLI:
                                    nargs='?',
                                    const='all',
                                    help='Lists flows for all buckets in the registry or for a bucket name specified')
+
+        self.mx_group.add_argument('--deploy-flows',
+                                   type=str,
+                                   nargs='?',
+                                   const="{}",
+                                   action=ValidateDeployFlows2,
+                                   help="Deploy the provided flows or all flows in the registry. Must specify --dest-registry-endpoint."
+                                        "Note: This assumes that the destination flow is the exact same name as the source and in the same bucket.")
 
         if not file_config:
             file_config = FlowLibConfig()
