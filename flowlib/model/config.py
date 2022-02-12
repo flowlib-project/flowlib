@@ -12,8 +12,7 @@ class FlowLibConfig:
         'zookeeper_acl': 'open',
         'docs_directory': 'docs',
         'max_timer_driven_threads': 5,
-        'max_event_driven_threads': 10,
-        'container': 'apache/nifi:1.11.4'
+        'max_event_driven_threads': 10
     }
 
     def __init__(self, **kwargs):
@@ -54,7 +53,7 @@ class FlowLibConfig:
         self.zookeeper_connection = kwargs.get('zookeeper_connection')
         self.zookeeper_root_node = kwargs.get('zookeeper_root_node', FlowLibConfig.DEFAULTS['zookeeper_root_node'])
         self.zookeeper_acl = kwargs.get('zookeeper_acl', FlowLibConfig.DEFAULTS['zookeeper_acl'])
-        self.container = kwargs.get('container', FlowLibConfig.DEFAULTS['container'])
+        self.container = kwargs.get('container', None)
 
         # file only configs
         self.docs_directory = kwargs.get('docs_directory', FlowLibConfig.DEFAULTS['docs_directory'])
