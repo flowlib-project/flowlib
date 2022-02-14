@@ -58,3 +58,29 @@ for a patch release, do not pass any arguments
 ```bash
 ./release.sh
 ```
+
+Please note that the archive still needs to be uploaded to GitHub.
+
+
+## Build Docker ##
+
+For local development, the version does not need to be passed in and the tar containing
+local changes will be created and used in the Docker image using the following script:
+
+```bash
+./build.sh
+```
+
+If a specific tagged version is required for the Docker image then the script can be
+provided a version:
+
+```bash
+./build.sh 1.1.0
+```
+
+Please note, that `gh` needs to be installed since this is used to download the release
+archive.  You may need to login in using the following command:
+
+```bash
+gh auth login
+```
