@@ -3,7 +3,6 @@ import argparse
 from argparse import Namespace
 import collections
 import sys
-import yaml
 
 import flowlib
 from flowlib.model.config import FlowLibConfig
@@ -31,7 +30,6 @@ class ValidateValidate(argparse._StoreTrueAction):
         setattr(args, self.dest, True)
         if not args.flow_yaml:
             parser.error("argument --validate: --flow-yaml is required when --validate is true")
-
 
 
 class FlowLibCLI:
@@ -96,6 +94,10 @@ class FlowLibCLI:
                                  type=str,
                                  help='The name of the docker container to run to execute NiFi Toolkit commands')
 
+        self.parser.add_argument('--dest-registry-endpoint',
+                                 type=str,
+                                 help='The NiFi Registry endpoint (proto://host:port) to deploy a flow from the --registry-endpoint')
+
         self.mx_group = self.parser.add_mutually_exclusive_group()
 
         self.mx_group.add_argument('--scaffold',
@@ -149,6 +151,14 @@ class FlowLibCLI:
                                    nargs='?',
                                    const='all',
                                    help='Lists flows for all buckets in the registry or for a bucket name specified')
+
+        self.mx_group.add_argument('--transfer-flows',
+                                   type=str,
+                                   nargs='?',
+                                   const="{}",
+                                   help="Deploy the provided flows or all flows in a bucket to another bucket within the same registry"
+                                        "Note: The format is \"{\"source_bucket_name:dest_bucket_name\": [list of flow names or empty]}"
+                                        "and it is assumed that the flow names are the same between buckets and registries")
 
         if not file_config:
             file_config = FlowLibConfig()

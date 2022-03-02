@@ -54,6 +54,7 @@ class FlowLibConfig:
         self.zookeeper_root_node = kwargs.get('zookeeper_root_node', FlowLibConfig.DEFAULTS['zookeeper_root_node'])
         self.zookeeper_acl = kwargs.get('zookeeper_acl', FlowLibConfig.DEFAULTS['zookeeper_acl'])
         self.container = kwargs.get('container', None)
+        self.dest_registry_endpoint = kwargs.get('dest_registry_endpoint', None)
 
         # file only configs
         self.docs_directory = kwargs.get('docs_directory', FlowLibConfig.DEFAULTS['docs_directory'])

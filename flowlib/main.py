@@ -6,7 +6,7 @@ from tabulate import tabulate
 
 import flowlib.api
 from flowlib.cli import FlowLibCLI, FlowLibConfig
-from flowlib.new.registry import list_flows
+from flowlib.new.registry import list_flows, transfer_flows
 
 
 def main():
@@ -19,6 +19,8 @@ def main():
     cli = FlowLibCLI(file_config=config)
     if cli.args.list_flows:
         list_flows(cli.config, cli.config.list_flows)
+    elif cli.args.transfer_flows:
+        transfer_flows(cli.config, cli.config.transfer_flows)
     elif cli.args.scaffold:
         flowlib.api.gen_flow_scaffold(cli.args.scaffold)
     elif cli.args.generate_docs:
