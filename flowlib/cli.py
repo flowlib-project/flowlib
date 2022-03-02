@@ -31,11 +31,6 @@ class ValidateValidate(argparse._StoreTrueAction):
         if not args.flow_yaml:
             parser.error("argument --validate: --flow-yaml is required when --validate is true")
 
-class ValidateDeployFlows2(argparse.Action):
-    def __call__(self, parser, args, values, option_string=None):
-        setattr(args, self.dest, values)
-        if not args.dest_registry_endpoint:
-            parser.error("argument --deploy-flows: --dest-registry-endpoint is required")
 
 class FlowLibCLI:
     def __init__(self, args=None, file_config=None):
@@ -157,13 +152,13 @@ class FlowLibCLI:
                                    const='all',
                                    help='Lists flows for all buckets in the registry or for a bucket name specified')
 
-        self.mx_group.add_argument('--deploy-flows',
+        self.mx_group.add_argument('--transfer-flows',
                                    type=str,
                                    nargs='?',
                                    const="{}",
-                                   action=ValidateDeployFlows2,
-                                   help="Deploy the provided flows or all flows in the registry. Must specify --dest-registry-endpoint."
-                                        "Note: This assumes that the destination flow is the exact same name as the source and in the same bucket.")
+                                   help="Deploy the provided flows or all flows in a bucket to another bucket within the same registry"
+                                        "Note: The format is \"{\"source_bucket_name:dest_bucket_name\": [list of flow names or empty]}"
+                                        "and it is assumed that the flow names are the same between buckets and registries")
 
         if not file_config:
             file_config = FlowLibConfig()
