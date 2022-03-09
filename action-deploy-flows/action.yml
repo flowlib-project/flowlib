@@ -1,0 +1,15 @@
+name: "Deploy Flows Action"
+description: "Deploy flows from staging to production"
+
+inputs:
+  INPUT_REGISTRY_ENDPOINT:
+    description: "Registry endpoint to perform tasks against"
+    required: true
+    default: "http://10.0.4.233:18080/nifi-registry/"
+  INPUT_FLOWS:
+    description: "Flows to be deployed along with source and destination buckets"
+    required: true
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
