@@ -32,13 +32,13 @@ def call_cmd(container, endpoint, command):
 
 def __process_output(cmd):
     cmd_output = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='UTF-8')
-    response = cmd_output.communicate()[0]
-    if response.strip().startswith("ERROR:"):
+    response = cmd_output.communicate()[0].strip()
+    if response.startswith("ERROR:"):
         print(response)
         sys.exit(-1)
     elif __is_uuid(response):
-        return response.strip()
-    elif not response.strip() == "OK":
+        return response
+    elif not response == "OK" and not response == "":
         return json.loads(response)
     else:
         return None

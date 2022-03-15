@@ -160,6 +160,11 @@ class FlowLibCLI:
                                         "Note: The format is \"{\"source_bucket_name:dest_bucket_name\": [list of flow names or empty]}"
                                         "and it is assumed that the flow names are the same between buckets and registries")
 
+        self.mx_group.add_argument('--change-versions',
+                                   type=str,
+                                   nargs='*',
+                                   help="Change the version of the specified process groups to either the latest or specified version")
+
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()
