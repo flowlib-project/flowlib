@@ -165,6 +165,11 @@ class FlowLibCLI:
                                    nargs='*',
                                    help="Change the version of the specified process groups to either the latest or specified version")
 
+        self.mx_group.add_argument('--toggle-controller-services',
+                                   type=str,
+                                   nargs='*',
+                                   help="Disable or enable the controller services for the specified process groups")
+
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()
