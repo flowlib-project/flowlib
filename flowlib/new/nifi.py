@@ -30,6 +30,40 @@ def change_version(config, names_and_versions):
             print("{} changed to latest version".format(name))
 
 
+def toggle_controller_services(config, names_and_action):
+    names_map = {}
+    for name_and_version in names_and_action:
+        split = name_and_version.split(":")
+        names_map[split[0]] = split[1]
+
+    process_groups_by_name = __obtain_multi_process_groups_info(config, names_map.keys())
+
+    for name in names_map:
+        action = names_map[name]
+        process_group = process_groups_by_name[name]
+
+        process_groups = [process_group]
+
+        if action == "disable":
+            call_cmd(config.container, config.nifi_endpoint,
+                     "nifi pg-stop --processGroupId {}".format(process_group['id']))
+
+            while len(process_groups) > 0:
+                process_group = process_groups.pop(0)
+                call_cmd(config.container, config.nifi_endpoint,
+                         "nifi pg-disable-services --processGroupId {}".format(process_group['id']))
+                process_groups.extend(__obtain_process_groups(config, process_group['id']))
+
+        elif action == "enable":
+            while len(process_groups) > 0:
+                process_group = process_groups.pop(0)
+                call_cmd(config.container, config.nifi_endpoint,
+                         "nifi pg-enable-services --processGroupId {}".format(process_group['id']))
+                process_groups.extend(__obtain_process_groups(config, process_group['id']))
+        else:
+            print("Invalid action: {} for process group {}; must be enable or disable".format(action, name))
+
+
 def __obtain_multi_process_groups_info(config, names):
     all_process_groups = []
     process_groups = {}

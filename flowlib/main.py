@@ -7,7 +7,7 @@ from tabulate import tabulate
 import flowlib.api
 from flowlib.cli import FlowLibCLI, FlowLibConfig
 from flowlib.new.registry import list_flows, transfer_flows
-from flowlib.new.nifi import change_version
+from flowlib.new.nifi import change_version, toggle_controller_services
 
 
 def main():
@@ -24,6 +24,8 @@ def main():
         transfer_flows(cli.config, cli.config.transfer_flows)
     elif cli.args.change_versions:
         change_version(cli.config, cli.config.change_versions)
+    elif cli.args.toggle_controller_services:
+        toggle_controller_services(cli.config, cli.config.toggle_controller_services)
     elif cli.args.scaffold:
         flowlib.api.gen_flow_scaffold(cli.args.scaffold)
     elif cli.args.generate_docs:
