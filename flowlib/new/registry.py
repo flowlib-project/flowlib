@@ -95,6 +95,7 @@ def __get_flows(container, registry_endpoint, bucket_id):
     return call_cmd(container, registry_endpoint,
                     "registry list-flows --bucketIdentifier {}".format(bucket_id))
 
+
 def __move_flow(config, source_flow, dest_flow, dest_bucket):
     dest_flow_id = None
     if not dest_flow:

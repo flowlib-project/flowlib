@@ -170,6 +170,10 @@ class FlowLibCLI:
                                    nargs='*',
                                    help="Disable or enable the controller services for the specified process groups")
 
+        self.mx_group.add_argument('--list-templates',
+                                   action="store_true",
+                                   help="Lists templates that are available")
+
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()
