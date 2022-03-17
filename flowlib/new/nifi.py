@@ -4,6 +4,16 @@ import sys
 from flowlib.new.util import call_cmd
 
 
+def list_templates(config):
+    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")
+    if all_templates['templates']:
+        print("Templates:")
+        for template in all_templates['templates']:
+            print("\t{}".format(template['template']['name']))
+    else:
+        print("\t! No templates available")
+
+
 def change_version(config, names_and_versions):
     names_map = {}
     for name_and_version in names_and_versions:

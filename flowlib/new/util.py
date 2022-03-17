@@ -22,7 +22,8 @@ def call_move_cmd(container, source_endpoint, dest_endpoint, command):
 def call_cmd(container, endpoint, command):
     cmd = None
     if container:
-        cmd = "docker run -it --rm --entrypoint /opt/nifi/nifi-toolkit-current/bin/cli.sh {container} {cmd} --baseUrl {endpt} -ot json" \
+        cmd = "docker run -it --rm --entrypoint /opt/nifi/nifi-toolkit-current/bin/cli.sh " \
+              "{container} {cmd} --baseUrl {endpt} -ot json" \
             .format(container=container, cmd=command, endpt=endpoint)
     else:
         cmd = "/opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd} --baseUrl {endpt} -ot json" \
