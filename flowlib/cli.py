@@ -32,6 +32,14 @@ class ValidateValidate(argparse._StoreTrueAction):
             parser.error("argument --validate: --flow-yaml is required when --validate is true")
 
 
+class ValidateTransferTemplates(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        setattr(args, self.dest, values)
+        if not args.dest_nifi_endpoint:
+            parser.error("argument --transfer-templates: --dest-nifi-endpoint is required")
+
+
+
 class FlowLibCLI:
     def __init__(self, args=None, file_config=None):
         """
@@ -96,7 +104,11 @@ class FlowLibCLI:
 
         self.parser.add_argument('--dest-registry-endpoint',
                                  type=str,
-                                 help='The NiFi Registry endpoint (proto://host:port) to deploy a flow from the --registry-endpoint')
+                                 help='The NiFi Registry endpoint (proto://host:port) to transfer a flow from the --registry-endpoint')
+
+        self.parser.add_argument('--dest-nifi-endpoint',
+                                 type=str,
+                                 help='The NiFi Instance endpoint (proto://host:port) to transfer a template from the --nifi-endpoint')
 
         self.mx_group = self.parser.add_mutually_exclusive_group()
 
@@ -173,6 +185,12 @@ class FlowLibCLI:
         self.mx_group.add_argument('--list-templates',
                                    action="store_true",
                                    help="Lists templates that are available")
+
+        self.mx_group.add_argument('--transfer-templates',
+                                   type=str,
+                                   nargs="*",
+                                   action=ValidateTransferTemplates,
+                                   help="Transfer tempaltes from one NiFi instance to another. WARNING: will overwrite templates with the same name")
 
         if not file_config:
             file_config = FlowLibConfig()

@@ -3,7 +3,7 @@ import subprocess
 import sys
 import json
 import re
-
+import requests
 
 def call_move_cmd(container, source_endpoint, dest_endpoint, command):
     cmd = "/opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd} --baseUrl {url} -ot json"
@@ -19,6 +19,22 @@ def call_move_cmd(container, source_endpoint, dest_endpoint, command):
     return __process_output(cmd)
 
 
+def call_multi_cmd(container, endpoint, commands):
+    cmd = None
+    command = commands.pop(0)
+    if container:
+        cmd = "docker run -it --rm --entrypoint /bin/sh " \
+              "{container} -c \"/opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd} -ot json" \
+            .format(container=container, cmd=command, endpt=endpoint)
+    else:
+        cmd = "/opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd} --baseUrl {endpt} -ot json" \
+            .format(cmd=command, endpt=endpoint)
+    for c in commands:
+        cmd = cmd + " && /opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd}    -ot json".format(cmd=c, endpt=endpoint)
+    cmd = cmd + "\""
+    return __process_output(cmd)
+
+
 def call_cmd(container, endpoint, command):
     cmd = None
     if container:
@@ -29,6 +45,12 @@ def call_cmd(container, endpoint, command):
         cmd = "/opt/nifi/nifi-toolkit-current/bin/cli.sh {cmd} --baseUrl {endpt} -ot json" \
             .format(cmd=command, endpt=endpoint)
     return __process_output(cmd)
+
+
+def call_api(endpoint, method, path):
+    if method.casefold() == 'delete':
+        url = "{}/nifi-api/{}".format(endpoint, path)
+        requests.delete(url)
 
 
 def __process_output(cmd):

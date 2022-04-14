@@ -1,17 +1,35 @@
 # -*- coding: utf-8 -*-
-import sys
-
-from flowlib.new.util import call_cmd
+from flowlib.new.util import call_cmd, call_api, call_multi_cmd
 
 
 def list_templates(config):
-    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")
-    if all_templates['templates']:
+    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")['templates']
+    if all_templates:
         print("Templates:")
-        for template in all_templates['templates']:
+        for template in all_templates:
             print("\t{}".format(template['template']['name']))
     else:
         print("\t! No templates available")
+
+
+def transfer_templates(config, templates):
+    root_id = call_cmd(config.container, config.dest_nifi_endpoint, "nifi get-root-id")
+    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")['templates']
+    dest_templates = call_cmd(config.container, config.dest_nifi_endpoint, "nifi list-templates")['templates']
+    for template_name in templates:
+        template = __filter_templates(all_templates, template_name)
+        dest_template = __filter_templates(dest_templates, template_name)
+        if dest_template:
+            call_api(config.dest_nifi_endpoint, 'delete', "templates/{}".format(dest_template['id']))
+
+        if template:
+            commands = ["nifi download-template --templateId {} --outputFile /tmp/template --baseUrl {}"
+                            .format(template['id'], config.nifi_endpoint),
+                        "nifi upload-template --processGroupId {} --input /tmp/template --baseUrl {}"
+                            .format(root_id,config.dest_nifi_endpoint)]
+            call_multi_cmd(config.container, config.nifi_endpoint, commands)
+        else:
+            print("! Could not find template in {} instance".format(config.nifi_endpoint))
 
 
 def change_version(config, names_and_versions):
@@ -102,3 +120,10 @@ def __obtain_process_groups(config, process_group_id=None):
     if process_group_id:
         cmd = cmd + " --processGroupId " + process_group_id
     return call_cmd(config.container, config.nifi_endpoint, cmd)
+
+
+def __filter_templates(templates, template_name):
+    for template in templates:
+        if template['template']['name'] == template_name:
+            return template
+    return None
