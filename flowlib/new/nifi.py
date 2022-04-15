@@ -12,6 +12,37 @@ def list_templates(config):
         print("\t! No templates available")
 
 
+def create_templates(config, process_groups_templates):
+    names_map = {}
+    for name_and_template in process_groups_templates:
+        split = name_and_template.split(":")
+        names_map[split[0]] = split[1]
+
+    process_groups_by_name = __obtain_multi_process_groups_info(config, names_map.keys())
+    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")['templates']
+
+    for name in names_map:
+        template_name = names_map[name]
+        process_group = process_groups_by_name[name]
+        template = __filter_templates(all_templates, template_name)
+        if template:
+            call_api(config.nifi_endpoint, 'delete', "templates/{}".format(template['id']))
+
+        snippet = {"snippet": {"parentGroupId": process_group['parentGroupId'],
+                               "processGroups": {process_group['id']: {"version": 1}}}}
+
+        snippet_info = call_api(config.nifi_endpoint, 'POST', "snippets", snippet)
+        if isinstance(snippet_info, dict):
+            response = call_api(config.nifi_endpoint, 'POST', "process-groups/{}/templates".format(process_group['id']),
+                                {"name": template_name, "snippetId": snippet_info['snippet']['id']})
+            if isinstance(response, dict):
+                print("Created {} template for {} processor group".format(template_name, name))
+            else:
+                print("Could not create {} template for {} processor group: {}".format(template_name, name, response))
+        else:
+            print("Could not create {} template for {} processor group: {}".format(template_name, name, snippet_info))
+
+
 def transfer_templates(config, templates):
     root_id = call_cmd(config.container, config.dest_nifi_endpoint, "nifi get-root-id")
     all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")['templates']

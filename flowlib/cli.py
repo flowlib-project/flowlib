@@ -186,6 +186,11 @@ class FlowLibCLI:
                                    action="store_true",
                                    help="Lists templates that are available")
 
+        self.mx_group.add_argument('--create-templates',
+                                   type=str,
+                                   nargs='*',
+                                   help="Create templates for each process group specified")
+
         self.mx_group.add_argument('--transfer-templates',
                                    type=str,
                                    nargs="*",
