@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from flowlib.new.util import call_cmd, call_api, call_multi_cmd
+import json
 
 
 def list_templates(config):
@@ -34,7 +35,8 @@ def create_templates(config, process_groups_templates):
         snippet_info = call_api(config.nifi_endpoint, 'POST', "snippets", snippet)
         if isinstance(snippet_info, dict):
             response = call_api(config.nifi_endpoint, 'POST', "process-groups/{}/templates".format(process_group['id']),
-                                {"name": template_name, "snippetId": snippet_info['snippet']['id']})
+                                {"name": template_name, "snippetId": snippet_info['snippet']['id'],
+                                 "description": "{}".format(process_group['position']).replace('\'', '\"')})
             if isinstance(response, dict):
                 print("Created {} template for {} processor group".format(template_name, name))
             else:
