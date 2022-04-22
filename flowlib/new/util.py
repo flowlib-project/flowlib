@@ -47,10 +47,17 @@ def call_cmd(container, endpoint, command):
     return __process_output(cmd)
 
 
-def call_api(endpoint, method, path):
+def call_api(endpoint, method, path, data=None):
+    url = "{}/nifi-api/{}".format(endpoint, path)
     if method.casefold() == 'delete':
-        url = "{}/nifi-api/{}".format(endpoint, path)
         requests.delete(url)
+    elif method.casefold() == 'post':
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = requests.post(url=url, headers=headers, data=json.dumps(data))
+        if response.status_code != 201:
+            return response.text
+        else:
+            return json.loads(response.text)
 
 
 def __process_output(cmd):
