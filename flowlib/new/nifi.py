@@ -84,8 +84,8 @@ def deploy_templates(config, templates_process_groups):
 
             if process_id:
                 info = template['template']
-                origin_x = 0 if 'description' not in info else json.loads(info['description'])['x']
-                origin_y = 0 if 'description' not in info else json.loads(info['description'])['y']
+                origin_x = 0 if 'description' in info else json.loads(info['description'])['x']
+                origin_y = 0 if 'description' in info else json.loads(info['description'])['y']
 
                 response = call_api(config.nifi_endpoint, 'POST',
                                     "process-groups/{}/template-instance".format(process_id),
