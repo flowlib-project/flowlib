@@ -197,6 +197,11 @@ class FlowLibCLI:
                                    action=ValidateTransferTemplates,
                                    help="Transfer tempaltes from one NiFi instance to another. WARNING: will overwrite templates with the same name")
 
+        self.mx_group.add_argument('--deploy-templates',
+                                   type=str,
+                                   nargs='*',
+                                   help="Instantiate templates in a specified process group")
+
         if not file_config:
             file_config = FlowLibConfig()
         self.args = self.parser.parse_args(args=args) if args else self.parser.parse_args()

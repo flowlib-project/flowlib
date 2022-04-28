@@ -8,7 +8,7 @@ import flowlib.api
 from flowlib.cli import FlowLibCLI, FlowLibConfig
 from flowlib.new.registry import list_flows, transfer_flows
 from flowlib.new.nifi import change_version, toggle_controller_services, list_templates, transfer_templates, \
-    create_templates
+    create_templates, deploy_templates
 
 
 def main():
@@ -29,6 +29,8 @@ def main():
         toggle_controller_services(cli.config, cli.config.toggle_controller_services)
     elif cli.args.list_templates:
         list_templates(cli.config)
+    elif cli.args.deploy_templates:
+        deploy_templates(cli.config, cli.config.deploy_templates)
     elif cli.args.create_templates:
         create_templates(cli.config, cli.config.create_templates)
     elif cli.args.transfer_templates:

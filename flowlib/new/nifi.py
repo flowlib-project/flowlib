@@ -59,10 +59,46 @@ def transfer_templates(config, templates):
             commands = ["nifi download-template --templateId {} --outputFile /tmp/template --baseUrl {}"
                             .format(template['id'], config.nifi_endpoint),
                         "nifi upload-template --processGroupId {} --input /tmp/template --baseUrl {}"
-                            .format(root_id,config.dest_nifi_endpoint)]
+                            .format(root_id, config.dest_nifi_endpoint)]
             call_multi_cmd(config.container, config.nifi_endpoint, commands)
         else:
             print("! Could not find template in {} instance".format(config.nifi_endpoint))
+
+
+def deploy_templates(config, templates_process_groups):
+    templates_map = {}
+    for template_and_name in templates_process_groups:
+        split = template_and_name.split(":")
+        templates_map[split[0]] = split[1]
+
+    filtered = {k:v for (k,v) in templates_map.items() if "root" != v}
+    process_groups_by_name = __obtain_multi_process_groups_info(config, filtered.values())
+    all_templates = call_cmd(config.container, config.nifi_endpoint, "nifi list-templates")['templates']
+    root_id = call_cmd(config.container, config.nifi_endpoint, "nifi get-root-id")
+
+    for template_name in templates_map:
+        template = __filter_templates(all_templates, template_name)
+        if template:
+            process_group_name = templates_map[template_name]
+            process_id = root_id if process_group_name == "root" else process_groups_by_name[process_group_name]['id']
+
+            if process_id:
+                info = template['template']
+                origin_x = 0 if 'description' in info else json.loads(info['description'])['x']
+                origin_y = 0 if 'description' in info else json.loads(info['description'])['y']
+
+                response = call_api(config.nifi_endpoint, 'POST',
+                                    "process-groups/{}/template-instance".format(process_id),
+                                    {"templateId": template['id'], "originX": origin_x, "originY": origin_y})
+                if isinstance(response, dict):
+                    print("Deployed {} template in {} process group".format(template_name, process_group_name))
+                else:
+                    print("Unable to deploy {} template in {} process group: {}".format(template_name,
+                                                                                        process_group_name, response))
+            else:
+                print("No process group name {} found.".format(process_group_name))
+        else:
+            print("No template with name {} found".format(template_name))
 
 
 def change_version(config, names_and_versions):
