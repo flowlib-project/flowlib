@@ -7,10 +7,10 @@ nifi_release_version=${2:-1.14.0}
 regex="[0-9]+.[0-9]+.[0-9]+"
 
 if ! [ -z "$release_version" ]; then
-    if ! [[ $release_version =~ $regex ]]; then
-        echo "Obtaining latest tagged version: $version"
-        rm dist/*
-        gh release download v1.1.0 --dir dist/ --archive=tar.gz
+    if [[ $release_version =~ $regex ]]; then
+        echo "Obtaining latest tagged version: $release_version"
+        rm -f dist/*
+        gh release download v${release_version} --dir dist/ --archive=tar.gz
     fi
 else
     echo "Building local tar"
