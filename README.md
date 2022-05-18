@@ -11,14 +11,6 @@ pip install b23-flowlib-$VERSION.tar.gz
 Check out the [User Guide](./docs/FLOWLIB_USER_GUIDE.md) to get started
 
 
-## User Stories ##
-
-1. As a NiFi flow developer, I would like the ability to develop data flows in a way that is easily version controlled and code reviewed, and the ability to deploy those flows in a fully automated way with no user interaction.
-2. ~~[#63](https://github.com/B23admin/b23-flowlib/issues/63)~~ As a NiFi flow developer, I would like the ability to modify an existing data flow (that was previously deployed by FlowLib) and deploy the modified flow while maintaining processor state if it exists.
-3. ~~[#59](https://github.com/B23admin/b23-flowlib/issues/59)~~ As a NiFi flow developer, I would like the ability to export an existing data flow (that was previously deployed by FlowLib) and deploy the data flow to a new NiFi instance while maintaining processor state if it exists.
-4. As a NiFi flow developer, I would like the ability to export an existing data flow (that was *__not__* deployed by FlowLib) to a format that is compatible with FlowLib so that it can be modified as code and deployed by FlowLib.
-
-
 ## Why FlowLib? ##
 
 - (Data Flow as Code) FlowLib provides data flow developers the ability to maintain their data flow logic as code.
@@ -31,6 +23,8 @@ Check out the [User Guide](./docs/FLOWLIB_USER_GUIDE.md) to get started
 
 ## Developer Getting Started ##
 
+The following commands will allow a virtualenv to be setup where the packages required will be installed along with FlowLib itself.  Any changes in FlowLib will be picked up and can be ran in this environment; hence, pip install does not need to be ran every time when testing changes.
+
 ```shell
 git clone git@github.com:B23admin/b23-flowlib.git && cd b23-flowlib
 virtualenv env --python=$(which python3)
@@ -39,6 +33,11 @@ pip install requirements-dev.txt
 pip install -e ./
 ```
 
+## Dependencies ##
+
+All packages/libraries needed for FlowLib are specified and installed using the `requirements-dev.txt` file.  How to install that is mentioned in the section above.
+
+FlowLib does allow two workflows to promote flows from one NiFi instance to another and would require you have more than one NiFi instance up and running.  The first workflow just works with templates where you can use FlowLib to create templates, transfer templates to another instance, and instantiate it in destination instance.  The second workflow would require at least one in of a Registry and can transfer template between buckets or two Registry instances and change a flow's version to either the latest or one specified.
 
 ## Testing ##
 
@@ -59,10 +58,14 @@ for a patch release, do not pass any arguments
 ./release.sh
 ```
 
-Please note that the archive still needs to be uploaded to GitHub.
+Please note that the archive still needs to be uploaded to GitHub.  This is first accomplished by creating the release via GitHub
+and then uploading the archives to that release from your local machine.  You will need to ensure that the local archive has been
+named to the appropriated release (i.e. b23-flowlib-1.2.1.tar.gz) since a local build using adds a dist + # to the archive name.
 
 
 ## Build Docker ##
+
+The `build.sh` in the root folder will allow for a specified release or a local build to be used and a Docker image to be created.
 
 For local development, the version does not need to be passed in and the tar containing
 local changes will be created and used in the Docker image using the following script:
