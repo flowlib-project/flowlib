@@ -1,4 +1,4 @@
-# B23 FlowLib #
+# FlowLib #
 
 ## Install ##
 
